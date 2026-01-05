@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dwg-forensic-tool"
+version = "0.1.0"
+description = "Open-source forensic analysis toolkit for AutoCAD DWG files"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "GPL-3.0-or-later"}
+authors = [
+    {name = "Jordan Paul Ehrig", email = "jordan@ehrigbim.com"}
+]
+keywords = ["dwg", "forensics", "autocad", "litigation", "chain-of-custody"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Legal Industry",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Security",
+]
+
+dependencies = [
+    "click>=8.0.0",
+    "pydantic>=2.0.0",
+    "rich>=13.0.0",
+    "reportlab>=4.0.0",
+    "pyyaml>=6.0.0",
+    "sqlalchemy>=2.0.0",
+    "python-dateutil>=2.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=24.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.8.0",
+    "pre-commit>=3.6.0",
+]
+
+[project.scripts]
+dwg-forensic = "dwg_forensic.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/SamuraiBuddha/DWG-forensic-tool"
+Documentation = "https://github.com/SamuraiBuddha/DWG-forensic-tool#readme"
+Repository = "https://github.com/SamuraiBuddha/DWG-forensic-tool.git"
+Issues = "https://github.com/SamuraiBuddha/DWG-forensic-tool/issues"
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=dwg_forensic --cov-report=term-missing"
