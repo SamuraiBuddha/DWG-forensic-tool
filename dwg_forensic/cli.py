@@ -1,97 +1,835 @@
 """Command-line interface for DWG Forensic Tool."""
 
+import json
+import sys
+from pathlib import Path
+
 import click
 from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 from dwg_forensic import __version__
+from dwg_forensic.core.analyzer import ForensicAnalyzer, analyze_tampering
+from dwg_forensic.core.custody import CustodyChain, EventType, IntegrityError
+from dwg_forensic.core.file_guard import FileGuard
+from dwg_forensic.core.intake import FileIntake
+from dwg_forensic.output.json_export import JSONExporter
+from dwg_forensic.parsers import CRCValidator, HeaderParser, WatermarkDetector
+from dwg_forensic.utils.audit import AuditLogger, get_audit_logger
+from dwg_forensic.utils.exceptions import DWGForensicError, IntakeError, UnsupportedVersionError
+
+# Phase 3 imports
+from dwg_forensic.analysis import TamperingRuleEngine, RiskScorer
 
 console = Console()
+
+
+def print_status(status: str, message: str) -> None:
+    """Print a status message with consistent formatting.
+
+    Args:
+        status: Status indicator ([OK], [FAIL], [WARN], [INFO], [ERROR])
+        message: Message to display
+    """
+    color_map = {
+        "[OK]": "green",
+        "[FAIL]": "red",
+        "[WARN]": "yellow",
+        "[INFO]": "blue",
+        "[ERROR]": "red bold",
+    }
+    color = color_map.get(status, "white")
+    console.print(f"[{color}]{status}[/{color}] {message}")
 
 
 @click.group()
 @click.version_option(version=__version__, prog_name="dwg-forensic")
 def main():
-    """DWG Forensic Tool - Forensic analysis toolkit for AutoCAD DWG files."""
+    """DWG Forensic Tool - Forensic analysis toolkit for AutoCAD DWG files.
+
+    Analyze DWG files for tampering detection, watermark verification,
+    and forensic documentation. Supports R18+ versions (AutoCAD 2010+).
+    """
     pass
 
 
 @main.command()
 @click.argument("filepath", type=click.Path(exists=True))
-@click.option("-o", "--output", help="Output file path")
-@click.option("-f", "--format", "output_format", type=click.Choice(["pdf", "json", "both"]), default="json")
+@click.option("-o", "--output", help="Output file path for JSON report")
+@click.option("-f", "--format", "output_format", type=click.Choice(["json", "table"]), default="table")
 @click.option("-v", "--verbose", count=True, help="Verbosity level")
-def analyze(filepath, output, output_format, verbose):
-    """Perform full forensic analysis on a DWG file."""
-    console.print(f"[bold blue]Analyzing:[/bold blue] {filepath}")
-    console.print(f"[dim]Output format: {output_format}[/dim]")
-    # TODO: Implement analysis
-    console.print("[yellow]Analysis module not yet implemented[/yellow]")
+def analyze(filepath: str, output: str, output_format: str, verbose: int):
+    """Perform full forensic analysis on a DWG file.
+
+    FILEPATH is the path to the DWG file to analyze.
+    """
+    file_path = Path(filepath)
+    console.print(Panel(f"[bold]DWG Forensic Analysis[/bold]\nFile: {file_path.name}", style="blue"))
+
+    try:
+        analyzer = ForensicAnalyzer()
+        result = analyzer.analyze(file_path)
+
+        if output_format == "json" or output:
+            exporter = JSONExporter(indent=2)
+            json_output = exporter.to_json(result)
+
+            if output:
+                exporter.to_file(result, output)
+                print_status("[OK]", f"Report saved to: {output}")
+            else:
+                console.print(json_output)
+        else:
+            # Table format output
+            _print_analysis_table(result, verbose)
+
+    except UnsupportedVersionError as e:
+        print_status("[ERROR]", f"Unsupported version: {e.version}")
+        console.print(f"  [dim]This tool only supports R18+ (AC1024, AC1027, AC1032)[/dim]")
+        sys.exit(1)
+    except DWGForensicError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+    except Exception as e:
+        print_status("[ERROR]", f"Unexpected error: {e}")
+        if verbose > 0:
+            console.print_exception()
+        sys.exit(1)
+
+
+def _print_analysis_table(result, verbose: int) -> None:
+    """Print analysis results as formatted tables."""
+    # File Info
+    table = Table(title="File Information", show_header=True, header_style="bold")
+    table.add_column("Property", style="cyan")
+    table.add_column("Value")
+    table.add_row("Filename", result.file_info.filename)
+    table.add_row("SHA-256", result.file_info.sha256[:16] + "..." if not verbose else result.file_info.sha256)
+    table.add_row("Size", f"{result.file_info.file_size_bytes:,} bytes")
+    table.add_row("Analyzed", result.file_info.intake_timestamp.isoformat())
+    console.print(table)
+    console.print()
+
+    # Header Analysis
+    table = Table(title="Header Analysis", show_header=True, header_style="bold")
+    table.add_column("Property", style="cyan")
+    table.add_column("Value")
+    table.add_row("Version", f"{result.header_analysis.version_string} ({result.header_analysis.version_name})")
+    table.add_row("Maintenance Version", str(result.header_analysis.maintenance_version))
+    table.add_row("Codepage", str(result.header_analysis.codepage))
+    table.add_row("Supported", "[green][OK][/green]" if result.header_analysis.is_supported else "[red][X][/red]")
+    console.print(table)
+    console.print()
+
+    # CRC Validation
+    crc_status = "[green][OK][/green]" if result.crc_validation.is_valid else "[red][FAIL][/red]"
+    table = Table(title="CRC Validation", show_header=True, header_style="bold")
+    table.add_column("Property", style="cyan")
+    table.add_column("Value")
+    table.add_row("Status", crc_status)
+    table.add_row("Stored CRC", result.crc_validation.header_crc_stored)
+    table.add_row("Calculated CRC", result.crc_validation.header_crc_calculated)
+    console.print(table)
+    console.print()
+
+    # TrustedDWG
+    table = Table(title="TrustedDWG Watermark", show_header=True, header_style="bold")
+    table.add_column("Property", style="cyan")
+    table.add_column("Value")
+    wm_present = "[green][OK][/green]" if result.trusted_dwg.watermark_present else "[yellow][WARN][/yellow]"
+    wm_valid = "[green][OK][/green]" if result.trusted_dwg.watermark_valid else "[yellow][WARN][/yellow]"
+    table.add_row("Watermark Present", wm_present)
+    table.add_row("Watermark Valid", wm_valid)
+    if result.trusted_dwg.application_origin:
+        table.add_row("Application", result.trusted_dwg.application_origin)
+    console.print(table)
+    console.print()
+
+    # Risk Assessment
+    risk_colors = {
+        "LOW": "green",
+        "MEDIUM": "yellow",
+        "HIGH": "red",
+        "CRITICAL": "red bold",
+    }
+    risk_color = risk_colors.get(result.risk_assessment.overall_risk.value, "white")
+    console.print(Panel(
+        f"[{risk_color}]Risk Level: {result.risk_assessment.overall_risk.value}[/{risk_color}]\n\n"
+        + "\n".join(result.risk_assessment.factors)
+        + f"\n\n[dim]{result.risk_assessment.recommendation}[/dim]",
+        title="Risk Assessment",
+        style="bold",
+    ))
+
+
+@main.command(name="validate-crc")
+@click.argument("filepath", type=click.Path(exists=True))
+def validate_crc(filepath: str):
+    """Validate CRC checksums in a DWG file.
+
+    FILEPATH is the path to the DWG file to validate.
+    """
+    file_path = Path(filepath)
+    console.print(f"[bold blue]CRC Validation:[/bold blue] {file_path.name}")
+
+    try:
+        validator = CRCValidator()
+        result = validator.validate_header_crc(file_path)
+
+        if result.is_valid:
+            print_status("[OK]", "Header CRC is valid")
+        else:
+            print_status("[FAIL]", "Header CRC mismatch detected!")
+
+        console.print(f"  Stored:     {result.header_crc_stored}")
+        console.print(f"  Calculated: {result.header_crc_calculated}")
+
+        sys.exit(0 if result.is_valid else 1)
+
+    except DWGForensicError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+
+
+@main.command(name="check-watermark")
+@click.argument("filepath", type=click.Path(exists=True))
+def check_watermark(filepath: str):
+    """Check TrustedDWG watermark in a DWG file.
+
+    FILEPATH is the path to the DWG file to check.
+    """
+    file_path = Path(filepath)
+    console.print(f"[bold blue]Watermark Check:[/bold blue] {file_path.name}")
+
+    try:
+        detector = WatermarkDetector()
+        result = detector.detect(file_path)
+
+        if result.watermark_present:
+            if result.watermark_valid:
+                print_status("[OK]", "Valid TrustedDWG watermark found")
+            else:
+                print_status("[WARN]", "TrustedDWG watermark present but invalid")
+        else:
+            print_status("[WARN]", "No TrustedDWG watermark found")
+            console.print("  [dim]File may have been created or modified by third-party software[/dim]")
+
+        if result.application_origin:
+            console.print(f"  Application: {result.application_origin}")
+        if result.watermark_offset:
+            console.print(f"  Offset: 0x{result.watermark_offset:X}")
+
+    except DWGForensicError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+
+
+@main.command()
+@click.argument("filepath", type=click.Path(exists=True))
+@click.option("-f", "--format", "output_format", type=click.Choice(["json", "table"]), default="table")
+def metadata(filepath: str, output_format: str):
+    """Extract metadata from a DWG file.
+
+    FILEPATH is the path to the DWG file.
+    """
+    file_path = Path(filepath)
+    console.print(f"[bold blue]Metadata:[/bold blue] {file_path.name}")
+
+    try:
+        parser = HeaderParser()
+        result = parser.parse(file_path)
+
+        if output_format == "json":
+            import json
+            console.print(json.dumps(result.model_dump(), indent=2))
+        else:
+            table = Table(show_header=True, header_style="bold")
+            table.add_column("Property", style="cyan")
+            table.add_column("Value")
+            table.add_row("Version", f"{result.version_string} ({result.version_name})")
+            table.add_row("Maintenance", str(result.maintenance_version))
+            table.add_row("Preview Address", f"0x{result.preview_address:X}")
+            table.add_row("Codepage", str(result.codepage))
+            table.add_row("Supported", "Yes" if result.is_supported else "No")
+            console.print(table)
+
+    except UnsupportedVersionError as e:
+        print_status("[ERROR]", f"Unsupported version: {e.version}")
+        sys.exit(1)
+    except DWGForensicError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
 
 
 @main.command()
 @click.argument("filepath", type=click.Path(exists=True))
 @click.option("--case-id", required=True, help="Case identifier")
 @click.option("--examiner", required=True, help="Examiner name")
+@click.option("--evidence-number", help="Evidence number (auto-generated if not provided)")
+@click.option("--evidence-dir", type=click.Path(), default="./evidence", help="Evidence storage directory")
+@click.option("--db-path", type=click.Path(), default="./evidence/custody.db", help="Database path")
 @click.option("--notes", help="Intake notes")
-def intake(filepath, case_id, examiner, notes):
-    """Intake a DWG file into evidence with chain of custody."""
-    console.print(f"[bold blue]Intake:[/bold blue] {filepath}")
-    console.print(f"[dim]Case: {case_id} | Examiner: {examiner}[/dim]")
-    # TODO: Implement intake
-    console.print("[yellow]Intake module not yet implemented[/yellow]")
+def intake(filepath: str, case_id: str, examiner: str, evidence_number: str,
+           evidence_dir: str, db_path: str, notes: str):
+    """Intake a DWG file into evidence with chain of custody.
+
+    FILEPATH is the path to the DWG file.
+
+    This performs secure evidence intake including:
+    - DWG format validation
+    - Multi-hash calculation (SHA-256, SHA-1, MD5)
+    - Copy to evidence directory with write-protection
+    - Hash verification of copied file
+    - Database record creation with chain of custody
+    """
+    file_path = Path(filepath)
+    console.print(Panel(
+        f"[bold]Evidence Intake[/bold]\n"
+        f"File: {file_path.name}\n"
+        f"Case: {case_id}\n"
+        f"Examiner: {examiner}",
+        style="blue"
+    ))
+
+    try:
+        # Initialize intake handler
+        intake_handler = FileIntake(
+            evidence_dir=Path(evidence_dir),
+            db_path=Path(db_path)
+        )
+
+        # Perform intake
+        print_status("[INFO]", "Starting intake process...")
+        evidence = intake_handler.intake(
+            source_path=file_path,
+            case_id=case_id,
+            examiner=examiner,
+            evidence_number=evidence_number,
+            notes=notes,
+        )
+
+        # Log to audit logger
+        audit_logger = get_audit_logger(Path(evidence_dir) / "logs")
+        audit_logger.log_intake(
+            evidence_id=evidence.id,
+            case_id=case_id,
+            examiner=examiner,
+            filename=evidence.filename,
+            sha256=evidence.sha256,
+        )
+
+        # Display results
+        console.print()
+        table = Table(title="Evidence Intake Complete", show_header=True, header_style="bold green")
+        table.add_column("Property", style="cyan")
+        table.add_column("Value")
+        table.add_row("Evidence ID", evidence.id)
+        table.add_row("Evidence Number", evidence.evidence_number)
+        table.add_row("Filename", evidence.filename)
+        table.add_row("Storage Path", evidence.file_path)
+        table.add_row("SHA-256", evidence.sha256)
+        table.add_row("SHA-1", evidence.sha1)
+        table.add_row("MD5", evidence.md5)
+        table.add_row("File Size", f"{evidence.file_size_bytes:,} bytes")
+        table.add_row("Intake Time", evidence.intake_timestamp.isoformat())
+        console.print(table)
+
+        print_status("[OK]", "Evidence intake complete - chain of custody initiated")
+
+    except IntakeError as e:
+        print_status("[ERROR]", f"Intake failed: {e}")
+        sys.exit(1)
+    except DWGForensicError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+    except Exception as e:
+        print_status("[ERROR]", f"Unexpected error: {e}")
+        sys.exit(1)
+
+
+@main.command()
+@click.argument("evidence-id")
+@click.option("--db-path", type=click.Path(exists=True), default="./evidence/custody.db", help="Database path")
+def verify(evidence_id: str, db_path: str):
+    """Verify evidence file integrity.
+
+    EVIDENCE-ID is the UUID of the evidence file to verify.
+
+    Compares the current file hash against the stored hash from intake.
+    """
+    console.print(f"[bold blue]Integrity Verification:[/bold blue] {evidence_id[:16]}...")
+
+    try:
+        chain = CustodyChain(Path(db_path))
+        is_valid, message = chain.verify_integrity(evidence_id)
+
+        if is_valid:
+            print_status("[OK]", message)
+        else:
+            print_status("[FAIL]", message)
+            sys.exit(1)
+
+    except ValueError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+    except Exception as e:
+        print_status("[ERROR]", f"Verification failed: {e}")
+        sys.exit(1)
+
+
+@main.command(name="custody-chain")
+@click.argument("evidence-id")
+@click.option("--db-path", type=click.Path(exists=True), default="./evidence/custody.db", help="Database path")
+@click.option("-f", "--format", "output_format", type=click.Choice(["table", "json"]), default="table")
+def custody_chain(evidence_id: str, db_path: str, output_format: str):
+    """Display chain of custody for evidence.
+
+    EVIDENCE-ID is the UUID of the evidence file.
+    """
+    console.print(f"[bold blue]Chain of Custody:[/bold blue] {evidence_id[:16]}...")
+
+    try:
+        chain = CustodyChain(Path(db_path))
+        report = chain.generate_custody_report(evidence_id)
+
+        if output_format == "json":
+            console.print(json.dumps(report, indent=2, default=str))
+        else:
+            # Evidence info
+            ev = report["evidence"]
+            table = Table(title="Evidence Information", show_header=True, header_style="bold")
+            table.add_column("Property", style="cyan")
+            table.add_column("Value")
+            table.add_row("ID", ev["id"])
+            table.add_row("Filename", ev["filename"])
+            table.add_row("Case ID", ev["case_id"])
+            table.add_row("Evidence Number", ev["evidence_number"] or "N/A")
+            table.add_row("SHA-256", ev["sha256"][:32] + "...")
+            table.add_row("Size", f"{ev['file_size_bytes']:,} bytes")
+            table.add_row("Intake", ev["intake_timestamp"])
+            console.print(table)
+            console.print()
+
+            # Integrity status
+            integrity = report["integrity_status"]
+            status = "[OK]" if integrity["is_valid"] else "[FAIL]"
+            print_status(status, integrity["message"])
+            console.print()
+
+            # Custody events
+            table = Table(title=f"Custody Events ({report['total_events']})", show_header=True, header_style="bold")
+            table.add_column("#", style="dim")
+            table.add_column("Timestamp", style="cyan")
+            table.add_column("Event")
+            table.add_column("Examiner")
+            table.add_column("Hash Verified")
+            table.add_column("Description")
+
+            for i, event in enumerate(report["chain"], 1):
+                hash_status = "[OK]" if event["hash_verified"] else "-"
+                table.add_row(
+                    str(i),
+                    event["timestamp"][:19],
+                    event["event_type"],
+                    event["examiner"],
+                    hash_status,
+                    event["description"][:50] + "..." if len(event["description"]) > 50 else event["description"]
+                )
+
+            console.print(table)
+
+    except ValueError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+    except Exception as e:
+        print_status("[ERROR]", f"Failed to retrieve custody chain: {e}")
+        sys.exit(1)
+
+
+@main.command(name="log-event")
+@click.argument("evidence-id")
+@click.option("--event-type", required=True,
+              type=click.Choice(["ACCESS", "ANALYSIS", "EXPORT", "TRANSFER", "VERIFICATION"]),
+              help="Type of custody event")
+@click.option("--examiner", required=True, help="Examiner name")
+@click.option("--description", required=True, help="Event description")
+@click.option("--db-path", type=click.Path(exists=True), default="./evidence/custody.db", help="Database path")
+@click.option("--notes", help="Additional notes")
+@click.option("--skip-verify", is_flag=True, help="Skip hash verification (not recommended)")
+def log_event(evidence_id: str, event_type: str, examiner: str, description: str,
+              db_path: str, notes: str, skip_verify: bool):
+    """Log a custody event for evidence.
+
+    EVIDENCE-ID is the UUID of the evidence file.
+    """
+    console.print(f"[bold blue]Logging Custody Event:[/bold blue] {event_type}")
+
+    try:
+        chain = CustodyChain(Path(db_path))
+        event = chain.log_event(
+            evidence_id=evidence_id,
+            event_type=EventType[event_type],
+            examiner=examiner,
+            description=description,
+            verify_hash=not skip_verify,
+            notes=notes,
+        )
+
+        print_status("[OK]", f"Event logged: {event.id}")
+        console.print(f"  Timestamp: {event.timestamp.isoformat()}")
+        console.print(f"  Hash Verified: {event.hash_verified}")
+
+    except IntegrityError as e:
+        print_status("[FAIL]", f"Integrity check failed: {e}")
+        sys.exit(1)
+    except ValueError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+    except Exception as e:
+        print_status("[ERROR]", f"Failed to log event: {e}")
+        sys.exit(1)
+
+
+@main.command(name="protect")
+@click.argument("filepath", type=click.Path(exists=True))
+def protect_file(filepath: str):
+    """Set write-protection on a file.
+
+    FILEPATH is the path to the file to protect.
+    """
+    file_path = Path(filepath)
+    console.print(f"[bold blue]Setting Write Protection:[/bold blue] {file_path.name}")
+
+    try:
+        guard = FileGuard()
+
+        if guard.is_protected(file_path):
+            print_status("[INFO]", "File is already write-protected")
+            return
+
+        guard.protect(file_path)
+        print_status("[OK]", f"Write-protection set: {file_path}")
+
+    except PermissionError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+    except Exception as e:
+        print_status("[ERROR]", f"Failed to protect file: {e}")
+        sys.exit(1)
+
+
+@main.command(name="check-protection")
+@click.argument("filepath", type=click.Path(exists=True))
+def check_protection(filepath: str):
+    """Check write-protection status of a file.
+
+    FILEPATH is the path to the file to check.
+    """
+    file_path = Path(filepath)
+    console.print(f"[bold blue]Protection Status:[/bold blue] {file_path.name}")
+
+    try:
+        guard = FileGuard()
+        is_protected, message = guard.verify_protection(file_path)
+
+        if is_protected:
+            print_status("[OK]", message)
+        else:
+            print_status("[WARN]", message)
+            sys.exit(1)
+
+    except Exception as e:
+        print_status("[ERROR]", f"Check failed: {e}")
+        sys.exit(1)
 
 
 @main.command()
 @click.argument("filepath", type=click.Path(exists=True))
-@click.option("-f", "--format", "output_format", type=click.Choice(["json", "yaml", "table"]), default="table")
-def metadata(filepath, output_format):
-    """Extract metadata from a DWG file."""
-    console.print(f"[bold blue]Metadata:[/bold blue] {filepath}")
-    # TODO: Implement metadata extraction
-    console.print("[yellow]Metadata module not yet implemented[/yellow]")
+@click.option("-o", "--output", help="Output file path for JSON report")
+@click.option("-f", "--format", "output_format", type=click.Choice(["json", "table"]), default="table")
+@click.option("--rules", type=click.Path(exists=True), help="Custom tampering rules file (YAML/JSON)")
+@click.option("-v", "--verbose", count=True, help="Verbosity level")
+def tampering(filepath: str, output: str, output_format: str, rules: str, verbose: int):
+    """Perform focused tampering analysis on a DWG file.
+
+    FILEPATH is the path to the DWG file to analyze.
+
+    This command performs comprehensive tampering detection including:
+    - 12 built-in tampering detection rules
+    - Timestamp anomaly detection
+    - Version consistency checks
+    - Structural integrity analysis
+    - Weighted risk scoring
+    """
+    file_path = Path(filepath)
+    rules_path = Path(rules) if rules else None
+
+    console.print(Panel(
+        f"[bold]Tampering Analysis[/bold]\nFile: {file_path.name}",
+        style="red"
+    ))
+
+    try:
+        report = analyze_tampering(file_path, custom_rules_path=rules_path)
+
+        if output_format == "json" or output:
+            # JSON output
+            report_dict = report.model_dump(mode="json")
+            json_output = json.dumps(report_dict, indent=2, default=str)
+
+            if output:
+                with open(output, "w") as f:
+                    f.write(json_output)
+                print_status("[OK]", f"Report saved to: {output}")
+            else:
+                console.print(json_output)
+        else:
+            # Table format output
+            _print_tampering_report(report, verbose)
+
+    except DWGForensicError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+    except Exception as e:
+        print_status("[ERROR]", f"Tampering analysis failed: {e}")
+        if verbose > 0:
+            console.print_exception()
+        sys.exit(1)
 
 
-@main.command(name="validate-crc")
-@click.argument("filepath", type=click.Path(exists=True))
-def validate_crc(filepath):
-    """Validate CRC checksums in a DWG file."""
-    console.print(f"[bold blue]CRC Validation:[/bold blue] {filepath}")
-    # TODO: Implement CRC validation
-    console.print("[yellow]CRC validation module not yet implemented[/yellow]")
+def _print_tampering_report(report, verbose: int) -> None:
+    """Print tampering analysis report as formatted tables."""
+    # Risk summary
+    risk_colors = {
+        "LOW": "green",
+        "MEDIUM": "yellow",
+        "HIGH": "red",
+        "CRITICAL": "red bold",
+    }
+    risk_color = risk_colors.get(report.risk_level.value, "white")
+
+    console.print(Panel(
+        f"[{risk_color}]Risk Level: {report.risk_level.value}[/{risk_color}]\n"
+        f"Risk Score: {report.risk_score}\n"
+        f"Confidence: {report.confidence:.0%}",
+        title="Risk Assessment",
+        style="bold",
+    ))
+    console.print()
+
+    # Summary counts
+    table = Table(title="Analysis Summary", show_header=True, header_style="bold")
+    table.add_column("Category", style="cyan")
+    table.add_column("Count")
+    table.add_column("Status")
+
+    anomaly_status = "[green][OK][/green]" if report.anomaly_count == 0 else "[yellow][WARN][/yellow]"
+    rule_status = "[green][OK][/green]" if report.rule_failures == 0 else "[red][FAIL][/red]"
+    indicator_status = "[green][OK][/green]" if report.tampering_indicators == 0 else "[red][FAIL][/red]"
+
+    table.add_row("Anomalies Detected", str(report.anomaly_count), anomaly_status)
+    table.add_row("Rules Triggered", str(report.rule_failures), rule_status)
+    table.add_row("Tampering Indicators", str(report.tampering_indicators), indicator_status)
+    console.print(table)
+    console.print()
+
+    # CRC and Watermark status
+    table = Table(title="Integrity Checks", show_header=True, header_style="bold")
+    table.add_column("Check", style="cyan")
+    table.add_column("Status")
+
+    if report.crc_valid is not None:
+        crc_status = "[green][OK][/green]" if report.crc_valid else "[red][FAIL][/red]"
+        table.add_row("CRC Validation", crc_status)
+    else:
+        table.add_row("CRC Validation", "[dim]N/A[/dim]")
+
+    if report.watermark_valid is not None:
+        wm_status = "[green][OK][/green]" if report.watermark_valid else "[yellow][WARN][/yellow]"
+        table.add_row("Watermark Validation", wm_status)
+    else:
+        table.add_row("Watermark Validation", "[dim]Not present[/dim]")
+
+    console.print(table)
+    console.print()
+
+    # Risk factors
+    if report.factors:
+        console.print("[bold]Risk Factors:[/bold]")
+        for factor in report.factors:
+            # Color-code the factor based on status marker
+            if "[OK]" in factor:
+                console.print(f"  [green]{factor}[/green]")
+            elif "[FAIL]" in factor or "[CRITICAL]" in factor:
+                console.print(f"  [red]{factor}[/red]")
+            elif "[WARN]" in factor:
+                console.print(f"  [yellow]{factor}[/yellow]")
+            else:
+                console.print(f"  {factor}")
+        console.print()
+
+    # Failed rules (if verbose or any exist)
+    if report.failed_rules and (verbose > 0 or len(report.failed_rules) <= 5):
+        table = Table(title="Triggered Rules", show_header=True, header_style="bold red")
+        table.add_column("Rule ID", style="cyan")
+        table.add_column("Severity")
+        table.add_column("Description")
+
+        for rule in report.failed_rules[:10]:  # Limit to 10
+            severity = rule.get("severity", "WARNING")
+            severity_color = "red" if severity == "CRITICAL" else "yellow"
+            table.add_row(
+                rule.get("rule_id", "unknown"),
+                f"[{severity_color}]{severity}[/{severity_color}]",
+                rule.get("message", "")[:50] + "..." if len(rule.get("message", "")) > 50 else rule.get("message", "")
+            )
+
+        console.print(table)
+        console.print()
+
+    # Anomalies (if verbose)
+    if verbose > 0 and report.anomalies:
+        table = Table(title="Detected Anomalies", show_header=True, header_style="bold yellow")
+        table.add_column("Type", style="cyan")
+        table.add_column("Severity")
+        table.add_column("Description")
+
+        for anomaly in report.anomalies[:10]:
+            severity_color = risk_colors.get(anomaly.severity.value, "white")
+            table.add_row(
+                anomaly.anomaly_type.value,
+                f"[{severity_color}]{anomaly.severity.value}[/{severity_color}]",
+                anomaly.description[:50] + "..." if len(anomaly.description) > 50 else anomaly.description
+            )
+
+        console.print(table)
+        console.print()
+
+    # Recommendation
+    console.print(Panel(
+        f"[dim]{report.recommendation}[/dim]",
+        title="Recommendation",
+        style="blue",
+    ))
 
 
-@main.command(name="check-watermark")
-@click.argument("filepath", type=click.Path(exists=True))
-def check_watermark(filepath):
-    """Check TrustedDWG watermark in a DWG file."""
-    console.print(f"[bold blue]Watermark Check:[/bold blue] {filepath}")
-    # TODO: Implement watermark check
-    console.print("[yellow]Watermark check module not yet implemented[/yellow]")
+@main.command(name="list-rules")
+@click.option("--format", "output_format", type=click.Choice(["table", "json"]), default="table")
+def list_rules(output_format: str):
+    """List all built-in tampering detection rules.
+
+    Displays the 12 built-in rules used for tampering detection.
+    """
+    console.print(Panel("[bold]Built-in Tampering Rules[/bold]", style="blue"))
+
+    engine = TamperingRuleEngine()
+    rules = engine.get_builtin_rules()
+
+    if output_format == "json":
+        rules_list = [
+            {
+                "id": r.rule_id,
+                "name": r.name,
+                "description": r.description,
+                "severity": r.severity.value,
+                "enabled": r.enabled,
+            }
+            for r in rules
+        ]
+        console.print(json.dumps(rules_list, indent=2))
+    else:
+        table = Table(show_header=True, header_style="bold")
+        table.add_column("Rule ID", style="cyan")
+        table.add_column("Name")
+        table.add_column("Severity")
+        table.add_column("Enabled")
+
+        severity_colors = {
+            "INFO": "blue",
+            "WARNING": "yellow",
+            "CRITICAL": "red",
+        }
+
+        for rule in rules:
+            severity_color = severity_colors.get(rule.severity.value, "white")
+            enabled = "[green][OK][/green]" if rule.enabled else "[dim]No[/dim]"
+            table.add_row(
+                rule.rule_id,
+                rule.name,
+                f"[{severity_color}]{rule.severity.value}[/{severity_color}]",
+                enabled
+            )
+
+        console.print(table)
+        console.print()
+        console.print(f"[dim]Total: {len(rules)} built-in rules[/dim]")
 
 
 @main.command()
 @click.argument("file1", type=click.Path(exists=True))
 @click.argument("file2", type=click.Path(exists=True))
 @click.option("--report", help="Output report file path")
-def compare(file1, file2, report):
-    """Compare two DWG files for differences."""
-    console.print(f"[bold blue]Comparing:[/bold blue]")
+def compare(file1: str, file2: str, report: str):
+    """Compare two DWG files for differences.
+
+    FILE1 and FILE2 are the paths to the DWG files to compare.
+    """
+    console.print("[bold blue]Comparing:[/bold blue]")
     console.print(f"  File 1: {file1}")
     console.print(f"  File 2: {file2}")
-    # TODO: Implement comparison
-    console.print("[yellow]Compare module not yet implemented[/yellow]")
+    # TODO: Implement comparison in future phase
+    console.print("[yellow]Compare module will be implemented in a future phase[/yellow]")
 
 
 @main.command()
 @click.argument("directory", type=click.Path(exists=True))
 @click.option("--recursive", is_flag=True, help="Process subdirectories")
 @click.option("--output-dir", help="Output directory for reports")
-def batch(directory, recursive, output_dir):
-    """Batch analyze multiple DWG files in a directory."""
+def batch(directory: str, recursive: bool, output_dir: str):
+    """Batch analyze multiple DWG files in a directory.
+
+    DIRECTORY is the path to the directory containing DWG files.
+    """
     console.print(f"[bold blue]Batch Analysis:[/bold blue] {directory}")
     console.print(f"[dim]Recursive: {recursive}[/dim]")
-    # TODO: Implement batch processing
-    console.print("[yellow]Batch module not yet implemented[/yellow]")
+    # TODO: Implement batch processing in Phase 3
+    console.print("[yellow]Batch module will be implemented in Phase 3[/yellow]")
+
+
+@main.command()
+def info():
+    """Display tool information and supported versions."""
+    console.print(Panel(
+        f"[bold]DWG Forensic Tool v{__version__}[/bold]\n\n"
+        "Forensic analysis toolkit for AutoCAD DWG files\n\n"
+        "[bold]Supported DWG Versions:[/bold]\n"
+        "  [->] AC1024: AutoCAD 2010-2012\n"
+        "  [->] AC1027: AutoCAD 2013-2017\n"
+        "  [->] AC1032: AutoCAD 2018+\n\n"
+        "[bold]Phase 1 - Forensic Analysis:[/bold]\n"
+        "  [*] Header parsing and version detection\n"
+        "  [*] CRC32 integrity validation\n"
+        "  [*] TrustedDWG watermark detection\n"
+        "  [*] Risk assessment and anomaly detection\n"
+        "  [*] JSON export for reporting\n\n"
+        "[bold]Phase 2 - Chain of Custody:[/bold]\n"
+        "  [*] Secure evidence intake with multi-hash verification\n"
+        "  [*] Chain of custody tracking and event logging\n"
+        "  [*] File write-protection management\n"
+        "  [*] Forensic-grade audit logging\n"
+        "  [*] Integrity verification at any time\n\n"
+        "[bold]Phase 3 - Tampering Detection:[/bold]\n"
+        "  [*] 12 built-in tampering detection rules\n"
+        "  [*] Timestamp anomaly detection\n"
+        "  [*] Version consistency checks\n"
+        "  [*] Structural integrity analysis\n"
+        "  [*] Custom rules via YAML/JSON\n"
+        "  [*] Weighted risk scoring algorithm\n\n"
+        "[dim]Built for litigation support[/dim]",
+        title="About",
+        style="blue",
+    ))
 
 
 if __name__ == "__main__":
