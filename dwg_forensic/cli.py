@@ -15,6 +15,9 @@ from dwg_forensic.core.custody import CustodyChain, EventType, IntegrityError
 from dwg_forensic.core.file_guard import FileGuard
 from dwg_forensic.core.intake import FileIntake
 from dwg_forensic.output.json_export import JSONExporter
+from dwg_forensic.output.pdf_report import generate_pdf_report
+from dwg_forensic.output.expert_witness import generate_expert_witness_document
+from dwg_forensic.output.timeline import generate_timeline
 from dwg_forensic.parsers import CRCValidator, HeaderParser, WatermarkDetector
 from dwg_forensic.utils.audit import AuditLogger, get_audit_logger
 from dwg_forensic.utils.exceptions import DWGForensicError, IntakeError, UnsupportedVersionError
@@ -798,6 +801,216 @@ def batch(directory: str, recursive: bool, output_dir: str):
 
 
 @main.command()
+@click.argument("filepath", type=click.Path(exists=True))
+@click.option("-o", "--output", required=True, help="Output PDF file path")
+@click.option("--case-id", help="Case identifier for the report")
+@click.option("--examiner", default="Digital Forensics Examiner", help="Examiner name")
+@click.option("--organization", help="Organization name")
+@click.option("--include-hex", is_flag=True, help="Include hex dump appendix")
+@click.option("-v", "--verbose", count=True, help="Verbosity level")
+def report(filepath: str, output: str, case_id: str, examiner: str,
+           organization: str, include_hex: bool, verbose: int):
+    """Generate a PDF forensic report for a DWG file.
+
+    FILEPATH is the path to the DWG file to analyze.
+
+    This command performs full forensic analysis and generates a
+    litigation-ready PDF report including:
+    - Cover page with file identification
+    - Executive summary (non-technical)
+    - Technical findings
+    - Metadata analysis
+    - Anomaly and tampering detection results
+    - Hash attestation
+    - Optional hex dump appendix
+    """
+    file_path = Path(filepath)
+    output_path = Path(output)
+
+    console.print(Panel(
+        f"[bold]PDF Report Generation[/bold]\n"
+        f"File: {file_path.name}\n"
+        f"Output: {output_path}",
+        style="blue"
+    ))
+
+    try:
+        # Run analysis
+        print_status("[INFO]", "Running forensic analysis...")
+        analyzer = ForensicAnalyzer()
+        result = analyzer.analyze(file_path)
+
+        # Generate report
+        print_status("[INFO]", "Generating PDF report...")
+        report_path = generate_pdf_report(
+            analysis=result,
+            output_path=output_path,
+            case_id=case_id,
+            examiner_name=examiner,
+            organization=organization,
+            include_hex_dump=include_hex,
+        )
+
+        print_status("[OK]", f"Report generated: {report_path}")
+
+        # Display summary
+        table = Table(title="Report Summary", show_header=True, header_style="bold")
+        table.add_column("Property", style="cyan")
+        table.add_column("Value")
+        table.add_row("File Analyzed", result.file_info.filename)
+        table.add_row("Risk Level", result.risk_assessment.overall_risk.value)
+        table.add_row("CRC Valid", "[OK]" if result.crc_validation.is_valid else "[FAIL]")
+        table.add_row("Watermark", "[OK]" if result.trusted_dwg.watermark_valid else "[WARN]")
+        table.add_row("Report Path", str(report_path))
+        console.print(table)
+
+    except UnsupportedVersionError as e:
+        print_status("[ERROR]", f"Unsupported version: {e.version}")
+        sys.exit(1)
+    except DWGForensicError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+    except Exception as e:
+        print_status("[ERROR]", f"Report generation failed: {e}")
+        if verbose > 0:
+            console.print_exception()
+        sys.exit(1)
+
+
+@main.command(name="expert-witness")
+@click.argument("filepath", type=click.Path(exists=True))
+@click.option("-o", "--output", required=True, help="Output PDF file path")
+@click.option("--case-id", help="Case identifier")
+@click.option("--expert-name", default="Digital Forensics Expert", help="Expert witness name")
+@click.option("--credentials", help="Expert credentials/certifications")
+@click.option("--company", help="Company or organization name")
+@click.option("-v", "--verbose", count=True, help="Verbosity level")
+def expert_witness(filepath: str, output: str, case_id: str, expert_name: str,
+                   credentials: str, company: str, verbose: int):
+    """Generate expert witness methodology documentation.
+
+    FILEPATH is the path to the DWG file to analyze.
+
+    This command generates professional documentation suitable for:
+    - Court submission
+    - Deposition support
+    - Expert testimony preparation
+    - Methodology documentation
+
+    Implements FR-REPORT-003 from the PRD.
+    """
+    file_path = Path(filepath)
+    output_path = Path(output)
+
+    console.print(Panel(
+        f"[bold]Expert Witness Document[/bold]\n"
+        f"File: {file_path.name}\n"
+        f"Expert: {expert_name}",
+        style="blue"
+    ))
+
+    try:
+        # Run analysis
+        print_status("[INFO]", "Running forensic analysis...")
+        analyzer = ForensicAnalyzer()
+        result = analyzer.analyze(file_path)
+
+        # Generate document
+        print_status("[INFO]", "Generating expert witness document...")
+        doc_path = generate_expert_witness_document(
+            analysis=result,
+            output_path=output_path,
+            case_id=case_id,
+            expert_name=expert_name,
+            expert_credentials=credentials,
+            company_name=company,
+        )
+
+        print_status("[OK]", f"Document generated: {doc_path}")
+
+        # Display info
+        console.print()
+        console.print("[bold]Document Contents:[/bold]")
+        console.print("  [*] Methodology description")
+        console.print("  [*] Tool information and dependencies")
+        console.print("  [*] Reproducibility instructions")
+        console.print("  [*] Limitations statement")
+        console.print("  [*] Opinion support framework")
+        console.print("  [*] Expert attestation section")
+
+    except UnsupportedVersionError as e:
+        print_status("[ERROR]", f"Unsupported version: {e.version}")
+        sys.exit(1)
+    except DWGForensicError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+    except Exception as e:
+        print_status("[ERROR]", f"Document generation failed: {e}")
+        if verbose > 0:
+            console.print_exception()
+        sys.exit(1)
+
+
+@main.command()
+@click.argument("filepath", type=click.Path(exists=True))
+@click.option("-o", "--output", help="Output file path (for SVG format)")
+@click.option("-f", "--format", "output_format", type=click.Choice(["ascii", "svg"]), default="ascii",
+              help="Output format")
+@click.option("-v", "--verbose", count=True, help="Verbosity level")
+def timeline(filepath: str, output: str, output_format: str, verbose: int):
+    """Generate a timeline visualization of file events.
+
+    FILEPATH is the path to the DWG file to analyze.
+
+    Extracts timestamp events from the file and generates a timeline
+    visualization showing creation, modification, and analysis events.
+
+    Supports ASCII (text) and SVG (graphical) output formats.
+    """
+    file_path = Path(filepath)
+    output_path = Path(output) if output else None
+
+    console.print(Panel(
+        f"[bold]Timeline Visualization[/bold]\n"
+        f"File: {file_path.name}\n"
+        f"Format: {output_format.upper()}",
+        style="blue"
+    ))
+
+    try:
+        # Run analysis
+        print_status("[INFO]", "Running forensic analysis...")
+        analyzer = ForensicAnalyzer()
+        result = analyzer.analyze(file_path)
+
+        # Generate timeline
+        print_status("[INFO]", "Generating timeline...")
+        timeline_output = generate_timeline(
+            analysis=result,
+            output_path=output_path,
+            format=output_format,
+        )
+
+        if output_format == "svg" and output_path:
+            print_status("[OK]", f"SVG timeline saved: {output_path}")
+        else:
+            console.print()
+            console.print(timeline_output)
+
+    except UnsupportedVersionError as e:
+        print_status("[ERROR]", f"Unsupported version: {e.version}")
+        sys.exit(1)
+    except DWGForensicError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+    except Exception as e:
+        print_status("[ERROR]", f"Timeline generation failed: {e}")
+        if verbose > 0:
+            console.print_exception()
+        sys.exit(1)
+
+
+@main.command()
 def info():
     """Display tool information and supported versions."""
     console.print(Panel(
@@ -826,6 +1039,13 @@ def info():
         "  [*] Structural integrity analysis\n"
         "  [*] Custom rules via YAML/JSON\n"
         "  [*] Weighted risk scoring algorithm\n\n"
+        "[bold]Phase 4 - Reporting:[/bold]\n"
+        "  [*] Litigation-ready PDF forensic reports\n"
+        "  [*] Executive summary generator\n"
+        "  [*] Expert witness methodology documentation\n"
+        "  [*] Timeline visualization (ASCII and SVG)\n"
+        "  [*] Hex dump formatter for evidence\n"
+        "  [*] Hash attestation and chain of custody\n\n"
         "[dim]Built for litigation support[/dim]",
         title="About",
         style="blue",
