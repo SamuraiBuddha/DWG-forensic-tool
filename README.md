@@ -2,11 +2,11 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![LibreDWG](https://img.shields.io/badge/LibreDWG-0.13+-green.svg)](https://www.gnu.org/software/libredwg/)
+[![CI](https://github.com/SamuraiBuddha/DWG-forensic-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/SamuraiBuddha/DWG-forensic-tool/actions/workflows/ci.yml)
 
 **Open-source forensic analysis toolkit for AutoCAD DWG files designed for litigation support, chain of custody documentation, and tampering detection.**
 
-## 🎯 Purpose
+## Purpose
 
 DWG Forensic Tool fills a critical gap in digital forensics: there is no existing turnkey solution for forensic analysis of AutoCAD DWG files. While tools like EnCase and FTK handle general forensics, they lack deep DWG-specific analysis capabilities. This tool provides:
 
@@ -15,7 +15,7 @@ DWG Forensic Tool fills a critical gap in digital forensics: there is no existin
 - **Metadata Extraction**: Complete DWGPROPS, application fingerprints, edit history
 - **Litigation-Ready Reports**: PDF reports with hash attestation for court submission
 
-## 🔍 What It Detects
+## What It Detects
 
 | Indicator | Detection Method | Forensic Value |
 |-----------|------------------|----------------|
@@ -26,83 +26,71 @@ DWG Forensic Tool fills a critical gap in digital forensics: there is no existin
 | Suspicious edit time | Editing time vs date range mismatch | Potential fabrication indicator |
 | Application fingerprint | ACAD ID, build number analysis | Identifies exact software used |
 
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    DWG Forensic Analyzer                         │
-├─────────────────────────────────────────────────────────────────┤
-│  INPUT LAYER                                                     │
-│  ├── dwg_intake.py      - File ingestion with SHA-256           │
-│  ├── custody_chain.py   - Audit logging & timestamps            │
-│  └── file_guard.py      - Write-protection verification         │
-├─────────────────────────────────────────────────────────────────┤
-│  PARSING LAYER                                                   │
-│  ├── header_parser.py   - Binary header extraction              │
-│  ├── crc_validator.py   - CRC validation across sections        │
-│  ├── watermark_detector.py - TrustedDWG detection               │
-│  └── metadata_extractor.py - DWGPROPS extraction                │
-├─────────────────────────────────────────────────────────────────┤
-│  ANALYSIS LAYER                                                  │
-│  ├── anomaly_detector.py - Version/timestamp anomalies          │
-│  ├── tampering_rules.py  - Rule engine for flagging             │
-│  ├── fingerprint_analyzer.py - Application identification       │
-│  └── timeline_builder.py - Edit history reconstruction          │
-├─────────────────────────────────────────────────────────────────┤
-│  OUTPUT LAYER                                                    │
-│  ├── report_generator.py - PDF forensic reports                 │
-│  ├── json_exporter.py    - Structured data export               │
-│  ├── timeline_viz.py     - Visual timeline generation           │
-│  └── witness_summary.py  - Expert witness documentation         │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## 🚀 Quick Start
+## Installation
 
 ```bash
 # Clone repository
 git clone https://github.com/SamuraiBuddha/DWG-forensic-tool.git
 cd DWG-forensic-tool
 
-# Install dependencies
-pip install -r requirements.txt
+# Install package with dependencies
+pip install -e .
 
-# Install LibreDWG (Ubuntu/Debian)
-sudo apt-get install libredwg-tools
-
-# Run forensic analysis
-python -m dwg_forensic analyze /path/to/suspect.dwg --output report.pdf
-
-# Chain of custody intake
-python -m dwg_forensic intake /path/to/evidence.dwg --case-id "2025-CV-1234"
+# Or install with development dependencies
+pip install -e ".[dev]"
 ```
 
-## 📋 CLI Commands
+## Quick Start
 
 ```bash
-# Full forensic analysis
-dwg-forensic analyze <file.dwg> [--output report.pdf] [--json] [--verbose]
+# Full forensic analysis (table output)
+dwg-forensic analyze /path/to/file.dwg
 
-# Chain of custody intake (creates audit record)
-dwg-forensic intake <file.dwg> --case-id <id> --examiner <name>
+# Full forensic analysis (JSON output)
+dwg-forensic analyze /path/to/file.dwg -f json
 
-# Quick metadata extraction
-dwg-forensic metadata <file.dwg> [--format json|yaml|table]
+# Generate PDF forensic report
+dwg-forensic report /path/to/file.dwg -o report.pdf --case-id "2025-CV-1234"
+
+# Generate expert witness methodology document
+dwg-forensic expert-witness /path/to/file.dwg -o witness.pdf --expert-name "Dr. Smith"
+
+# Generate visual timeline
+dwg-forensic timeline /path/to/file.dwg -o timeline.svg
+
+# Run tampering analysis
+dwg-forensic tampering /path/to/file.dwg
 
 # CRC validation only
-dwg-forensic validate-crc <file.dwg>
+dwg-forensic validate-crc /path/to/file.dwg
 
-# TrustedDWG check
-dwg-forensic check-watermark <file.dwg>
+# TrustedDWG watermark check
+dwg-forensic check-watermark /path/to/file.dwg
 
-# Compare two versions of a file
-dwg-forensic compare <file1.dwg> <file2.dwg> --report diff.pdf
+# Extract metadata
+dwg-forensic metadata /path/to/file.dwg
 
-# Batch analysis
-dwg-forensic batch <directory> --recursive --output-dir reports/
+# Chain of custody intake
+dwg-forensic intake /path/to/evidence.dwg --case-id "2025-CV-1234" --examiner "John Doe"
 ```
 
-## 📊 Sample Output
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `analyze` | Full forensic analysis with CRC, watermark, and risk assessment |
+| `report` | Generate litigation-ready PDF forensic report |
+| `expert-witness` | Generate expert witness methodology document |
+| `timeline` | Generate visual timeline of file events |
+| `tampering` | Run tampering detection rule engine |
+| `validate-crc` | Validate header CRC checksum |
+| `check-watermark` | Check TrustedDWG watermark presence and validity |
+| `metadata` | Extract and display file metadata |
+| `intake` | Securely intake evidence file with chain of custody |
+| `list-rules` | List all tampering detection rules |
+| `info` | Show tool version and system information |
+
+## Sample Output
 
 ```json
 {
@@ -113,10 +101,10 @@ dwg-forensic batch <directory> --recursive --output-dir reports/
     "intake_timestamp": "2025-01-05T14:32:00Z"
   },
   "header_analysis": {
-    "version_string": "AC1027",
-    "version_name": "AutoCAD 2013-2017",
+    "version_string": "AC1032",
+    "version_name": "AutoCAD 2018-2024",
     "maintenance_version": 3,
-    "codepage": "ANSI_1252"
+    "codepage": 30
   },
   "trusted_dwg": {
     "watermark_present": true,
@@ -126,29 +114,97 @@ dwg-forensic batch <directory> --recursive --output-dir reports/
   "crc_validation": {
     "header_crc_stored": "0x4A2B3C1D",
     "header_crc_calculated": "0x4A2B3C1D",
-    "crc_valid": true
+    "is_valid": true
   },
-  "metadata": {
-    "title": "Building A - Floor 3",
-    "author": "John Smith",
-    "last_saved_by": "Jane Doe",
-    "created_date": "2024-03-15T09:00:00Z",
-    "modified_date": "2024-11-20T16:45:00Z",
-    "revision_number": 47,
-    "total_editing_time_hours": 156.5
-  },
-  "application_fingerprint": {
-    "created_by": "AutoCAD 2024",
-    "application_id": "ACAD0001427",
-    "build_number": "U.51.0.0"
-  },
-  "anomalies": [],
-  "tampering_indicators": [],
-  "risk_assessment": "LOW"
+  "risk_assessment": {
+    "overall_risk": "LOW",
+    "tampering_score": 0.0,
+    "risk_factors": []
+  }
 }
 ```
 
-## 🔬 Technical Details
+## Supported DWG Versions
+
+| Version | Code | AutoCAD Version | Support Level |
+|---------|------|-----------------|---------------|
+| R18 | AC1024 | AutoCAD 2010-2012 | Full |
+| R21 | AC1027 | AutoCAD 2013-2017 | Full |
+| R24 | AC1032 | AutoCAD 2018-2024 | Full |
+
+**Note:** Earlier versions (R13-R14, AC1012-AC1014) can be read but have limited analysis capabilities.
+
+## Project Structure
+
+```
+DWG-forensic-tool/
+|-- dwg_forensic/
+|   |-- __init__.py
+|   |-- cli.py                 # Command-line interface
+|   |-- models.py              # Data models (Pydantic)
+|   |-- core/
+|   |   |-- analyzer.py        # Main forensic analyzer
+|   |   |-- intake.py          # Evidence intake
+|   |   |-- custody.py         # Chain of custody
+|   |   |-- file_guard.py      # Write protection
+|   |   +-- database.py        # SQLite database
+|   |-- parsers/
+|   |   |-- header.py          # Header parsing
+|   |   |-- crc.py             # CRC validation
+|   |   +-- watermark.py       # TrustedDWG detection
+|   |-- analysis/
+|   |   |-- anomaly.py         # Anomaly detection
+|   |   |-- rules.py           # Tampering rules engine
+|   |   +-- risk.py            # Risk scoring
+|   |-- output/
+|   |   |-- pdf_report.py      # PDF generation
+|   |   |-- expert_witness.py  # Expert witness docs
+|   |   |-- json_export.py     # JSON export
+|   |   |-- hex_dump.py        # Hex dump formatting
+|   |   +-- timeline.py        # Timeline visualization
+|   +-- utils/
+|       |-- audit.py           # Forensic audit logging
+|       +-- exceptions.py      # Custom exceptions
+|-- tests/                     # Comprehensive test suite
+|-- docs/
+|   +-- PRD.md                 # Product Requirements Document
+|-- pyproject.toml
++-- README.md
+```
+
+## Testing
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run with coverage report
+pytest tests/ --cov=dwg_forensic --cov-report=html
+
+# Run specific test module
+pytest tests/test_analyzer.py -v
+
+# Run integration tests only
+pytest tests/test_integration.py -v
+```
+
+## Development
+
+```bash
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run linter
+ruff check dwg_forensic/
+
+# Format code
+ruff format dwg_forensic/
+
+# Type checking
+mypy dwg_forensic/
+```
+
+## Technical Details
 
 ### DWG File Structure (Forensic Perspective)
 
@@ -161,97 +217,30 @@ dwg-forensic batch <directory> --recursive --output-dir reports/
 | 0x13 | 2 | DWGCODEPAGE | Language/encoding |
 | 0x68 | 4 | CRC32 | Integrity verification |
 
-### Supported DWG Versions
+### Tampering Detection Rules
 
-- ✅ R13 (AC1012) - Full support
-- ✅ R14 (AC1014) - Full support
-- ✅ R2000 (AC1015) - Full support
-- ✅ R2004 (AC1018) - Full support
-- ✅ R2007 (AC1021) - Full support
-- ✅ R2010 (AC1024) - Full support
-- ✅ R2013 (AC1027) - Full support
-- ✅ R2018 (AC1032) - Full support
-- ⚠️ R2021+ - Partial (read-only analysis)
+The tool includes 12 built-in tampering detection rules:
 
-## 📁 Project Structure
+- `TAMPER-001`: Header CRC Mismatch
+- `TAMPER-002`: Missing TrustedDWG Watermark
+- `TAMPER-003`: Invalid TrustedDWG Watermark
+- `TAMPER-004`: Unsupported DWG Version
+- `TAMPER-005`: Timestamp Anomaly
+- `TAMPER-006`: Suspicious File Size
+- `TAMPER-007`: Version String Anomaly
+- And more...
 
-```
-DWG-forensic-tool/
-├── dwg_forensic/
-│   ├── __init__.py
-│   ├── cli.py                 # Command-line interface
-│   ├── core/
-│   │   ├── __init__.py
-│   │   ├── intake.py          # File ingestion
-│   │   ├── custody.py         # Chain of custody
-│   │   └── file_guard.py      # Write protection
-│   ├── parsers/
-│   │   ├── __init__.py
-│   │   ├── header.py          # Header parsing
-│   │   ├── crc.py             # CRC validation
-│   │   ├── watermark.py       # TrustedDWG detection
-│   │   └── metadata.py        # DWGPROPS extraction
-│   ├── analysis/
-│   │   ├── __init__.py
-│   │   ├── anomaly.py         # Anomaly detection
-│   │   ├── tampering.py       # Tampering rules
-│   │   ├── fingerprint.py     # App identification
-│   │   └── timeline.py        # Edit history
-│   ├── output/
-│   │   ├── __init__.py
-│   │   ├── report.py          # PDF generation
-│   │   ├── json_export.py     # JSON export
-│   │   └── visualization.py   # Timeline viz
-│   └── utils/
-│       ├── __init__.py
-│       ├── hashing.py         # SHA-256 utilities
-│       └── logging.py         # Audit logging
-├── tests/
-│   ├── __init__.py
-│   ├── test_header_parser.py
-│   ├── test_crc_validator.py
-│   ├── test_watermark.py
-│   ├── test_tampering_rules.py
-│   └── fixtures/              # Test DWG files
-├── docs/
-│   ├── PRD.md                 # Product Requirements
-│   ├── ARCHITECTURE.md
-│   └── FORENSIC_GUIDE.md      # For expert witnesses
-├── requirements.txt
-├── setup.py
-├── pyproject.toml
-└── README.md
-```
+## License
 
-## 🧪 Testing
+GPL v3 - See [LICENSE](LICENSE) for details.
 
-```bash
-# Run all tests
-pytest tests/ -v
-
-# Run with coverage
-pytest tests/ --cov=dwg_forensic --cov-report=html
-
-# Test specific module
-pytest tests/test_crc_validator.py -v
-```
-
-## 🤝 Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
-
-## 📜 License
-
-GPL v3 - This project uses LibreDWG which is GPL-licensed.
-
-## ⚠️ Legal Disclaimer
+## Legal Disclaimer
 
 This tool is designed to assist forensic examiners and legal professionals. Results should be interpreted by qualified experts. The tool does not make legal determinations about document authenticity.
 
-## 🔗 Related Resources
+## Related Resources
 
 - [Open Design Specification for .dwg files](https://www.opendesign.com/files/guestdownloads/OpenDesign_Specification_for_.dwg_files.pdf)
-- [GNU LibreDWG](https://www.gnu.org/software/libredwg/)
 - [Autodesk TrustedDWG Documentation](https://www.autodesk.com/blogs/autocad/trusteddwg-exploring-features-benefits-autocad/)
 
 ---

@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from dwg_forensic.models import (
     Anomaly,
@@ -54,9 +54,7 @@ class TamperingReport(BaseModel):
     crc_valid: Optional[bool] = None
     watermark_valid: Optional[bool] = None
 
-    class Config:
-        """Pydantic configuration."""
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class RiskScorer:

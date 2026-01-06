@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RuleSeverity(str, Enum):
@@ -43,6 +43,8 @@ class RuleCondition(BaseModel):
 
 class TamperingRule(BaseModel):
     """Tampering detection rule specification."""
+    model_config = ConfigDict(populate_by_name=True)
+
     rule_id: str = Field(..., alias="id", description="Rule ID (e.g., TAMPER-001)")
     name: str = Field(..., description="Human-readable rule name")
     severity: RuleSeverity = Field(..., description="Rule severity level")
@@ -54,9 +56,6 @@ class TamperingRule(BaseModel):
     message: Optional[str] = Field(
         default=None, description="Custom failure message"
     )
-
-    class Config:
-        populate_by_name = True
 
 
 class RuleResult(BaseModel):

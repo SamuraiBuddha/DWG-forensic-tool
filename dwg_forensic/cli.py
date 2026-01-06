@@ -847,8 +847,8 @@ def report(filepath: str, output: str, case_id: str, examiner: str,
             output_path=output_path,
             case_id=case_id,
             examiner_name=examiner,
-            organization=organization,
-            include_hex_dump=include_hex,
+            company_name=organization,
+            include_hex_dumps=include_hex,
         )
 
         print_status("[OK]", f"Report generated: {report_path}")

@@ -276,3 +276,21 @@ class CustodyChain:
                 sha256_hash.update(chunk)
 
         return sha256_hash.hexdigest()
+
+    def close(self) -> None:
+        """Close database connections and release resources.
+
+        This is important on Windows where file handles must be
+        explicitly closed to allow file deletion.
+        """
+        if hasattr(self, '_engine') and self._engine:
+            self._engine.dispose()
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - close connections."""
+        self.close()
+        return False

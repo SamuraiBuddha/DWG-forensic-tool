@@ -88,6 +88,29 @@ class AuditLogger:
 
         return logger
 
+    def close(self) -> None:
+        """Close all file handlers to release file locks.
+
+        This is important on Windows where file handles must be
+        explicitly closed to allow file deletion.
+        """
+        for handler in self.json_logger.handlers[:]:
+            handler.close()
+            self.json_logger.removeHandler(handler)
+
+        for handler in self.text_logger.handlers[:]:
+            handler.close()
+            self.text_logger.removeHandler(handler)
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - close handlers."""
+        self.close()
+        return False
+
     def _get_system_info(self) -> dict:
         """Get current system information for audit entry."""
         try:

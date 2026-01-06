@@ -40,14 +40,14 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.0.0",
-    "black>=24.0.0",
-    "isort>=5.12.0",
+    "ruff>=0.4.0",
     "mypy>=1.8.0",
     "pre-commit>=3.6.0",
 ]
 
 [project.scripts]
 dwg-forensic = "dwg_forensic.cli:main"
+dwg-forensic-gui = "dwg_forensic.gui:main"
 
 [project.urls]
 Homepage = "https://github.com/SamuraiBuddha/DWG-forensic-tool"
@@ -55,13 +55,27 @@ Documentation = "https://github.com/SamuraiBuddha/DWG-forensic-tool#readme"
 Repository = "https://github.com/SamuraiBuddha/DWG-forensic-tool.git"
 Issues = "https://github.com/SamuraiBuddha/DWG-forensic-tool/issues"
 
-[tool.black]
+[tool.ruff]
 line-length = 100
-target-version = ["py310", "py311", "py312"]
+target-version = "py310"
 
-[tool.isort]
-profile = "black"
-line_length = 100
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # Pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long - handled by formatter
+    "B008",  # function calls in default arguments
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["dwg_forensic"]
 
 [tool.mypy]
 python_version = "3.10"
