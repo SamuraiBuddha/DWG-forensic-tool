@@ -207,7 +207,8 @@ class ForensicGUI:
                 self.current_analysis = self.analyzer.analyze(self.current_file)
                 self.root.after(0, self._display_results)
             except Exception as e:
-                self.root.after(0, lambda: self._show_error(str(e)))
+                error_msg = str(e)
+                self.root.after(0, lambda msg=error_msg: self._show_error(msg))
 
         thread = threading.Thread(target=analyze, daemon=True)
         thread.start()
