@@ -499,12 +499,30 @@ class TestEdgeCasesAndErrorHandling:
 
         assert result.exit_code != 0
 
-    def test_handles_unsupported_version(self, unsupported_dwg_ac1015):
+    def test_handles_legacy_version(self, unsupported_dwg_ac1015):
         """
-        Test handling of unsupported DWG versions.
+        Test handling of legacy DWG versions with limited support.
+
+        AC1015 (AutoCAD 2000) is now analyzable with limited support.
         """
         runner = CliRunner()
         result = runner.invoke(main, ["analyze", str(unsupported_dwg_ac1015)])
+
+        # AC1015 is now supported with limited analysis
+        assert result.exit_code == 0
+
+    def test_handles_truly_unsupported_version(self, temp_dir):
+        """
+        Test handling of truly unsupported DWG versions (R10/R11).
+        """
+        # Create an AC1009 (R11-R12) file which is truly unsupported
+        dwg_path = temp_dir / "old_r11.dwg"
+        header = bytearray(32)
+        header[0:6] = b"AC1009"
+        dwg_path.write_bytes(bytes(header))
+
+        runner = CliRunner()
+        result = runner.invoke(main, ["analyze", str(dwg_path)])
 
         assert result.exit_code != 0
         assert "unsupported" in result.output.lower()

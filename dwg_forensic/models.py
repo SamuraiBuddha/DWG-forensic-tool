@@ -28,6 +28,11 @@ class AnomalyType(str, Enum):
     WATERMARK_INVALID = "WATERMARK_INVALID"
     SUSPICIOUS_EDIT_TIME = "SUSPICIOUS_EDIT_TIME"
     OTHER = "OTHER"
+    # Advanced timestamp manipulation detection
+    TDINDWG_EXCEEDS_SPAN = "TDINDWG_EXCEEDS_SPAN"
+    VERSION_ANACHRONISM = "VERSION_ANACHRONISM"
+    TIMEZONE_DISCREPANCY = "TIMEZONE_DISCREPANCY"
+    TIMESTAMP_PRECISION_ANOMALY = "TIMESTAMP_PRECISION_ANOMALY"
 
 
 class TamperingIndicatorType(str, Enum):
@@ -38,6 +43,11 @@ class TamperingIndicatorType(str, Enum):
     VERSION_INCONSISTENCY = "VERSION_INCONSISTENCY"
     SUSPICIOUS_PATTERN = "SUSPICIOUS_PATTERN"
     OTHER = "OTHER"
+    # Advanced timestamp manipulation indicators
+    TDINDWG_MANIPULATION = "TDINDWG_MANIPULATION"
+    VERSION_ANACHRONISM = "VERSION_ANACHRONISM"
+    TIMEZONE_MANIPULATION = "TIMEZONE_MANIPULATION"
+    EDUCATIONAL_VERSION = "EDUCATIONAL_VERSION"
 
 
 class FileInfo(BaseModel):
@@ -103,7 +113,11 @@ class ApplicationFingerprint(BaseModel):
 
 
 class DWGMetadata(BaseModel):
-    """Metadata extracted from DWG file properties."""
+    """Metadata extracted from DWG file properties.
+
+    Includes Modified Julian Date (MJD) timestamp fields for forensic analysis.
+    MJD format: integer part = days since Nov 17, 1858; decimal = fraction of day.
+    """
     title: Optional[str] = Field(None, description="Document title")
     author: Optional[str] = Field(None, description="Document author")
     last_saved_by: Optional[str] = Field(None, description="User who last saved the file")
@@ -117,6 +131,52 @@ class DWGMetadata(BaseModel):
     )
     comments: Optional[str] = Field(None, description="Document comments")
     keywords: Optional[str] = Field(None, description="Document keywords")
+
+    # MJD Timestamp Fields - Critical for forensic timestamp manipulation detection
+    tdcreate: Optional[float] = Field(
+        None,
+        description="TDCREATE - Local creation date/time as Modified Julian Date"
+    )
+    tdupdate: Optional[float] = Field(
+        None,
+        description="TDUPDATE - Local last-save date/time as Modified Julian Date"
+    )
+    tducreate: Optional[float] = Field(
+        None,
+        description="TDUCREATE - UTC creation time as Modified Julian Date"
+    )
+    tduupdate: Optional[float] = Field(
+        None,
+        description="TDUUPDATE - UTC last-save time as Modified Julian Date"
+    )
+    tdindwg: Optional[float] = Field(
+        None,
+        description="TDINDWG - Cumulative editing time as MJD fraction (read-only, cannot exceed calendar span)"
+    )
+    tdusrtimer: Optional[float] = Field(
+        None,
+        description="TDUSRTIMER - User-resettable timer as MJD fraction"
+    )
+
+    # GUID Fields - File lineage tracking
+    fingerprint_guid: Optional[str] = Field(
+        None,
+        description="FINGERPRINTGUID - Unique file ID that persists across copies and saves"
+    )
+    version_guid: Optional[str] = Field(
+        None,
+        description="VERSIONGUID - Changes with each save operation"
+    )
+
+    # User Identity Artifacts
+    login_name: Optional[str] = Field(
+        None,
+        description="LOGINNAME - Windows username who last saved the file"
+    )
+    educational_watermark: Optional[bool] = Field(
+        None,
+        description="Whether Educational Version watermark is present (student license)"
+    )
 
 
 class Anomaly(BaseModel):

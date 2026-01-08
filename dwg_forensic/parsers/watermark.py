@@ -3,6 +3,9 @@
 This module detects and analyzes Autodesk TrustedDWG watermarks embedded in DWG files.
 TrustedDWG watermarks indicate that a file was created or last modified by genuine
 Autodesk software (AutoCAD or Autodesk-licensed applications).
+
+TrustedDWG was introduced in AutoCAD 2007 (AC1021). Earlier versions do not have
+this watermark feature.
 """
 
 from pathlib import Path
@@ -18,6 +21,9 @@ class WatermarkDetector:
     TrustedDWG watermarks are embedded by Autodesk applications to verify
     file authenticity. The presence of a valid watermark indicates the file
     was created or modified by genuine Autodesk software.
+
+    Note: TrustedDWG was introduced in AutoCAD 2007 (AC1021). Earlier versions
+    (AC1018 and before) do not support this feature.
     """
 
     # Watermark marker bytes that identify the start of a TrustedDWG watermark
@@ -25,6 +31,12 @@ class WatermarkDetector:
 
     # Full watermark prefix for verification
     FULL_WATERMARK_PREFIX = b"Autodesk DWG. This file is a Trusted DWG"
+
+    # Versions that support TrustedDWG (AC1021/AutoCAD 2007 and later)
+    WATERMARK_SUPPORTED_VERSIONS = ["AC1021", "AC1024", "AC1027", "AC1032"]
+
+    # Versions that do NOT support TrustedDWG
+    NO_WATERMARK_VERSIONS = ["AC1012", "AC1014", "AC1015", "AC1018"]
 
     # Known AutoCAD application identifiers and their versions
     KNOWN_APPLICATION_IDS = {
@@ -35,16 +47,44 @@ class WatermarkDetector:
         "ACAD0001951": "AutoCAD 2020",
         "ACAD0001901": "AutoCAD 2019",
         "ACAD0001851": "AutoCAD 2018",
+        "ACAD0001801": "AutoCAD 2017",
+        "ACAD0001751": "AutoCAD 2016",
+        "ACAD0001701": "AutoCAD 2015",
+        "ACAD0001651": "AutoCAD 2014",
+        "ACAD0001601": "AutoCAD 2013",
+        "ACAD0001551": "AutoCAD 2012",
+        "ACAD0001501": "AutoCAD 2011",
+        "ACAD0001451": "AutoCAD 2010",
+        "ACAD0001401": "AutoCAD 2009",
+        "ACAD0001351": "AutoCAD 2008",
+        "ACAD0001301": "AutoCAD 2007",
     }
 
-    def detect(self, file_path: Path) -> TrustedDWGAnalysis:
+    def has_watermark_support(self, version_string: str) -> bool:
+        """Check if a version supports TrustedDWG watermarks.
+
+        Args:
+            version_string: DWG version string (e.g., 'AC1032').
+
+        Returns:
+            True if version supports TrustedDWG watermarks.
+        """
+        return version_string in self.WATERMARK_SUPPORTED_VERSIONS
+
+    def detect(
+        self, file_path: Path, version_string: Optional[str] = None
+    ) -> TrustedDWGAnalysis:
         """Detect and analyze TrustedDWG watermark in a DWG file.
 
         Args:
-            file_path: Path to the DWG file to analyze
+            file_path: Path to the DWG file to analyze.
+            version_string: DWG version string (e.g., 'AC1032'). If None,
+                           will be detected from the file.
 
         Returns:
-            TrustedDWGAnalysis object containing watermark detection results
+            TrustedDWGAnalysis object containing watermark detection results.
+            For versions that don't support TrustedDWG (pre-2007), returns
+            a result indicating the feature is not applicable.
 
         Raises:
             ParseError: If the file cannot be read or parsed
@@ -58,6 +98,21 @@ class WatermarkDetector:
                 data = f.read()
         except IOError as e:
             raise ParseError(f"Failed to read file {file_path}: {e}")
+
+        # Detect version if not provided
+        if version_string is None:
+            version_string = self._detect_version(data)
+
+        # Check if version supports TrustedDWG watermarks
+        if version_string and not self.has_watermark_support(version_string):
+            # Return "not applicable" result for older versions
+            return TrustedDWGAnalysis(
+                watermark_present=False,
+                watermark_text="N/A - TrustedDWG not available for this version",
+                watermark_valid=True,  # Not a failure, just not applicable
+                application_origin=None,
+                watermark_offset=None,
+            )
 
         # Search for watermark marker
         watermark_offset = self._find_watermark(data)
@@ -184,4 +239,25 @@ class WatermarkDetector:
             return None
 
         except Exception:
+            return None
+
+    def _detect_version(self, data: bytes) -> Optional[str]:
+        """Detect DWG version from file data.
+
+        Args:
+            data: Complete file contents as bytes.
+
+        Returns:
+            Version string (e.g., 'AC1032'), or None if detection fails.
+        """
+        if len(data) < 6:
+            return None
+
+        try:
+            version_bytes = data[0:6]
+            version_string = version_bytes.decode("ascii").rstrip("\x00")
+            if version_string.startswith("AC"):
+                return version_string
+            return None
+        except UnicodeDecodeError:
             return None

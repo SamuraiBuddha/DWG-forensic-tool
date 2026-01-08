@@ -236,8 +236,8 @@ class ForensicGUI:
             foreground=risk_colors.get(risk, "black")
         )
 
-        score = analysis.risk_assessment.tampering_score
-        self.risk_details.config(text=f"Tampering Score: {score:.1f}")
+        factors_count = len(analysis.risk_assessment.factors)
+        self.risk_details.config(text=f"Risk Factors: {factors_count}")
 
         # Update findings tree
         for item in self.findings_tree.get_children():
@@ -272,7 +272,7 @@ class ForensicGUI:
         for anomaly in analysis.anomalies:
             self.findings_tree.insert("", tk.END, values=(
                 "[WARN]",
-                f"Anomaly: {anomaly.anomaly_type}",
+                f"Anomaly: {anomaly.anomaly_type.value}",
                 anomaly.description
             ))
 
@@ -280,7 +280,7 @@ class ForensicGUI:
         for indicator in analysis.tampering_indicators:
             self.findings_tree.insert("", tk.END, values=(
                 "[FAIL]",
-                f"Tampering: {indicator.indicator_type}",
+                f"Tampering: {indicator.indicator_type.value}",
                 indicator.description
             ))
 
@@ -342,13 +342,12 @@ class ForensicGUI:
             "RISK ASSESSMENT",
             "-" * 40,
             f"Overall Risk: {analysis.risk_assessment.overall_risk.value}",
-            f"Tampering Score: {analysis.risk_assessment.tampering_score:.2f}",
-            f"Confidence: {analysis.risk_assessment.confidence:.1%}",
+            f"Recommendation: {analysis.risk_assessment.recommendation}",
         ])
 
-        if analysis.risk_assessment.risk_factors:
+        if analysis.risk_assessment.factors:
             lines.append("Risk Factors:")
-            for factor in analysis.risk_assessment.risk_factors:
+            for factor in analysis.risk_assessment.factors:
                 lines.append(f"  - {factor}")
 
         if analysis.anomalies:
@@ -358,7 +357,7 @@ class ForensicGUI:
                 "-" * 40,
             ])
             for a in analysis.anomalies:
-                lines.append(f"  [{a.severity}] {a.anomaly_type}: {a.description}")
+                lines.append(f"  [{a.severity.value}] {a.anomaly_type.value}: {a.description}")
 
         if analysis.tampering_indicators:
             lines.extend([
@@ -367,7 +366,7 @@ class ForensicGUI:
                 "-" * 40,
             ])
             for t in analysis.tampering_indicators:
-                lines.append(f"  [{t.severity}] {t.indicator_type}: {t.description}")
+                lines.append(f"  [{t.confidence:.0%}] {t.indicator_type.value}: {t.description}")
 
         self.details_text.insert(tk.END, "\n".join(lines))
         self.details_text.config(state=tk.DISABLED)

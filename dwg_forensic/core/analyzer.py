@@ -30,7 +30,13 @@ from dwg_forensic.models import (
     TrustedDWGAnalysis,
     DWGMetadata,
 )
-from dwg_forensic.parsers import CRCValidator, HeaderParser, WatermarkDetector
+from dwg_forensic.parsers import (
+    CRCValidator,
+    HeaderParser,
+    WatermarkDetector,
+    TimestampParser,
+    TimestampData,
+)
 from dwg_forensic.utils.exceptions import DWGForensicError
 
 # Phase 3 imports
@@ -40,6 +46,7 @@ from dwg_forensic.analysis import (
     RiskScorer,
     TamperingReport,
 )
+from dwg_forensic.analysis.version_dates import get_version_release_date
 
 
 class ForensicAnalyzer:
@@ -59,6 +66,9 @@ class ForensicAnalyzer:
         self.header_parser = HeaderParser()
         self.crc_validator = CRCValidator()
         self.watermark_detector = WatermarkDetector()
+
+        # Timestamp parser for advanced forensic analysis
+        self.timestamp_parser = TimestampParser()
 
         # Phase 3 analyzers
         self.anomaly_detector = AnomalyDetector()
@@ -91,30 +101,44 @@ class ForensicAnalyzer:
         # Collect file info
         file_info = self._collect_file_info(file_path)
 
-        # Parse header
+        # Parse header first to get version
         header_analysis = self.header_parser.parse(file_path)
+        version_string = header_analysis.version_string
 
-        # Validate CRC
-        crc_validation = self.crc_validator.validate_header_crc(file_path)
+        # Validate CRC (version-aware)
+        crc_validation = self.crc_validator.validate_header_crc(
+            file_path, version_string=version_string
+        )
 
-        # Detect watermark
-        trusted_dwg = self.watermark_detector.detect(file_path)
+        # Detect watermark (version-aware)
+        trusted_dwg = self.watermark_detector.detect(
+            file_path, version_string=version_string
+        )
 
-        # Phase 3: Anomaly detection
+        # Parse timestamps for advanced forensic analysis
+        timestamp_data = self.timestamp_parser.parse(file_path, version_string)
+
+        # Build metadata from timestamp data
+        metadata = self._build_metadata_from_timestamps(timestamp_data)
+
+        # Phase 3: Anomaly detection (including advanced timestamp anomalies)
         anomalies = self._detect_all_anomalies(
-            header_analysis, crc_validation, trusted_dwg, file_path
+            header_analysis, crc_validation, trusted_dwg, file_path,
+            timestamp_data=timestamp_data, metadata=metadata
         )
 
         # Phase 3: Tampering rule evaluation
         rule_context = self._build_rule_context(
-            header_analysis, crc_validation, trusted_dwg, file_path
+            header_analysis, crc_validation, trusted_dwg, file_path,
+            timestamp_data=timestamp_data, anomalies=anomalies, metadata=metadata
         )
         rule_results = self.rule_engine.evaluate_all(rule_context)
         failed_rules = self.rule_engine.get_failed_rules(rule_results)
 
-        # Phase 3: Detect tampering indicators
+        # Phase 3: Detect tampering indicators (version-aware)
         tampering_indicators = self._detect_tampering(
-            crc_validation, trusted_dwg, failed_rules
+            crc_validation, trusted_dwg, failed_rules, version_string,
+            timestamp_data=timestamp_data
         )
 
         # Phase 3: Risk assessment with scoring
@@ -128,7 +152,7 @@ class ForensicAnalyzer:
             header_analysis=header_analysis,
             trusted_dwg=trusted_dwg,
             crc_validation=crc_validation,
-            metadata=None,  # Metadata extraction handled by metadata module
+            metadata=metadata,
             application_fingerprint=None,  # Application fingerprinting in future phase
             anomalies=anomalies,
             tampering_indicators=tampering_indicators,
@@ -151,14 +175,19 @@ class ForensicAnalyzer:
         """
         file_path = Path(file_path)
 
-        # Parse header
+        # Parse header first to get version
         header_analysis = self.header_parser.parse(file_path)
+        version_string = header_analysis.version_string
 
-        # Validate CRC
-        crc_validation = self.crc_validator.validate_header_crc(file_path)
+        # Validate CRC (version-aware)
+        crc_validation = self.crc_validator.validate_header_crc(
+            file_path, version_string=version_string
+        )
 
-        # Detect watermark
-        trusted_dwg = self.watermark_detector.detect(file_path)
+        # Detect watermark (version-aware)
+        trusted_dwg = self.watermark_detector.detect(
+            file_path, version_string=version_string
+        )
 
         # Anomaly detection
         anomalies = self._detect_all_anomalies(
@@ -190,9 +219,9 @@ class ForensicAnalyzer:
                 "evidence": evidence,
             })
 
-        # Detect tampering indicators
+        # Detect tampering indicators (version-aware)
         tampering_indicators = self._detect_tampering(
-            crc_validation, trusted_dwg, failed_rules
+            crc_validation, trusted_dwg, failed_rules, version_string
         )
 
         # Generate comprehensive report
@@ -231,12 +260,68 @@ class ForensicAnalyzer:
             intake_timestamp=datetime.now(),
         )
 
+    def _build_metadata_from_timestamps(
+        self, timestamp_data: TimestampData
+    ) -> Optional[DWGMetadata]:
+        """Build DWGMetadata from parsed timestamp data.
+
+        Args:
+            timestamp_data: Parsed timestamp data from the DWG file
+
+        Returns:
+            DWGMetadata model or None if no timestamp data available
+        """
+        from dwg_forensic.parsers.timestamp import mjd_to_datetime
+
+        # Convert MJD timestamps to datetime for metadata
+        created_date = None
+        modified_date = None
+
+        if timestamp_data.tdcreate is not None:
+            try:
+                created_date = mjd_to_datetime(timestamp_data.tdcreate)
+            except (ValueError, OverflowError):
+                pass
+
+        if timestamp_data.tdupdate is not None:
+            try:
+                modified_date = mjd_to_datetime(timestamp_data.tdupdate)
+            except (ValueError, OverflowError):
+                pass
+
+        # Calculate total editing time in hours from TDINDWG (days)
+        total_editing_hours = None
+        if timestamp_data.tdindwg is not None:
+            total_editing_hours = timestamp_data.tdindwg * 24.0
+
+        return DWGMetadata(
+            created_date=created_date,
+            modified_date=modified_date,
+            total_editing_time_hours=total_editing_hours,
+            last_saved_by=timestamp_data.login_name,
+            # MJD fields
+            tdcreate=timestamp_data.tdcreate,
+            tdupdate=timestamp_data.tdupdate,
+            tducreate=timestamp_data.tducreate,
+            tduupdate=timestamp_data.tduupdate,
+            tdindwg=timestamp_data.tdindwg,
+            tdusrtimer=timestamp_data.tdusrtimer,
+            # GUID fields
+            fingerprint_guid=timestamp_data.fingerprint_guid,
+            version_guid=timestamp_data.version_guid,
+            # User identity
+            login_name=timestamp_data.login_name,
+            educational_watermark=timestamp_data.educational_watermark,
+        )
+
     def _detect_all_anomalies(
         self,
         header_analysis: HeaderAnalysis,
         crc_validation: CRCValidation,
         trusted_dwg: TrustedDWGAnalysis,
         file_path: Path,
+        timestamp_data: Optional[TimestampData] = None,
+        metadata: Optional[DWGMetadata] = None,
     ) -> List[Anomaly]:
         """Detect all anomalies using Phase 3 AnomalyDetector.
 
@@ -245,6 +330,8 @@ class ForensicAnalyzer:
             crc_validation: CRC validation results
             trusted_dwg: TrustedDWG analysis results
             file_path: Path to the DWG file
+            timestamp_data: Optional parsed timestamp data for advanced detection
+            metadata: Optional DWG metadata
 
         Returns:
             List of detected anomalies
@@ -259,6 +346,20 @@ class ForensicAnalyzer:
 
         structural_anomalies = self.anomaly_detector.detect_structural_anomalies(file_path)
         anomalies.extend(structural_anomalies)
+
+        # Timestamp anomalies (if metadata available)
+        if metadata:
+            timestamp_anomalies = self.anomaly_detector.detect_timestamp_anomalies(
+                metadata, file_path
+            )
+            anomalies.extend(timestamp_anomalies)
+
+        # Advanced timestamp manipulation detection (if timestamp_data available)
+        if timestamp_data:
+            advanced_anomalies = self.anomaly_detector.detect_advanced_timestamp_anomalies(
+                header_analysis.version_string, timestamp_data, metadata
+            )
+            anomalies.extend(advanced_anomalies)
 
         # CRC mismatch anomaly
         if not crc_validation.is_valid:
@@ -293,6 +394,9 @@ class ForensicAnalyzer:
         crc_validation: CRCValidation,
         trusted_dwg: TrustedDWGAnalysis,
         file_path: Path,
+        timestamp_data: Optional[TimestampData] = None,
+        anomalies: Optional[List[Anomaly]] = None,
+        metadata: Optional[DWGMetadata] = None,
     ) -> Dict[str, Any]:
         """Build context dictionary for tampering rule evaluation.
 
@@ -301,6 +405,9 @@ class ForensicAnalyzer:
             crc_validation: CRC validation results
             trusted_dwg: TrustedDWG analysis results
             file_path: Path to the DWG file
+            timestamp_data: Optional parsed timestamp data
+            anomalies: Optional list of detected anomalies
+            metadata: Optional DWG metadata
 
         Returns:
             Context dictionary for rule evaluation
@@ -312,7 +419,7 @@ class ForensicAnalyzer:
             trusted_dwg.watermark_valid
         )
 
-        return {
+        context = {
             "header": {
                 "version_string": header_analysis.version_string,
                 "version_name": header_analysis.version_name,
@@ -336,11 +443,58 @@ class ForensicAnalyzer:
             },
         }
 
+        # Add timestamp data for advanced tampering rules
+        if timestamp_data:
+            context["timestamp_data"] = {
+                "tdcreate": timestamp_data.tdcreate,
+                "tdupdate": timestamp_data.tdupdate,
+                "tducreate": timestamp_data.tducreate,
+                "tduupdate": timestamp_data.tduupdate,
+                "tdindwg": timestamp_data.tdindwg,
+                "tdusrtimer": timestamp_data.tdusrtimer,
+                "fingerprint_guid": timestamp_data.fingerprint_guid,
+                "version_guid": timestamp_data.version_guid,
+                "login_name": timestamp_data.login_name,
+                "educational_watermark": timestamp_data.educational_watermark,
+                "calendar_span_days": timestamp_data.get_calendar_span_days(),
+                "timezone_offset_hours": timestamp_data.get_timezone_offset_hours(),
+            }
+
+        # Add version release date for anachronism detection
+        version_release = get_version_release_date(header_analysis.version_string)
+        if version_release:
+            context["version_release_date"] = version_release.isoformat()
+
+        # Add metadata if available
+        if metadata:
+            context["metadata"] = {
+                "created_date": metadata.created_date.isoformat() if metadata.created_date else None,
+                "modified_date": metadata.modified_date.isoformat() if metadata.modified_date else None,
+                "total_editing_time_hours": metadata.total_editing_time_hours,
+                "educational_watermark": metadata.educational_watermark,
+            }
+
+        # Add anomalies for rule cross-referencing
+        if anomalies:
+            context["anomalies"] = [
+                {
+                    "anomaly_type": a.anomaly_type.value if hasattr(a.anomaly_type, 'value') else str(a.anomaly_type),
+                    "description": a.description,
+                    "severity": a.severity.value if hasattr(a.severity, 'value') else str(a.severity),
+                    "details": a.details,
+                }
+                for a in anomalies
+            ]
+
+        return context
+
     def _detect_tampering(
         self,
         crc_validation: CRCValidation,
         trusted_dwg: TrustedDWGAnalysis,
         failed_rules: List[Any],
+        version_string: Optional[str] = None,
+        timestamp_data: Optional[TimestampData] = None,
     ) -> List[TamperingIndicator]:
         """Detect potential tampering indicators.
 
@@ -348,14 +502,17 @@ class ForensicAnalyzer:
             crc_validation: CRC validation results
             trusted_dwg: TrustedDWG analysis results
             failed_rules: List of failed tampering rules
+            version_string: DWG version string for version-aware detection
+            timestamp_data: Optional parsed timestamp data
 
         Returns:
             List of tampering indicators
         """
         indicators = []
 
-        # CRC modification
-        if not crc_validation.is_valid:
+        # CRC modification (only if CRC is available for this version)
+        # "N/A" indicates version doesn't support CRC
+        if crc_validation.header_crc_stored != "N/A" and not crc_validation.is_valid:
             indicators.append(
                 TamperingIndicator(
                     indicator_type=TamperingIndicatorType.CRC_MODIFIED,
@@ -366,8 +523,13 @@ class ForensicAnalyzer:
                 )
             )
 
-        # Missing watermark (potential third-party modification)
-        if not trusted_dwg.watermark_present:
+        # Missing watermark (only for versions that support TrustedDWG - AC1021+)
+        # Check if watermark is expected for this version
+        watermark_expected = self.watermark_detector.has_watermark_support(
+            version_string
+        ) if version_string else True
+
+        if watermark_expected and not trusted_dwg.watermark_present:
             indicators.append(
                 TamperingIndicator(
                     indicator_type=TamperingIndicatorType.WATERMARK_REMOVED,
@@ -378,10 +540,55 @@ class ForensicAnalyzer:
                 )
             )
 
+        # Advanced timestamp manipulation indicators
+        if timestamp_data:
+            # TDINDWG manipulation detection
+            calendar_span = timestamp_data.get_calendar_span_days()
+            if (timestamp_data.tdindwg is not None and
+                calendar_span is not None and
+                timestamp_data.tdindwg > calendar_span):
+                indicators.append(
+                    TamperingIndicator(
+                        indicator_type=TamperingIndicatorType.TDINDWG_MANIPULATION,
+                        description=(
+                            "Cumulative editing time exceeds calendar span - "
+                            "proves timestamp manipulation"
+                        ),
+                        confidence=1.0,
+                        evidence=(
+                            f"TDINDWG: {round(timestamp_data.tdindwg * 24, 1)} hours, "
+                            f"Calendar span: {round(calendar_span * 24, 1)} hours"
+                        ),
+                    )
+                )
+
+            # Timezone manipulation detection
+            offset = timestamp_data.get_timezone_offset_hours()
+            if offset is not None and (offset < -12 or offset > 14):
+                indicators.append(
+                    TamperingIndicator(
+                        indicator_type=TamperingIndicatorType.TIMEZONE_MANIPULATION,
+                        description="Invalid UTC/local timezone offset indicates manipulation",
+                        confidence=0.9,
+                        evidence=f"Timezone offset: {round(offset, 2)} hours (valid: -12 to +14)",
+                    )
+                )
+
+            # Educational watermark detection
+            if timestamp_data.educational_watermark:
+                indicators.append(
+                    TamperingIndicator(
+                        indicator_type=TamperingIndicatorType.EDUCATIONAL_VERSION,
+                        description="File created with educational/student license",
+                        confidence=1.0,
+                        evidence="Educational Version watermark present in file",
+                    )
+                )
+
         # Add indicators from failed tampering rules
         for rule_result in failed_rules:
             # High severity rules indicate stronger tampering evidence
-            confidence = 0.8 if rule_result.severity.value == "CRITICAL" else 0.6
+            confidence = 0.8 if rule_result.severity.value == "critical" else 0.6
             # Build evidence string from available fields
             evidence_parts = []
             if rule_result.expected:
@@ -389,9 +596,21 @@ class ForensicAnalyzer:
             if rule_result.found:
                 evidence_parts.append(f"Found: {rule_result.found}")
             evidence = "; ".join(evidence_parts) if evidence_parts else rule_result.description
+
+            # Map specific rule IDs to indicator types
+            indicator_type = TamperingIndicatorType.SUSPICIOUS_PATTERN
+            if rule_result.rule_id == "TAMPER-013":
+                indicator_type = TamperingIndicatorType.TDINDWG_MANIPULATION
+            elif rule_result.rule_id == "TAMPER-014":
+                indicator_type = TamperingIndicatorType.VERSION_ANACHRONISM
+            elif rule_result.rule_id == "TAMPER-015":
+                indicator_type = TamperingIndicatorType.TIMEZONE_MANIPULATION
+            elif rule_result.rule_id == "TAMPER-016":
+                indicator_type = TamperingIndicatorType.EDUCATIONAL_VERSION
+
             indicators.append(
                 TamperingIndicator(
-                    indicator_type=TamperingIndicatorType.SUSPICIOUS_PATTERN,
+                    indicator_type=indicator_type,
                     description=f"Tampering rule triggered: {rule_result.rule_name}",
                     confidence=confidence,
                     evidence=evidence,

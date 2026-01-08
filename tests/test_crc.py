@@ -51,12 +51,47 @@ class TestCRCValidator:
         with pytest.raises(InvalidDWGError):
             validator.validate_header_crc(fake_path)
 
-    def test_header_crc_offset_constant(self):
-        """Test HEADER_CRC_OFFSET constant."""
+    def test_version_crc_info(self):
+        """Test VERSION_CRC_INFO contains expected versions."""
         validator = CRCValidator()
-        assert validator.HEADER_CRC_OFFSET == 0x68
+        # R24+ versions
+        assert "AC1032" in validator.VERSION_CRC_INFO
+        assert "AC1027" in validator.VERSION_CRC_INFO
+        assert "AC1024" in validator.VERSION_CRC_INFO
+        # R21
+        assert "AC1021" in validator.VERSION_CRC_INFO
+        # R18 and R15
+        assert "AC1018" in validator.VERSION_CRC_INFO
+        assert "AC1015" in validator.VERSION_CRC_INFO
 
-    def test_header_length_constant(self):
-        """Test HEADER_LENGTH constant."""
+    def test_no_crc_versions(self):
+        """Test NO_CRC_VERSIONS contains expected versions."""
         validator = CRCValidator()
-        assert validator.HEADER_LENGTH == 0x68
+        assert "AC1012" in validator.NO_CRC_VERSIONS
+        assert "AC1014" in validator.NO_CRC_VERSIONS
+
+    def test_has_crc_support(self):
+        """Test has_crc_support method."""
+        validator = CRCValidator()
+        # Versions with CRC support
+        assert validator.has_crc_support("AC1032") is True
+        assert validator.has_crc_support("AC1024") is True
+        assert validator.has_crc_support("AC1015") is True
+        # Versions without CRC support
+        assert validator.has_crc_support("AC1012") is False
+        assert validator.has_crc_support("AC1014") is False
+
+    def test_crc_na_for_old_versions(self, temp_dir):
+        """Test that older versions return N/A for CRC."""
+        validator = CRCValidator()
+
+        # Create an AC1014 file
+        dwg_path = temp_dir / "old_r14.dwg"
+        header = bytearray(32)
+        header[0:6] = b"AC1014"
+        dwg_path.write_bytes(bytes(header))
+
+        result = validator.validate_header_crc(dwg_path, version_string="AC1014")
+        assert result.header_crc_stored == "N/A"
+        assert result.header_crc_calculated == "N/A"
+        assert result.is_valid is True  # Not a failure, just not available

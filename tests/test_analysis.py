@@ -193,18 +193,18 @@ class TestTamperingRuleEngine:
     """Test TamperingRuleEngine functionality."""
 
     def test_init_loads_builtin_rules(self):
-        """Test that engine loads 12 built-in rules."""
+        """Test that engine loads 16 built-in rules (12 original + 4 advanced)."""
         engine = TamperingRuleEngine()
         rules = engine.get_builtin_rules()
-        assert len(rules) == 12
+        assert len(rules) == 16
 
     def test_builtin_rule_ids(self):
-        """Test that all 12 TAMPER rules exist."""
+        """Test that all 16 TAMPER rules exist."""
         engine = TamperingRuleEngine()
         rules = engine.get_builtin_rules()
         rule_ids = [r.rule_id for r in rules]
 
-        for i in range(1, 13):
+        for i in range(1, 17):
             expected_id = f"TAMPER-{i:03d}"
             assert expected_id in rule_ids, f"Missing rule {expected_id}"
 
@@ -289,8 +289,8 @@ rules:
         engine = TamperingRuleEngine()
         engine.load_rules(rules_file)
 
-        # Should have 13 rules now (12 built-in + 1 custom)
-        assert len(engine.rules) == 13
+        # Should have 17 rules now (16 built-in + 1 custom)
+        assert len(engine.rules) == 17
 
 
 # ============================================================================
