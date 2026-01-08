@@ -110,3 +110,197 @@ class TestHeaderParser:
         parser = HeaderParser()
         assert "AC1032" in parser.DWG_VERSIONS
         assert "2018" in parser.DWG_VERSIONS["AC1032"]
+
+    def test_parse_directory_raises_error(self, temp_dir):
+        """Test parsing a directory raises InvalidDWGError."""
+        parser = HeaderParser()
+
+        with pytest.raises(InvalidDWGError) as exc_info:
+            parser.parse(temp_dir)
+
+        assert "not a file" in str(exc_info.value).lower()
+
+    def test_parse_ac1021(self, temp_dir):
+        """Test parsing AC1021 (AutoCAD 2007) file."""
+        parser = HeaderParser()
+
+        # Create AC1021 file with proper header size
+        dwg_path = temp_dir / "r21.dwg"
+        header = bytearray(128)
+        header[0:6] = b"AC1021"
+        # Set maintenance version at R21 offset
+        header[0x07] = 2
+        dwg_path.write_bytes(bytes(header))
+
+        result = parser.parse(dwg_path)
+
+        assert result.version_string == "AC1021"
+        assert "2007" in result.version_name
+        assert result.is_supported is False  # Limited support
+
+    def test_parse_ac1018(self, temp_dir):
+        """Test parsing AC1018 (AutoCAD 2004) file."""
+        parser = HeaderParser()
+
+        # Create AC1018 file with proper header size (96 bytes for R18)
+        dwg_path = temp_dir / "r18.dwg"
+        header = bytearray(96)
+        header[0:6] = b"AC1018"
+        dwg_path.write_bytes(bytes(header))
+
+        result = parser.parse(dwg_path)
+
+        assert result.version_string == "AC1018"
+        assert "2004" in result.version_name
+
+    def test_parse_ac1014(self, temp_dir):
+        """Test parsing AC1014 (AutoCAD R14) file."""
+        parser = HeaderParser()
+
+        # Create AC1014 file
+        dwg_path = temp_dir / "r14.dwg"
+        header = bytearray(48)
+        header[0:6] = b"AC1014"
+        dwg_path.write_bytes(bytes(header))
+
+        result = parser.parse(dwg_path)
+
+        assert result.version_string == "AC1014"
+        assert "R14" in result.version_name or "14" in result.version_name
+
+    def test_parse_ac1012(self, temp_dir):
+        """Test parsing AC1012 (AutoCAD R13) file."""
+        parser = HeaderParser()
+
+        # Create AC1012 file
+        dwg_path = temp_dir / "r13.dwg"
+        header = bytearray(48)
+        header[0:6] = b"AC1012"
+        dwg_path.write_bytes(bytes(header))
+
+        result = parser.parse(dwg_path)
+
+        assert result.version_string == "AC1012"
+        assert "R13" in result.version_name or "13" in result.version_name
+
+    def test_get_min_header_size_full_support(self):
+        """Test _get_min_header_size for full support versions."""
+        parser = HeaderParser()
+
+        assert parser._get_min_header_size("AC1032") == parser.MIN_HEADER_SIZE_R24
+        assert parser._get_min_header_size("AC1027") == parser.MIN_HEADER_SIZE_R24
+        assert parser._get_min_header_size("AC1024") == parser.MIN_HEADER_SIZE_R24
+
+    def test_get_min_header_size_legacy(self):
+        """Test _get_min_header_size for legacy versions."""
+        parser = HeaderParser()
+
+        assert parser._get_min_header_size("AC1021") == parser.MIN_HEADER_SIZE_R21
+        assert parser._get_min_header_size("AC1018") == parser.MIN_HEADER_SIZE_R18
+        assert parser._get_min_header_size("AC1015") == parser.MIN_HEADER_SIZE_R15
+        assert parser._get_min_header_size("AC1012") == parser.MIN_HEADER_SIZE_R13
+        assert parser._get_min_header_size("AC1014") == parser.MIN_HEADER_SIZE_R13
+
+    def test_get_min_header_size_unknown(self):
+        """Test _get_min_header_size for unknown version."""
+        parser = HeaderParser()
+
+        # Unknown version should return minimum size
+        assert parser._get_min_header_size("AC9999") == parser.MIN_HEADER_SIZE
+
+    def test_read_version_string(self):
+        """Test _read_version_string extracts version correctly."""
+        parser = HeaderParser()
+
+        data = b"AC1032" + b"\x00" * 100
+        result = parser._read_version_string(data)
+
+        assert result == "AC1032"
+
+    def test_read_version_string_with_null(self):
+        """Test _read_version_string handles null padding."""
+        parser = HeaderParser()
+
+        data = b"AC1015\x00\x00" + b"\x00" * 100
+        result = parser._read_version_string(data)
+
+        assert result == "AC1015"
+
+    def test_validate_version_supported(self):
+        """Test _validate_version accepts supported versions."""
+        parser = HeaderParser()
+
+        # Should not raise for supported versions
+        parser._validate_version("AC1032", "/path/to/file.dwg")
+        parser._validate_version("AC1015", "/path/to/file.dwg")
+
+    def test_validate_version_unsupported(self):
+        """Test _validate_version rejects unsupported versions."""
+        parser = HeaderParser()
+
+        with pytest.raises(UnsupportedVersionError):
+            parser._validate_version("AC1009", "/path/to/file.dwg")
+
+    def test_validate_version_invalid(self):
+        """Test _validate_version rejects invalid version strings."""
+        parser = HeaderParser()
+
+        # Invalid version strings are treated as unsupported versions
+        with pytest.raises(UnsupportedVersionError):
+            parser._validate_version("XXXXXX", "/path/to/file.dwg")
+
+    def test_read_byte(self):
+        """Test _read_byte extracts single byte."""
+        parser = HeaderParser()
+
+        data = b"\x00\x01\x02\x03\xFF"
+        assert parser._read_byte(data, 0) == 0
+        assert parser._read_byte(data, 1) == 1
+        assert parser._read_byte(data, 4) == 255
+
+    def test_read_uint16(self):
+        """Test _read_uint16 extracts little-endian uint16."""
+        parser = HeaderParser()
+
+        data = b"\x01\x00\xFF\xFF"
+        assert parser._read_uint16(data, 0) == 1
+        assert parser._read_uint16(data, 2) == 65535
+
+    def test_read_uint32(self):
+        """Test _read_uint32 extracts little-endian uint32."""
+        parser = HeaderParser()
+
+        data = b"\x01\x00\x00\x00\xFF\xFF\xFF\xFF"
+        assert parser._read_uint32(data, 0) == 1
+        assert parser._read_uint32(data, 4) == 4294967295
+
+    def test_parse_version_specific_unknown(self, temp_dir):
+        """Test parsing with unknown version falls back gracefully."""
+        parser = HeaderParser()
+
+        # Create a file that looks like DWG but unknown version
+        # Note: This requires the version to pass validation first
+        # We'll test the internal method directly
+        data = b"AC9999" + b"\x00" * 100
+
+        # Call internal method directly
+        result = parser._parse_version_specific(data, "AC1015")
+
+        assert result.version_string == "AC1015"
+        assert result.is_supported is False
+
+    def test_file_too_small_for_version_header(self, temp_dir):
+        """Test error when file is valid header but too small for version."""
+        parser = HeaderParser()
+
+        # Create AC1032 file but with smaller data than R24 requires
+        dwg_path = temp_dir / "small_r24.dwg"
+        # AC1032 needs MIN_HEADER_SIZE_R24 bytes, give it less
+        header = bytearray(32)  # Only 32 bytes
+        header[0:6] = b"AC1032"
+        dwg_path.write_bytes(bytes(header))
+
+        with pytest.raises(InvalidDWGError) as exc_info:
+            parser.parse(dwg_path)
+
+        assert "too small" in str(exc_info.value).lower()
