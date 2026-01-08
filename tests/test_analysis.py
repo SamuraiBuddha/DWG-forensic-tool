@@ -785,3 +785,551 @@ class TestVersionAnachronismEdgeCases:
 
         # Should handle gracefully (no crash, empty list)
         assert isinstance(anomalies, list)
+
+
+# ============================================================================
+# Additional TamperingRuleEngine Coverage Tests
+# ============================================================================
+
+class TestRuleEngineLoadRules:
+    """Test rule loading functionality."""
+
+    def test_load_rules_with_none(self):
+        """Test load_rules with None path."""
+        engine = TamperingRuleEngine()
+        initial_count = len(engine.rules)
+
+        engine.load_rules(None)
+
+        # Should remain unchanged
+        assert len(engine.rules) == initial_count
+
+    def test_load_rules_missing_file(self, tmp_path):
+        """Test load_rules with missing file."""
+        engine = TamperingRuleEngine()
+
+        with pytest.raises(FileNotFoundError):
+            engine.load_rules(tmp_path / "nonexistent.yaml")
+
+    def test_load_rules_json_format(self, tmp_path):
+        """Test loading rules from JSON file."""
+        rules_file = tmp_path / "rules.json"
+        rules_file.write_text('{"rules": [{"id": "CUSTOM-001", "name": "Test", "severity": "warning", "description": "Test rule", "enabled": true}]}')
+
+        engine = TamperingRuleEngine()
+        engine.load_rules(rules_file)
+
+        assert any(r.rule_id == "CUSTOM-001" for r in engine.rules)
+
+    def test_load_rules_unsupported_format(self, tmp_path):
+        """Test load_rules with unsupported format."""
+        rules_file = tmp_path / "rules.txt"
+        rules_file.write_text("some content")
+
+        engine = TamperingRuleEngine()
+
+        with pytest.raises(ValueError) as exc_info:
+            engine.load_rules(rules_file)
+
+        assert "Unsupported format" in str(exc_info.value)
+
+    def test_load_rules_invalid_structure(self, tmp_path):
+        """Test load_rules with invalid structure (no 'rules' key)."""
+        rules_file = tmp_path / "invalid.yaml"
+        rules_file.write_text("some_key: value")
+
+        engine = TamperingRuleEngine()
+
+        with pytest.raises(ValueError) as exc_info:
+            engine.load_rules(rules_file)
+
+        assert "rules" in str(exc_info.value).lower()
+
+
+class TestRuleEngineEvaluation:
+    """Test rule evaluation functionality."""
+
+    def test_evaluate_disabled_rule(self):
+        """Test that disabled rules return INCONCLUSIVE."""
+        from dwg_forensic.analysis.rules import TamperingRule, RuleSeverity, RuleStatus
+
+        engine = TamperingRuleEngine()
+
+        disabled_rule = TamperingRule(
+            rule_id="TEST-001",
+            name="Disabled Rule",
+            severity=RuleSeverity.WARNING,
+            description="A disabled test rule",
+            enabled=False,
+        )
+
+        result = engine.evaluate_rule(disabled_rule, {})
+
+        assert result.status == RuleStatus.INCONCLUSIVE
+        assert "disabled" in result.description.lower()
+
+    def test_evaluate_custom_rule_with_condition(self):
+        """Test evaluation of custom rule with condition."""
+        from dwg_forensic.analysis.rules import TamperingRule, RuleSeverity, RuleCondition, RuleStatus
+
+        engine = TamperingRuleEngine()
+
+        custom_rule = TamperingRule(
+            rule_id="CUSTOM-001",
+            name="Custom Condition Rule",
+            severity=RuleSeverity.WARNING,
+            description="Tests custom condition",
+            condition=RuleCondition(
+                field="test.value",
+                operator="equals",
+                value="expected",
+            ),
+        )
+
+        # Should pass when condition met
+        context_pass = {"test": {"value": "expected"}}
+        result = engine.evaluate_rule(custom_rule, context_pass)
+        assert result.status == RuleStatus.PASSED
+
+        # Should fail when condition not met
+        context_fail = {"test": {"value": "wrong"}}
+        result = engine.evaluate_rule(custom_rule, context_fail)
+        assert result.status == RuleStatus.FAILED
+
+    def test_evaluate_unknown_rule_id(self):
+        """Test evaluation of rule with unknown ID."""
+        from dwg_forensic.analysis.rules import TamperingRule, RuleSeverity, RuleStatus
+
+        engine = TamperingRuleEngine()
+
+        unknown_rule = TamperingRule(
+            rule_id="UNKNOWN-999",
+            name="Unknown Rule",
+            severity=RuleSeverity.WARNING,
+            description="Unknown rule ID",
+        )
+
+        result = engine.evaluate_rule(unknown_rule, {})
+
+        assert result.status == RuleStatus.INCONCLUSIVE
+        assert "not found" in result.description.lower()
+
+
+class TestConditionEvaluation:
+    """Test _evaluate_condition method."""
+
+    def test_condition_not_equals(self):
+        """Test not_equals condition."""
+        from dwg_forensic.analysis.rules import RuleCondition
+
+        engine = TamperingRuleEngine()
+
+        condition = RuleCondition(field="status", operator="not_equals", value="bad")
+        assert engine._evaluate_condition(condition, {"status": "good"}) is True
+        assert engine._evaluate_condition(condition, {"status": "bad"}) is False
+
+    def test_condition_greater_than(self):
+        """Test greater_than condition."""
+        from dwg_forensic.analysis.rules import RuleCondition
+
+        engine = TamperingRuleEngine()
+
+        condition = RuleCondition(field="count", operator="greater_than", value=5)
+        assert engine._evaluate_condition(condition, {"count": 10}) is True
+        assert engine._evaluate_condition(condition, {"count": 3}) is False
+
+    def test_condition_less_than(self):
+        """Test less_than condition."""
+        from dwg_forensic.analysis.rules import RuleCondition
+
+        engine = TamperingRuleEngine()
+
+        condition = RuleCondition(field="count", operator="less_than", value=5)
+        assert engine._evaluate_condition(condition, {"count": 3}) is True
+        assert engine._evaluate_condition(condition, {"count": 10}) is False
+
+    def test_condition_contains(self):
+        """Test contains condition."""
+        from dwg_forensic.analysis.rules import RuleCondition
+
+        engine = TamperingRuleEngine()
+
+        condition = RuleCondition(field="text", operator="contains", value="hello")
+        assert engine._evaluate_condition(condition, {"text": "hello world"}) is True
+        assert engine._evaluate_condition(condition, {"text": "goodbye"}) is False
+
+    def test_condition_not_contains(self):
+        """Test not_contains condition."""
+        from dwg_forensic.analysis.rules import RuleCondition
+
+        engine = TamperingRuleEngine()
+
+        condition = RuleCondition(field="text", operator="not_contains", value="bad")
+        assert engine._evaluate_condition(condition, {"text": "good text"}) is True
+        assert engine._evaluate_condition(condition, {"text": "bad text"}) is False
+
+    def test_condition_exists(self):
+        """Test exists condition."""
+        from dwg_forensic.analysis.rules import RuleCondition
+
+        engine = TamperingRuleEngine()
+
+        condition = RuleCondition(field="data", operator="exists", value=None)
+        assert engine._evaluate_condition(condition, {"data": "something"}) is True
+        assert engine._evaluate_condition(condition, {"data": None}) is False
+
+    def test_condition_not_exists(self):
+        """Test not_exists condition."""
+        from dwg_forensic.analysis.rules import RuleCondition
+
+        engine = TamperingRuleEngine()
+
+        condition = RuleCondition(field="data", operator="not_exists", value=None)
+        assert engine._evaluate_condition(condition, {"data": None}) is True
+        assert engine._evaluate_condition(condition, {"data": "something"}) is False
+
+    def test_condition_nested_field(self):
+        """Test condition with nested field path."""
+        from dwg_forensic.analysis.rules import RuleCondition
+
+        engine = TamperingRuleEngine()
+
+        condition = RuleCondition(field="level1.level2.value", operator="equals", value="target")
+        context = {"level1": {"level2": {"value": "target"}}}
+        assert engine._evaluate_condition(condition, context) is True
+
+    def test_condition_invalid_path(self):
+        """Test condition with invalid field path."""
+        from dwg_forensic.analysis.rules import RuleCondition
+
+        engine = TamperingRuleEngine()
+
+        condition = RuleCondition(field="missing.path", operator="equals", value="x")
+        assert engine._evaluate_condition(condition, {}) is False
+
+
+class TestSectionCRCRule:
+    """Test TAMPER-002 section CRC rule."""
+
+    def test_section_crc_failure(self):
+        """Test section CRC failure detection."""
+        engine = TamperingRuleEngine()
+        context = {
+            "crc": {
+                "is_valid": True,
+                "section_results": [
+                    {"section_name": "Objects", "is_valid": False},
+                    {"section_name": "Header", "is_valid": True},
+                ],
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        section_result = next(r for r in results if r.rule_id == "TAMPER-002")
+
+        assert section_result.status == RuleStatus.FAILED
+        assert "Objects" in section_result.description
+
+
+class TestInvalidWatermarkRule:
+    """Test TAMPER-004 invalid watermark rule."""
+
+    def test_invalid_watermark_detection(self):
+        """Test invalid watermark detection."""
+        engine = TamperingRuleEngine()
+        context = {
+            "watermark": {"present": True, "valid": False},
+            "header": {"version_string": "AC1032"},
+        }
+
+        results = engine.evaluate_all(context)
+        wm_result = next(r for r in results if r.rule_id == "TAMPER-004")
+
+        assert wm_result.status == RuleStatus.FAILED
+        assert "malformed" in wm_result.description.lower()
+
+
+class TestTimestampRules:
+    """Test timestamp-related rules."""
+
+    def test_timestamp_reversal_with_strings(self):
+        """Test TAMPER-005 with ISO string timestamps."""
+        engine = TamperingRuleEngine()
+        context = {
+            "metadata": {
+                "created_date": "2025-01-01T12:00:00Z",
+                "modified_date": "2020-01-01T12:00:00Z",  # Before creation
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        ts_result = next(r for r in results if r.rule_id == "TAMPER-005")
+
+        assert ts_result.status == RuleStatus.FAILED
+
+    def test_future_timestamp_with_string(self):
+        """Test TAMPER-006 with ISO string timestamp."""
+        engine = TamperingRuleEngine()
+        # Far future date
+        context = {
+            "metadata": {
+                "modified_date": "2099-01-01T12:00:00Z",
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        future_result = next(r for r in results if r.rule_id == "TAMPER-006")
+
+        assert future_result.status == RuleStatus.FAILED
+
+    def test_edit_time_mismatch_with_strings(self):
+        """Test TAMPER-007 with ISO string timestamps and excessive edit time."""
+        engine = TamperingRuleEngine()
+        context = {
+            "metadata": {
+                "created_date": "2024-01-01T12:00:00Z",
+                "modified_date": "2024-01-02T12:00:00Z",  # 24 hours later
+                "total_editing_time_hours": 100.0,  # 100 hours in 24 hour span
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        edit_result = next(r for r in results if r.rule_id == "TAMPER-007")
+
+        assert edit_result.status == RuleStatus.FAILED
+
+
+class TestVersionDowngradeRule:
+    """Test TAMPER-008 version downgrade rule."""
+
+    def test_version_downgrade_detection(self):
+        """Test version downgrade detection via anomalies."""
+        engine = TamperingRuleEngine()
+        context = {
+            "anomalies": [
+                {"description": "Version downgrade detected"},
+            ]
+        }
+
+        results = engine.evaluate_all(context)
+        downgrade_result = next(r for r in results if r.rule_id == "TAMPER-008")
+
+        assert downgrade_result.status == RuleStatus.FAILED
+
+
+class TestNonAutodeskRule:
+    """Test TAMPER-010 non-Autodesk origin rule."""
+
+    def test_non_autodesk_origin(self):
+        """Test non-Autodesk origin detection."""
+        engine = TamperingRuleEngine()
+        context = {
+            "watermark": {
+                "present": True,
+                "valid": True,
+                "is_autodesk": False,
+                "application_origin": "LibreCAD",
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        origin_result = next(r for r in results if r.rule_id == "TAMPER-010")
+
+        assert origin_result.status == RuleStatus.FAILED
+        assert "LibreCAD" in origin_result.found
+
+
+class TestOrphanedObjectsRule:
+    """Test TAMPER-011 orphaned objects rule."""
+
+    def test_orphaned_objects_detection(self):
+        """Test orphaned objects detection via anomalies."""
+        engine = TamperingRuleEngine()
+        context = {
+            "anomalies": [
+                {"description": "Orphan object found at handle 0x123"},
+            ]
+        }
+
+        results = engine.evaluate_all(context)
+        orphan_result = next(r for r in results if r.rule_id == "TAMPER-011")
+
+        assert orphan_result.status == RuleStatus.FAILED
+
+
+class TestSlackSpaceRule:
+    """Test TAMPER-012 slack space rule."""
+
+    def test_slack_space_detection(self):
+        """Test unusual slack space detection via anomalies."""
+        engine = TamperingRuleEngine()
+        context = {
+            "anomalies": [
+                {"description": "Unusual padding detected"},
+            ]
+        }
+
+        results = engine.evaluate_all(context)
+        slack_result = next(r for r in results if r.rule_id == "TAMPER-012")
+
+        assert slack_result.status == RuleStatus.FAILED
+
+
+class TestTDINDWGRule:
+    """Test TAMPER-013 TDINDWG manipulation rule."""
+
+    def test_tdindwg_manipulation_from_anomaly(self):
+        """Test TDINDWG manipulation detection from anomaly."""
+        engine = TamperingRuleEngine()
+        context = {
+            "anomalies": [
+                {
+                    "anomaly_type": "TDINDWG_EXCEEDS_SPAN",
+                    "details": {
+                        "calendar_span_days": 2.0,
+                        "tdindwg_days": 5.0,
+                    },
+                },
+            ]
+        }
+
+        results = engine.evaluate_all(context)
+        tdindwg_result = next(r for r in results if r.rule_id == "TAMPER-013")
+
+        assert tdindwg_result.status == RuleStatus.FAILED
+
+    def test_tdindwg_manipulation_from_data(self):
+        """Test TDINDWG manipulation detection from raw data."""
+        engine = TamperingRuleEngine()
+        context = {
+            "timestamp_data": {
+                "tdindwg": 10.0,  # 10 days editing
+                "calendar_span_days": 5.0,  # Only 5 days elapsed
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        tdindwg_result = next(r for r in results if r.rule_id == "TAMPER-013")
+
+        assert tdindwg_result.status == RuleStatus.FAILED
+
+
+class TestVersionAnachronismRule:
+    """Test TAMPER-014 version anachronism rule."""
+
+    def test_version_anachronism_from_anomaly(self):
+        """Test version anachronism detection from anomaly."""
+        engine = TamperingRuleEngine()
+        context = {
+            "anomalies": [
+                {
+                    "anomaly_type": "VERSION_ANACHRONISM",
+                    "details": {
+                        "version_name": "AutoCAD 2010",
+                        "claimed_creation_date": "2008-01-01",
+                        "version_release_date": "2009-03-01",
+                    },
+                },
+            ]
+        }
+
+        results = engine.evaluate_all(context)
+        anachronism_result = next(r for r in results if r.rule_id == "TAMPER-014")
+
+        assert anachronism_result.status == RuleStatus.FAILED
+
+
+class TestTimezoneDiscrepancyRule:
+    """Test TAMPER-015 timezone discrepancy rule."""
+
+    def test_timezone_discrepancy_from_anomaly(self):
+        """Test timezone discrepancy detection from anomaly."""
+        engine = TamperingRuleEngine()
+        context = {
+            "anomalies": [
+                {
+                    "anomaly_type": "TIMEZONE_DISCREPANCY",
+                    "details": {"offset_hours": 20.0},
+                },
+            ]
+        }
+
+        results = engine.evaluate_all(context)
+        tz_result = next(r for r in results if r.rule_id == "TAMPER-015")
+
+        assert tz_result.status == RuleStatus.FAILED
+
+    def test_timezone_discrepancy_from_data(self):
+        """Test timezone discrepancy detection from raw data."""
+        engine = TamperingRuleEngine()
+        context = {
+            "timestamp_data": {
+                "timezone_offset_hours": -15.0,  # Invalid offset
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        tz_result = next(r for r in results if r.rule_id == "TAMPER-015")
+
+        assert tz_result.status == RuleStatus.FAILED
+
+
+class TestEducationalWatermarkRule:
+    """Test TAMPER-016 educational watermark rule."""
+
+    def test_educational_watermark_detection(self):
+        """Test educational watermark detection."""
+        engine = TamperingRuleEngine()
+        context = {
+            "timestamp_data": {
+                "educational_watermark": True,
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        edu_result = next(r for r in results if r.rule_id == "TAMPER-016")
+
+        assert edu_result.status == RuleStatus.FAILED
+        assert "Educational" in edu_result.description
+
+
+class TestTamperingScore:
+    """Test get_tampering_score method."""
+
+    def test_tampering_score_no_results(self):
+        """Test tampering score with no results."""
+        engine = TamperingRuleEngine()
+        engine.results = []
+
+        score = engine.get_tampering_score()
+
+        assert score == 0.0
+
+    def test_tampering_score_with_failures(self):
+        """Test tampering score with failures."""
+        from dwg_forensic.analysis.rules import RuleResult, RuleSeverity, RuleStatus
+
+        engine = TamperingRuleEngine()
+        engine.results = [
+            RuleResult(
+                rule_id="TEST-001",
+                rule_name="Test",
+                status=RuleStatus.FAILED,
+                severity=RuleSeverity.CRITICAL,
+                description="Failed",
+                confidence=1.0,
+            ),
+            RuleResult(
+                rule_id="TEST-002",
+                rule_name="Test 2",
+                status=RuleStatus.PASSED,
+                severity=RuleSeverity.WARNING,
+                description="Passed",
+                confidence=1.0,
+            ),
+        ]
+
+        score = engine.get_tampering_score()
+
+        assert score > 0.0
+        assert score <= 1.0

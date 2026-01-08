@@ -391,3 +391,141 @@ class TestVersionDates:
         possible, explanation = could_file_exist_at_date("AC1024", date_2015)
         assert possible is True
         assert "[OK]" in explanation
+
+    def test_get_version_release_date_unknown(self):
+        """Test get_version_release_date returns None for unknown version."""
+        from dwg_forensic.analysis.version_dates import get_version_release_date
+
+        result = get_version_release_date("AC9999")
+        assert result is None
+
+    def test_get_version_name_unknown(self):
+        """Test get_version_name returns formatted unknown for unknown version."""
+        from dwg_forensic.analysis.version_dates import get_version_name
+
+        name = get_version_name("AC9999")
+        assert "Unknown" in name
+        assert "AC9999" in name
+
+    def test_get_version_span(self):
+        """Test get_version_span returns correct span."""
+        from dwg_forensic.analysis.version_dates import get_version_span
+
+        span = get_version_span("AC1024")
+        assert span is not None
+        start, end = span
+        assert start.year == 2009
+        assert end.year == 2012
+
+    def test_get_version_span_unknown(self):
+        """Test get_version_span returns None for unknown version."""
+        from dwg_forensic.analysis.version_dates import get_version_span
+
+        span = get_version_span("AC9999")
+        assert span is None
+
+    def test_is_date_before_version_release_naive_datetime(self):
+        """Test is_date_before_version_release with naive datetime."""
+        from dwg_forensic.analysis.version_dates import is_date_before_version_release
+
+        # Naive datetime (no timezone)
+        date_2008 = datetime(2008, 1, 1)
+        assert is_date_before_version_release("AC1024", date_2008) is True
+
+    def test_is_date_before_version_release_unknown_version(self):
+        """Test is_date_before_version_release with unknown version returns False."""
+        from dwg_forensic.analysis.version_dates import is_date_before_version_release
+
+        date_2008 = datetime(2008, 1, 1, tzinfo=timezone.utc)
+        # Unknown version should return False (cannot determine)
+        assert is_date_before_version_release("AC9999", date_2008) is False
+
+    def test_get_anachronism_details(self):
+        """Test get_anachronism_details returns details for anachronism."""
+        from dwg_forensic.analysis.version_dates import get_anachronism_details
+
+        date_2008 = datetime(2008, 1, 1, tzinfo=timezone.utc)
+        details = get_anachronism_details("AC1024", date_2008)
+
+        assert details is not None
+        assert details["version_string"] == "AC1024"
+        assert "2010" in details["version_name"]
+        assert details["days_before_release"] > 0
+
+    def test_get_anachronism_details_no_anachronism(self):
+        """Test get_anachronism_details returns None when no anachronism."""
+        from dwg_forensic.analysis.version_dates import get_anachronism_details
+
+        date_2015 = datetime(2015, 1, 1, tzinfo=timezone.utc)
+        details = get_anachronism_details("AC1024", date_2015)
+
+        assert details is None
+
+    def test_get_anachronism_details_naive_datetime(self):
+        """Test get_anachronism_details with naive datetime."""
+        from dwg_forensic.analysis.version_dates import get_anachronism_details
+
+        # Naive datetime
+        date_2008 = datetime(2008, 1, 1)
+        details = get_anachronism_details("AC1024", date_2008)
+
+        assert details is not None
+        assert details["days_before_release"] > 0
+
+    def test_could_file_exist_at_date_unknown_version(self):
+        """Test could_file_exist_at_date with unknown version."""
+        from dwg_forensic.analysis.version_dates import could_file_exist_at_date
+
+        date = datetime(2015, 1, 1, tzinfo=timezone.utc)
+        possible, explanation = could_file_exist_at_date("AC9999", date)
+
+        assert possible is True
+        assert "Unknown" in explanation or "cannot verify" in explanation
+
+    def test_could_file_exist_at_date_naive_datetime(self):
+        """Test could_file_exist_at_date with naive datetime."""
+        from dwg_forensic.analysis.version_dates import could_file_exist_at_date
+
+        # Naive datetime
+        date_2008 = datetime(2008, 1, 1)
+        possible, explanation = could_file_exist_at_date("AC1024", date_2008)
+
+        assert possible is False
+        assert "[FAIL]" in explanation
+
+    def test_get_expected_version_for_date(self):
+        """Test get_expected_version_for_date returns correct version."""
+        from dwg_forensic.analysis.version_dates import get_expected_version_for_date
+
+        # Date in 2010 should return AC1024
+        date_2010 = datetime(2010, 6, 1, tzinfo=timezone.utc)
+        version = get_expected_version_for_date(date_2010)
+        assert version == "AC1024"
+
+        # Date in 2015 should return AC1027
+        date_2015 = datetime(2015, 6, 1, tzinfo=timezone.utc)
+        version = get_expected_version_for_date(date_2015)
+        assert version == "AC1027"
+
+        # Date in 2020 should return AC1032
+        date_2020 = datetime(2020, 6, 1, tzinfo=timezone.utc)
+        version = get_expected_version_for_date(date_2020)
+        assert version == "AC1032"
+
+    def test_get_expected_version_for_date_naive_datetime(self):
+        """Test get_expected_version_for_date with naive datetime."""
+        from dwg_forensic.analysis.version_dates import get_expected_version_for_date
+
+        # Naive datetime
+        date_2010 = datetime(2010, 6, 1)
+        version = get_expected_version_for_date(date_2010)
+        assert version == "AC1024"
+
+    def test_get_expected_version_for_date_before_dwg(self):
+        """Test get_expected_version_for_date for date before DWG format."""
+        from dwg_forensic.analysis.version_dates import get_expected_version_for_date
+
+        # Date before any DWG version existed
+        date_1980 = datetime(1980, 1, 1, tzinfo=timezone.utc)
+        version = get_expected_version_for_date(date_1980)
+        assert version is None

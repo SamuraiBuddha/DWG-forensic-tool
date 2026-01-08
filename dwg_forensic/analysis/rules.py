@@ -250,7 +250,7 @@ class TamperingRuleEngine:
         """
         if not rule.enabled:
             return RuleResult(
-                rule_id=rule.id,
+                rule_id=rule.rule_id,
                 rule_name=rule.name,
                 status=RuleStatus.INCONCLUSIVE,
                 severity=rule.severity,
@@ -262,7 +262,7 @@ class TamperingRuleEngine:
         if rule.condition:
             passed = self._evaluate_condition(rule.condition, context)
             return RuleResult(
-                rule_id=rule.id,
+                rule_id=rule.rule_id,
                 rule_name=rule.name,
                 status=RuleStatus.PASSED if passed else RuleStatus.FAILED,
                 severity=rule.severity,
