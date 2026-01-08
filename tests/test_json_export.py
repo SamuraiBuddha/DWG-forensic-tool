@@ -4,8 +4,10 @@ import json
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from uuid import UUID
 
 import pytest
+from pydantic import BaseModel
 
 from dwg_forensic.models import (
     CRCValidation,
@@ -82,6 +84,32 @@ class TestForensicJSONEncoder:
         """Test encoding Enum values."""
         result = json.dumps({"level": RiskLevel.HIGH}, cls=ForensicJSONEncoder)
         assert "HIGH" in result
+
+    def test_encode_uuid(self):
+        """Test encoding UUID objects."""
+        test_uuid = UUID("12345678-1234-5678-1234-567812345678")
+        result = json.dumps({"id": test_uuid}, cls=ForensicJSONEncoder)
+        assert "12345678-1234-5678-1234-567812345678" in result
+
+    def test_encode_pydantic_model(self):
+        """Test encoding Pydantic models with model_dump."""
+        class SimpleModel(BaseModel):
+            name: str
+            value: int
+
+        model = SimpleModel(name="test", value=42)
+        result = json.dumps({"model": model}, cls=ForensicJSONEncoder)
+        parsed = json.loads(result)
+        assert parsed["model"]["name"] == "test"
+        assert parsed["model"]["value"] == 42
+
+    def test_encode_unsupported_type_raises(self):
+        """Test encoding unsupported type raises TypeError."""
+        class CustomObject:
+            pass
+
+        with pytest.raises(TypeError):
+            json.dumps({"obj": CustomObject()}, cls=ForensicJSONEncoder)
 
 
 class TestJSONExporter:
