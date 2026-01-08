@@ -385,6 +385,103 @@ class TestRiskScorer:
         rec = scorer.generate_recommendation(RiskLevel.CRITICAL, 10)
         assert "critical" in rec.lower() or "expert" in rec.lower()
 
+    def test_calculate_score_with_risklevel_severity(self):
+        """Test score calculation with RiskLevel severity object (not string)."""
+        scorer = RiskScorer()
+        # Rule failure with RiskLevel object instead of string
+        rule_failures = [
+            {"rule_id": "TEST-001", "severity": RiskLevel.HIGH}
+        ]
+        score = scorer.calculate_score([], rule_failures, [])
+        assert score > 0
+
+    def test_calculate_confidence_with_metadata(self):
+        """Test confidence calculation with metadata present."""
+        scorer = RiskScorer()
+        header = HeaderAnalysis(
+            version_string="AC1032",
+            version_name="AutoCAD 2018+",
+            is_supported=True,
+            maintenance_version=3,
+            preview_address=0x100,
+            codepage=30,
+        )
+        crc = CRCValidation(
+            header_crc_stored="0x12345678",
+            header_crc_calculated="0x12345678",
+            is_valid=True,
+        )
+        metadata = DWGMetadata(
+            created_date=None,
+            modified_date=None,
+        )
+
+        confidence = scorer.calculate_confidence(header, crc, metadata, 0)
+
+        # With supported version, CRC, and metadata, confidence should be high
+        assert confidence >= 0.8
+
+    def test_calculate_confidence_with_many_anomalies(self):
+        """Test confidence calculation with more than 3 anomalies."""
+        scorer = RiskScorer()
+        header = HeaderAnalysis(
+            version_string="AC1032",
+            version_name="AutoCAD 2018+",
+            is_supported=True,
+            maintenance_version=3,
+            preview_address=0x100,
+            codepage=30,
+        )
+
+        confidence = scorer.calculate_confidence(header, None, None, 5)
+
+        # With 5 anomalies, should get the +0.05 bonus
+        assert confidence >= 0.75
+
+    def test_generate_factors_with_critical_anomalies(self):
+        """Test factor generation with critical anomalies."""
+        scorer = RiskScorer()
+        anomalies = [
+            Anomaly(
+                anomaly_type=AnomalyType.CRC_MISMATCH,
+                description="CRC mismatch",
+                severity=RiskLevel.CRITICAL,
+                details={},
+            ),
+            Anomaly(
+                anomaly_type=AnomalyType.WATERMARK_INVALID,
+                description="Watermark invalid",
+                severity=RiskLevel.CRITICAL,
+                details={},
+            ),
+        ]
+
+        factors = scorer.generate_factors(
+            anomalies=anomalies,
+            rule_failures=[],
+            tampering_indicators=[],
+            crc_validation=None,
+            trusted_dwg=None,
+        )
+
+        # Should have CRITICAL factor
+        assert any("[CRITICAL]" in f for f in factors)
+
+    def test_generate_factors_empty_no_issues(self):
+        """Test factor generation when all data is None and no issues."""
+        scorer = RiskScorer()
+
+        factors = scorer.generate_factors(
+            anomalies=[],
+            rule_failures=[],
+            tampering_indicators=[],
+            crc_validation=None,
+            trusted_dwg=None,
+        )
+
+        # Should have "[OK] No significant issues detected"
+        assert any("No significant issues detected" in f for f in factors)
+
 
 # ============================================================================
 # Integration Tests
