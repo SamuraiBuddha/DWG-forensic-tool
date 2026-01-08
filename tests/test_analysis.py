@@ -562,3 +562,226 @@ class TestTamperingReport:
         assert report.anomaly_count == 1
         assert len(report.anomalies) == 1
         assert len(report.factors) == 1
+
+
+# ============================================================================
+# Additional AnomalyDetector Coverage Tests
+# ============================================================================
+
+class TestAnomalyDetectorTimestamps:
+    """Test timestamp anomaly detection in AnomalyDetector."""
+
+    def test_created_after_modified(self, temp_dwg_file):
+        """Test detection of created date after modified date."""
+        detector = AnomalyDetector()
+        now = datetime.now(timezone.utc)
+        metadata = DWGMetadata(
+            created_date=now,  # Created now
+            modified_date=now - timedelta(days=5),  # Modified 5 days ago (before creation)
+        )
+
+        anomalies = detector.detect_timestamp_anomalies(metadata, temp_dwg_file)
+
+        # Should detect created > modified anomaly
+        assert any(
+            a.anomaly_type == AnomalyType.TIMESTAMP_ANOMALY and
+            "later than modified" in a.description.lower()
+            for a in anomalies
+        )
+
+    def test_modified_in_future(self, temp_dwg_file):
+        """Test detection of modified date in the future."""
+        detector = AnomalyDetector()
+        now = datetime.now(timezone.utc)
+        metadata = DWGMetadata(
+            modified_date=now + timedelta(days=10),  # 10 days in future
+        )
+
+        anomalies = detector.detect_timestamp_anomalies(metadata, temp_dwg_file)
+
+        # Should detect future timestamp
+        assert any(
+            a.anomaly_type == AnomalyType.TIMESTAMP_ANOMALY and
+            "future" in a.description.lower()
+            for a in anomalies
+        )
+
+    def test_editing_time_exceeds_span(self, temp_dwg_file):
+        """Test detection of editing time exceeding time span."""
+        detector = AnomalyDetector()
+        now = datetime.now(timezone.utc)
+        metadata = DWGMetadata(
+            created_date=now - timedelta(hours=10),  # 10 hours ago
+            modified_date=now,
+            total_editing_time_hours=100.0,  # 100 hours editing in 10 hours
+        )
+
+        anomalies = detector.detect_timestamp_anomalies(metadata, temp_dwg_file)
+
+        # Should detect excessive editing time
+        assert any(
+            a.anomaly_type == AnomalyType.SUSPICIOUS_EDIT_TIME
+            for a in anomalies
+        )
+
+    def test_filesystem_vs_internal_mismatch(self, tmp_path):
+        """Test detection of filesystem vs internal timestamp mismatch."""
+        # Create file with specific modification time
+        test_file = tmp_path / "test_mismatch.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        detector = AnomalyDetector()
+        # Internal date way off from filesystem date
+        metadata = DWGMetadata(
+            modified_date=datetime(2010, 1, 1, tzinfo=timezone.utc),
+        )
+
+        anomalies = detector.detect_timestamp_anomalies(metadata, test_file)
+
+        # Should detect mismatch
+        assert any(
+            a.anomaly_type == AnomalyType.TIMESTAMP_ANOMALY and
+            "filesystem" in a.description.lower()
+            for a in anomalies
+        )
+
+    def test_naive_datetime_handling(self, temp_dwg_file):
+        """Test handling of naive (timezone-unaware) datetimes."""
+        detector = AnomalyDetector()
+        # Create naive datetimes
+        created = datetime(2020, 1, 1, 12, 0)  # No timezone
+        modified = datetime(2019, 1, 1, 12, 0)  # No timezone, before created
+        metadata = DWGMetadata(
+            created_date=created,
+            modified_date=modified,
+        )
+
+        anomalies = detector.detect_timestamp_anomalies(metadata, temp_dwg_file)
+
+        # Should handle naive datetimes and detect created > modified
+        assert any(
+            a.anomaly_type == AnomalyType.TIMESTAMP_ANOMALY
+            for a in anomalies
+        )
+
+
+class TestAnomalyDetectorVersionMarkers:
+    """Test version marker detection."""
+
+    def test_multiple_version_markers(self, tmp_path):
+        """Test detection of multiple version markers."""
+        # Create file with multiple version markers
+        test_file = tmp_path / "multi_version.dwg"
+        data = b"AC1032" + b"\x00" * 100 + b"AC1027" + b"\x00" * 100
+        test_file.write_bytes(data)
+
+        detector = AnomalyDetector()
+        header = HeaderAnalysis(
+            version_string="AC1032",
+            version_name="AutoCAD 2018",
+            maintenance_version=0,
+            codepage=0,
+            preview_address=0,
+            is_supported=True,
+        )
+
+        anomalies = detector.detect_version_anomalies(header, test_file)
+
+        # Should detect multiple version markers
+        assert any(
+            a.anomaly_type == AnomalyType.VERSION_MISMATCH and
+            "multiple" in a.description.lower()
+            for a in anomalies
+        )
+
+
+class TestAnomalyDetectorStructural:
+    """Test structural anomaly detection."""
+
+    def test_detect_all_method(self, temp_dwg_file, valid_header, valid_metadata):
+        """Test detect_all orchestrator method."""
+        detector = AnomalyDetector()
+
+        anomalies = detector.detect_all(valid_header, valid_metadata, temp_dwg_file)
+
+        # Should return a list (may be empty for valid files)
+        assert isinstance(anomalies, list)
+
+    def test_detect_all_without_metadata(self, temp_dwg_file, valid_header):
+        """Test detect_all with no metadata."""
+        detector = AnomalyDetector()
+
+        anomalies = detector.detect_all(valid_header, None, temp_dwg_file)
+
+        # Should work without metadata
+        assert isinstance(anomalies, list)
+
+    def test_calculate_null_ratio_empty_data(self):
+        """Test _calculate_null_ratio with empty data."""
+        detector = AnomalyDetector()
+
+        ratio = detector._calculate_null_ratio(b"")
+
+        assert ratio == 0.0
+
+    def test_check_slack_space_repeated_pattern(self, tmp_path):
+        """Test detection of unusual repeated patterns in slack space."""
+        # Create file with long repeated non-null, non-FF sequence
+        repeated_byte = b"\x55"  # Not 0x00 or 0xFF
+        data = b"AC1032" + b"\x00" * 50 + (repeated_byte * 150) + b"\x00" * 50
+        test_file = tmp_path / "repeated.dwg"
+        test_file.write_bytes(data)
+
+        detector = AnomalyDetector()
+        anomalies = detector.detect_structural_anomalies(test_file)
+
+        # Should detect unusual repeated pattern
+        assert any(
+            "repeated" in a.description.lower() or "pattern" in a.description.lower()
+            for a in anomalies
+        )
+
+
+class TestTimezoneDiscrepancyEdgeCases:
+    """Test timezone discrepancy edge cases."""
+
+    def test_non_standard_timezone_offset(self):
+        """Test detection of non-standard timezone offset."""
+        from dwg_forensic.parsers.timestamp import TimestampData
+
+        detector = AnomalyDetector()
+        # Create data with odd timezone offset (not on 30-min boundary)
+        # offset_hours = (tdcreate - tducreate) * 24
+        # For offset of 2.25 hours (2h15m, not standard):
+        data = TimestampData(
+            tdcreate=60000.5,  # Noon local
+            tducreate=60000.5 - (2.25 / 24),  # UTC is 2.25 hours earlier
+        )
+
+        anomalies = detector.detect_timezone_discrepancy(data)
+
+        # Should detect non-standard offset
+        non_standard = [
+            a for a in anomalies
+            if "non-standard" in a.description.lower() or "30-minute" in a.description.lower()
+        ]
+        assert len(non_standard) >= 1
+
+
+class TestVersionAnachronismEdgeCases:
+    """Test version anachronism edge cases."""
+
+    def test_anachronism_invalid_mjd(self):
+        """Test version anachronism with invalid MJD value."""
+        from dwg_forensic.parsers.timestamp import TimestampData
+
+        detector = AnomalyDetector()
+        # Create data with invalid MJD that would cause overflow
+        data = TimestampData(
+            tdcreate=float("inf"),  # Invalid MJD
+        )
+
+        anomalies = detector.detect_version_anachronism("AC1024", data)
+
+        # Should handle gracefully (no crash, empty list)
+        assert isinstance(anomalies, list)

@@ -304,3 +304,151 @@ class TestHeaderParser:
             parser.parse(dwg_path)
 
         assert "too small" in str(exc_info.value).lower()
+
+    def test_read_byte_out_of_bounds(self):
+        """Test _read_byte returns 0 when offset is out of bounds."""
+        parser = HeaderParser()
+
+        data = b"\x01\x02\x03"
+        assert parser._read_byte(data, 10) == 0
+
+    def test_read_uint16_out_of_bounds(self):
+        """Test _read_uint16 returns 0 when offset is out of bounds."""
+        parser = HeaderParser()
+
+        data = b"\x01\x02"
+        assert parser._read_uint16(data, 10) == 0
+        # Also test partial bounds (offset+2 > len)
+        assert parser._read_uint16(data, 1) == 0
+
+    def test_read_uint32_out_of_bounds(self):
+        """Test _read_uint32 returns 0 when offset is out of bounds."""
+        parser = HeaderParser()
+
+        data = b"\x01\x02\x03"
+        assert parser._read_uint32(data, 10) == 0
+        # Also test partial bounds (offset+4 > len)
+        assert parser._read_uint32(data, 1) == 0
+
+    def test_parse_version_specific_unknown_fallback(self):
+        """Test _parse_version_specific uses fallback for truly unknown versions."""
+        parser = HeaderParser()
+
+        # Call with a version that's not in any known list
+        data = b"AC9999" + b"\x00" * 100
+
+        # This tests lines 232-234 (fallback branch)
+        result = parser._parse_version_specific(data, "AC9999")
+
+        assert result.version_string == "AC9999"
+        assert result.maintenance_version == 0
+        assert result.preview_address == 0
+        assert result.codepage == 0
+
+    def test_read_version_string_invalid_prefix(self):
+        """Test _read_version_string raises error for non-AC prefix."""
+        parser = HeaderParser()
+
+        # Create data with invalid version prefix
+        data = b"XX1032" + b"\x00" * 100
+
+        with pytest.raises(InvalidDWGError) as exc_info:
+            parser._read_version_string(data)
+
+        assert "Invalid DWG version string" in str(exc_info.value)
+
+    def test_read_version_string_decode_error(self):
+        """Test _read_version_string handles decode error."""
+        parser = HeaderParser()
+
+        # Create data with invalid ASCII bytes
+        data = b"\xff\xfe\xfd\xfc\xfb\xfa" + b"\x00" * 100
+
+        with pytest.raises(InvalidDWGError) as exc_info:
+            parser._read_version_string(data)
+
+        assert "Cannot decode" in str(exc_info.value)
+
+    def test_get_crc_offset_full_support_versions(self):
+        """Test get_crc_offset returns correct offset for full support versions."""
+        parser = HeaderParser()
+
+        # All full support versions should return R24 offset
+        for version in ["AC1024", "AC1027", "AC1032"]:
+            offset = parser.get_crc_offset(version)
+            assert offset == parser.OFFSET_CRC32_R24
+
+    def test_get_crc_offset_ac1021(self):
+        """Test get_crc_offset returns correct offset for AC1021."""
+        parser = HeaderParser()
+
+        offset = parser.get_crc_offset("AC1021")
+        assert offset == parser.OFFSET_CRC32_R21
+
+    def test_get_crc_offset_ac1018(self):
+        """Test get_crc_offset returns correct offset for AC1018."""
+        parser = HeaderParser()
+
+        offset = parser.get_crc_offset("AC1018")
+        assert offset == parser.OFFSET_CRC32_R18
+
+    def test_get_crc_offset_ac1015(self):
+        """Test get_crc_offset returns correct offset for AC1015."""
+        parser = HeaderParser()
+
+        offset = parser.get_crc_offset("AC1015")
+        assert offset == parser.OFFSET_CRC32_R15
+
+    def test_get_crc_offset_r13_returns_none(self):
+        """Test get_crc_offset returns None for R13/R14 versions."""
+        parser = HeaderParser()
+
+        assert parser.get_crc_offset("AC1012") is None
+        assert parser.get_crc_offset("AC1014") is None
+        assert parser.get_crc_offset("AC9999") is None
+
+    def test_has_full_support(self):
+        """Test has_full_support returns correct values."""
+        parser = HeaderParser()
+
+        # Full support versions
+        assert parser.has_full_support("AC1024") is True
+        assert parser.has_full_support("AC1027") is True
+        assert parser.has_full_support("AC1032") is True
+
+        # Limited support versions
+        assert parser.has_full_support("AC1021") is False
+        assert parser.has_full_support("AC1018") is False
+        assert parser.has_full_support("AC1015") is False
+        assert parser.has_full_support("AC1012") is False
+
+    def test_has_crc_support(self):
+        """Test has_crc_support returns correct values."""
+        parser = HeaderParser()
+
+        # Versions with CRC support
+        assert parser.has_crc_support("AC1032") is True
+        assert parser.has_crc_support("AC1027") is True
+        assert parser.has_crc_support("AC1024") is True
+        assert parser.has_crc_support("AC1021") is True
+        assert parser.has_crc_support("AC1018") is True
+        assert parser.has_crc_support("AC1015") is True
+
+        # Versions without CRC support
+        assert parser.has_crc_support("AC1012") is False
+        assert parser.has_crc_support("AC1014") is False
+
+    def test_has_watermark_support(self):
+        """Test has_watermark_support returns correct values."""
+        parser = HeaderParser()
+
+        # Versions with TrustedDWG support (AC1021+)
+        assert parser.has_watermark_support("AC1032") is True
+        assert parser.has_watermark_support("AC1027") is True
+        assert parser.has_watermark_support("AC1024") is True
+        assert parser.has_watermark_support("AC1021") is True
+
+        # Versions without TrustedDWG support
+        assert parser.has_watermark_support("AC1018") is False
+        assert parser.has_watermark_support("AC1015") is False
+        assert parser.has_watermark_support("AC1012") is False
