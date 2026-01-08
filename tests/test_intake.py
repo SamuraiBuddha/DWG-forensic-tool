@@ -399,3 +399,211 @@ class TestIntegration:
         # Verify each has unique evidence path
         paths = [r.file_path for r in results]
         assert len(set(paths)) == 3
+
+
+# ============================================================================
+# Additional Coverage Tests
+# ============================================================================
+
+class TestEvidenceDirectoryCreationError:
+    """Test evidence directory creation failures."""
+
+    def test_init_raises_intake_error_when_dir_creation_fails(self, tmp_path, temp_db_path):
+        """Test that IntakeError is raised when directory creation fails."""
+        # Create a file where directory should be (to cause mkdir to fail)
+        blocker = tmp_path / "evidence"
+        blocker.write_text("blocking file")
+
+        with pytest.raises(IntakeError):
+            FileIntake(evidence_dir=blocker / "subdir", db_path=temp_db_path)
+
+
+class TestDuplicateEvidenceFile:
+    """Test handling of duplicate evidence files."""
+
+    def test_intake_raises_error_for_duplicate(self, file_intake, valid_dwg_file):
+        """Test that intake raises error when evidence file already exists."""
+        # First intake
+        file_intake.intake(
+            source_path=valid_dwg_file,
+            case_id="CASE-DUP-001",
+            examiner="Examiner",
+            evidence_number="E-DUP-001"
+        )
+
+        # Create a new source file with same name to try to intake
+        new_file = valid_dwg_file.parent / "test2.dwg"
+        new_file.write_bytes(valid_dwg_file.read_bytes())
+
+        # Rename to same name as original
+        original_name = valid_dwg_file
+        new_source = original_name.parent / original_name.name
+
+        # Try to intake again with same case/evidence number
+        # This should fail because the destination file already exists
+        with pytest.raises(IntakeError) as excinfo:
+            file_intake.intake(
+                source_path=new_source,
+                case_id="CASE-DUP-001",
+                examiner="Examiner",
+                evidence_number="E-DUP-001"
+            )
+        assert "already exists" in str(excinfo.value)
+
+
+class TestCleanupMethod:
+    """Test _cleanup method."""
+
+    def test_cleanup_removes_read_only_file(self, file_intake, tmp_path):
+        """Test that _cleanup removes read-only file."""
+        test_file = tmp_path / "cleanup_test.txt"
+        test_file.write_text("test content")
+
+        # Set read-only
+        file_intake._set_read_only(test_file)
+
+        # Cleanup should remove it
+        file_intake._cleanup(test_file)
+        assert not test_file.exists()
+
+    def test_cleanup_handles_nonexistent_file(self, file_intake, tmp_path):
+        """Test that _cleanup handles nonexistent file gracefully."""
+        nonexistent = tmp_path / "nonexistent.txt"
+        # Should not raise error
+        file_intake._cleanup(nonexistent)
+
+
+class TestContextManagerIntake:
+    """Test FileIntake context manager."""
+
+    def test_file_intake_context_manager(self, temp_evidence_dir, temp_db_path):
+        """Test FileIntake as context manager."""
+        with FileIntake(evidence_dir=temp_evidence_dir, db_path=temp_db_path) as intake:
+            assert intake is not None
+
+    def test_file_intake_close_method(self, temp_evidence_dir, temp_db_path):
+        """Test FileIntake close method."""
+        intake = FileIntake(evidence_dir=temp_evidence_dir, db_path=temp_db_path)
+        intake.close()
+        # Should not raise error
+
+
+class TestIntakeErrorPaths:
+    """Test various error paths during intake."""
+
+    def test_intake_with_hash_calculation_error(self, file_intake, tmp_path):
+        """Test intake when hash calculation fails."""
+        from unittest.mock import patch
+
+        # Create a valid DWG file
+        test_file = tmp_path / "test_hash_error.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 110)
+
+        # Mock _calculate_hashes to raise an exception
+        with patch.object(file_intake, '_calculate_hashes', side_effect=IOError("Hash calculation failed")):
+            with pytest.raises(IntakeError) as excinfo:
+                file_intake.intake(
+                    source_path=test_file,
+                    case_id="CASE-001",
+                    examiner="Examiner"
+                )
+            assert "Failed to calculate hashes" in str(excinfo.value)
+
+    def test_intake_with_copy_error(self, file_intake, tmp_path):
+        """Test intake when file copy fails."""
+        from unittest.mock import patch
+
+        test_file = tmp_path / "test_copy_error.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 110)
+
+        with patch.object(file_intake, '_copy_to_evidence', side_effect=IOError("Copy failed")):
+            with pytest.raises(IntakeError) as excinfo:
+                file_intake.intake(
+                    source_path=test_file,
+                    case_id="CASE-001",
+                    examiner="Examiner"
+                )
+            assert "Failed to copy" in str(excinfo.value)
+
+    def test_intake_with_read_only_error(self, file_intake, tmp_path):
+        """Test intake when set_read_only fails."""
+        from unittest.mock import patch
+
+        test_file = tmp_path / "test_readonly_error.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 110)
+
+        # We need to mock _set_read_only to fail, but after _copy_to_evidence succeeds
+        original_copy = file_intake._copy_to_evidence
+        copied_path = [None]
+
+        def mock_copy(*args, **kwargs):
+            result = original_copy(*args, **kwargs)
+            copied_path[0] = result
+            return result
+
+        with patch.object(file_intake, '_copy_to_evidence', side_effect=mock_copy):
+            with patch.object(file_intake, '_set_read_only', side_effect=PermissionError("Cannot set read-only")):
+                with pytest.raises(IntakeError) as excinfo:
+                    file_intake.intake(
+                        source_path=test_file,
+                        case_id="CASE-RO-001",
+                        examiner="Examiner"
+                    )
+                assert "Failed to set read-only" in str(excinfo.value)
+
+    def test_intake_with_verify_error(self, file_intake, tmp_path):
+        """Test intake when copy verification fails."""
+        from unittest.mock import patch
+
+        test_file = tmp_path / "test_verify_error.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 110)
+
+        # Mock _verify_copy to raise an exception (not return False)
+        with patch.object(file_intake, '_verify_copy', side_effect=IOError("Verify failed")):
+            with pytest.raises(IntakeError) as excinfo:
+                file_intake.intake(
+                    source_path=test_file,
+                    case_id="CASE-VER-001",
+                    examiner="Examiner"
+                )
+            assert "Failed to verify copy" in str(excinfo.value)
+
+    def test_intake_with_hash_mismatch(self, file_intake, tmp_path):
+        """Test intake when copy hash doesn't match original."""
+        from unittest.mock import patch
+
+        test_file = tmp_path / "test_mismatch.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 110)
+
+        # Mock _verify_copy to return False (hash mismatch)
+        with patch.object(file_intake, '_verify_copy', return_value=False):
+            with pytest.raises(IntakeError) as excinfo:
+                file_intake.intake(
+                    source_path=test_file,
+                    case_id="CASE-MIS-001",
+                    examiner="Examiner"
+                )
+            assert "verification failed" in str(excinfo.value).lower()
+
+    def test_intake_with_database_error(self, file_intake, tmp_path):
+        """Test intake when database operation fails."""
+        from unittest.mock import patch, MagicMock
+        from dwg_forensic.core import intake as intake_module
+
+        test_file = tmp_path / "test_db_error.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 110)
+
+        # Mock get_session to raise an exception during the database operation
+        with patch.object(intake_module, 'get_session') as mock_session:
+            mock_cm = MagicMock()
+            mock_cm.__enter__ = MagicMock(side_effect=Exception("Database error"))
+            mock_cm.__exit__ = MagicMock(return_value=False)
+            mock_session.return_value = mock_cm
+
+            with pytest.raises(IntakeError) as excinfo:
+                file_intake.intake(
+                    source_path=test_file,
+                    case_id="CASE-DB-001",
+                    examiner="Examiner"
+                )
+            assert "Failed to create database record" in str(excinfo.value)

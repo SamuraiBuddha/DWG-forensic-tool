@@ -365,3 +365,238 @@ class TestIntegration:
         # Generate report
         report = custody_chain.generate_custody_report(sample_evidence_record)
         assert report["total_events"] == 2
+
+
+# ============================================================================
+# Additional Coverage Tests
+# ============================================================================
+
+class TestGetEvidenceByHash:
+    """Test get_evidence_by_hash method."""
+
+    def test_get_evidence_by_hash_found(self, custody_chain, sample_evidence_record, sample_evidence_file):
+        """Test get_evidence_by_hash returns evidence when found."""
+        import hashlib
+        content = sample_evidence_file.read_bytes()
+        sha256 = hashlib.sha256(content).hexdigest()
+
+        evidence = custody_chain.get_evidence_by_hash(sha256)
+        assert evidence is not None
+        assert evidence.sha256.lower() == sha256.lower()
+
+    def test_get_evidence_by_hash_not_found(self, custody_chain):
+        """Test get_evidence_by_hash returns None when not found."""
+        result = custody_chain.get_evidence_by_hash("nonexistent" * 8)
+        assert result is None
+
+
+class TestSearchEvidence:
+    """Test search_evidence method."""
+
+    def test_search_evidence_by_case_id(self, custody_chain, sample_evidence_record):
+        """Test searching evidence by case_id."""
+        results = custody_chain.search_evidence(case_id="TEST")
+        assert len(results) >= 1
+
+    def test_search_evidence_by_filename(self, custody_chain, sample_evidence_record):
+        """Test searching evidence by filename."""
+        results = custody_chain.search_evidence(filename="evidence")
+        assert len(results) >= 1
+
+    def test_search_evidence_by_examiner(self, custody_chain, sample_evidence_record):
+        """Test searching evidence by examiner."""
+        # First log an event to associate examiner
+        custody_chain.log_event(
+            evidence_id=sample_evidence_record,
+            event_type=EventType.ACCESS,
+            examiner="Unique Examiner 12345",
+            description="Test access"
+        )
+        results = custody_chain.search_evidence(examiner="Unique Examiner")
+        assert len(results) >= 1
+
+    def test_search_evidence_no_results(self, custody_chain):
+        """Test searching evidence with no results."""
+        results = custody_chain.search_evidence(case_id="NONEXISTENT_CASE_XYZ")
+        assert len(results) == 0
+
+
+class TestIntegrityVerificationAdvanced:
+    """Advanced integrity verification tests."""
+
+    def test_verify_integrity_file_not_on_disk(self, custody_chain, tmp_path):
+        """Test verify_integrity when file no longer exists on disk."""
+        import hashlib
+
+        # Create a file and evidence record
+        test_file = tmp_path / "temp_evidence.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 110)
+
+        content = test_file.read_bytes()
+        sha256 = hashlib.sha256(content).hexdigest()
+
+        engine = custody_chain._engine
+        with get_session(engine) as session:
+            case = CaseInfo(
+                id="CASE-TEMP-001",
+                case_name="Temp Case",
+                examiner_assigned="Temp Examiner"
+            )
+            session.add(case)
+            session.flush()
+
+            evidence = EvidenceFile(
+                filename=test_file.name,
+                file_path=str(test_file.absolute()),
+                file_size_bytes=test_file.stat().st_size,
+                sha256=sha256,
+                sha1=hashlib.sha1(content).hexdigest(),
+                md5=hashlib.md5(content).hexdigest(),
+                case_id="CASE-TEMP-001",
+                evidence_number="E-TEMP-001",
+                intake_timestamp=datetime.now(timezone.utc)
+            )
+            session.add(evidence)
+            session.commit()
+            evidence_id = evidence.id
+
+        # Delete the file
+        test_file.unlink()
+
+        # Now verify - should fail because file is missing
+        is_valid, message = custody_chain.verify_integrity(evidence_id)
+        assert is_valid is False
+        assert "not found on disk" in message
+
+    def test_verify_integrity_hash_mismatch(self, custody_chain, tmp_path):
+        """Test verify_integrity when file has been modified."""
+        import hashlib
+
+        # Create a file and evidence record
+        test_file = tmp_path / "modified_evidence.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 110)
+
+        content = test_file.read_bytes()
+
+        engine = custody_chain._engine
+        with get_session(engine) as session:
+            case = CaseInfo(
+                id="CASE-MOD-001",
+                case_name="Modified Case",
+                examiner_assigned="Test Examiner"
+            )
+            session.add(case)
+            session.flush()
+
+            # Store a wrong hash intentionally
+            evidence = EvidenceFile(
+                filename=test_file.name,
+                file_path=str(test_file.absolute()),
+                file_size_bytes=test_file.stat().st_size,
+                sha256="wrong_hash_" + "a" * 54,  # Wrong hash
+                sha1=hashlib.sha1(content).hexdigest(),
+                md5=hashlib.md5(content).hexdigest(),
+                case_id="CASE-MOD-001",
+                evidence_number="E-MOD-001",
+                intake_timestamp=datetime.now(timezone.utc)
+            )
+            session.add(evidence)
+            session.commit()
+            evidence_id = evidence.id
+
+        # Verify - should fail because hash doesn't match
+        is_valid, message = custody_chain.verify_integrity(evidence_id)
+        assert is_valid is False
+        assert "[FAIL]" in message
+
+
+class TestLogEventIntegrityError:
+    """Test log_event with integrity failures."""
+
+    def test_log_event_raises_integrity_error_when_hash_fails(self, custody_chain, tmp_path):
+        """Test that log_event raises IntegrityError when hash verification fails."""
+        import hashlib
+
+        # Create a file and evidence record with wrong hash
+        test_file = tmp_path / "bad_hash_evidence.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 110)
+        content = test_file.read_bytes()
+
+        engine = custody_chain._engine
+        with get_session(engine) as session:
+            case = CaseInfo(
+                id="CASE-BAD-001",
+                case_name="Bad Hash Case",
+                examiner_assigned="Test"
+            )
+            session.add(case)
+            session.flush()
+
+            evidence = EvidenceFile(
+                filename=test_file.name,
+                file_path=str(test_file.absolute()),
+                file_size_bytes=test_file.stat().st_size,
+                sha256="bad_hash_" + "x" * 55,  # Wrong hash
+                sha1=hashlib.sha1(content).hexdigest(),
+                md5=hashlib.md5(content).hexdigest(),
+                case_id="CASE-BAD-001",
+                evidence_number="E-BAD-001",
+                intake_timestamp=datetime.now(timezone.utc)
+            )
+            session.add(evidence)
+            session.commit()
+            evidence_id = evidence.id
+
+        # Try to log event with hash verification - should raise IntegrityError
+        with pytest.raises(IntegrityError):
+            custody_chain.log_event(
+                evidence_id=evidence_id,
+                event_type=EventType.ACCESS,
+                examiner="Test",
+                description="Test access",
+                verify_hash=True
+            )
+
+    def test_log_event_without_hash_verification(self, custody_chain, sample_evidence_record):
+        """Test log_event without hash verification."""
+        event = custody_chain.log_event(
+            evidence_id=sample_evidence_record,
+            event_type=EventType.ACCESS,
+            examiner="Test",
+            description="Access without hash check",
+            verify_hash=False
+        )
+        assert event is not None
+        assert event.hash_verified is False
+
+
+class TestContextManager:
+    """Test context manager functionality."""
+
+    def test_custody_chain_context_manager(self, temp_db_path):
+        """Test CustodyChain as context manager."""
+        with CustodyChain(db_path=temp_db_path) as chain:
+            assert chain is not None
+
+    def test_custody_chain_close_method(self, temp_db_path):
+        """Test CustodyChain close method."""
+        chain = CustodyChain(db_path=temp_db_path)
+        chain.close()
+        # Should not raise error when called
+
+
+class TestCustodyReportWithVerification:
+    """Test custody report with verification events."""
+
+    def test_report_last_verified_found(self, custody_chain, sample_evidence_record):
+        """Test that report includes last_verified when verification events exist."""
+        # Log a verification event
+        custody_chain.log_event(
+            evidence_id=sample_evidence_record,
+            event_type=EventType.VERIFICATION,
+            examiner="QA",
+            description="Verification check"
+        )
+
+        report = custody_chain.generate_custody_report(sample_evidence_record)
+        assert report["last_verified"] is not None

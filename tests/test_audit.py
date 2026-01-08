@@ -610,3 +610,272 @@ class TestIntegration:
         # Verify audit trail
         trail = logger.get_audit_trail()
         assert len(trail) >= 6  # 3 intakes + 3 analyses
+
+
+# ============================================================================
+# Additional Coverage Tests
+# ============================================================================
+
+class TestAuditLoggerContextManager:
+    """Test AuditLogger context manager functionality."""
+
+    def test_context_manager_enter_exit(self, tmp_path):
+        """Test AuditLogger as context manager."""
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        with AuditLogger(log_dir=log_dir) as logger:
+            assert logger is not None
+            logger.log(AuditLevel.INFO, "Test message")
+
+    def test_close_method_releases_handlers(self, tmp_path):
+        """Test that close() releases file handlers."""
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        logger = AuditLogger(log_dir=log_dir)
+        logger.log(AuditLevel.INFO, "Test message")
+        logger.close()
+        # Handlers should be empty after close
+        assert len(logger.json_logger.handlers) == 0
+        assert len(logger.text_logger.handlers) == 0
+
+
+class TestGetAuditTrailFiltering:
+    """Test get_audit_trail filtering functionality."""
+
+    def test_get_audit_trail_filter_by_evidence_id(self, tmp_path):
+        """Test filtering audit trail by evidence_id."""
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        logger = AuditLogger(log_dir=log_dir)
+        logger.log(AuditLevel.INFO, "E001 action", evidence_id="E-001")
+        logger.log(AuditLevel.INFO, "E002 action", evidence_id="E-002")
+
+        trail = logger.get_audit_trail(evidence_id="E-001")
+        assert len(trail) >= 1
+        assert all(e.get("evidence_id") == "E-001" for e in trail)
+
+    def test_get_audit_trail_filter_by_case_id(self, tmp_path):
+        """Test filtering audit trail by case_id."""
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        logger = AuditLogger(log_dir=log_dir)
+        logger.log(AuditLevel.INFO, "Case 1 action", case_id="CASE-001")
+        logger.log(AuditLevel.INFO, "Case 2 action", case_id="CASE-002")
+
+        trail = logger.get_audit_trail(case_id="CASE-001")
+        assert len(trail) >= 1
+        assert all(e.get("case_id") == "CASE-001" for e in trail)
+
+    def test_get_audit_trail_filter_by_date_range(self, tmp_path):
+        """Test filtering audit trail by date range."""
+        from datetime import datetime, timezone, timedelta
+
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        logger = AuditLogger(log_dir=log_dir)
+        logger.log(AuditLevel.INFO, "Test action")
+
+        now = datetime.now(timezone.utc)
+        start_date = now - timedelta(hours=1)
+        end_date = now + timedelta(hours=1)
+
+        trail = logger.get_audit_trail(start_date=start_date, end_date=end_date)
+        assert len(trail) >= 1
+
+    def test_get_audit_trail_empty_log_file(self, tmp_path):
+        """Test get_audit_trail when log file doesn't exist."""
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        logger = AuditLogger(log_dir=log_dir)
+        # Don't log anything - file won't exist
+        trail = logger.get_audit_trail()
+        assert trail == []
+
+    def test_get_audit_trail_handles_malformed_json(self, tmp_path):
+        """Test that get_audit_trail handles malformed JSON lines."""
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        # Create a malformed JSONL file
+        jsonl_path = log_dir / "dwg_forensic_audit.jsonl"
+        with open(jsonl_path, "w") as f:
+            f.write('{"timestamp": "2025-01-01T00:00:00Z", "level": "INFO", "action": "test"}\n')
+            f.write('malformed json line\n')
+            f.write('{"timestamp": "2025-01-01T01:00:00Z", "level": "INFO", "action": "test2"}\n')
+
+        logger = AuditLogger(log_dir=log_dir)
+        trail = logger.get_audit_trail()
+        # Should return valid entries, skipping malformed lines
+        assert len(trail) == 2
+
+
+class TestAuditTrailExportFormats:
+    """Test audit trail export in different formats."""
+
+    def test_export_csv_format(self, tmp_path):
+        """Test exporting audit trail in CSV format."""
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        logger = AuditLogger(log_dir=log_dir)
+        logger.log(AuditLevel.INFO, "Test action 1", evidence_id="E-001")
+        logger.log(AuditLevel.WARNING, "Test action 2", case_id="CASE-001")
+
+        export_path = tmp_path / "audit_export.csv"
+        logger.export_audit_trail(export_path, format="csv")
+
+        assert export_path.exists()
+        content = export_path.read_text()
+        assert "timestamp" in content
+        assert "level" in content
+
+    def test_export_csv_empty_entries(self, tmp_path):
+        """Test exporting empty audit trail in CSV format."""
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        logger = AuditLogger(log_dir=log_dir)
+        # Don't log anything
+
+        export_path = tmp_path / "audit_export_empty.csv"
+        logger.export_audit_trail(export_path, format="csv")
+
+        assert export_path.exists()
+        content = export_path.read_text()
+        assert content == ""
+
+    def test_export_txt_format(self, tmp_path):
+        """Test exporting audit trail in TXT format."""
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        logger = AuditLogger(log_dir=log_dir)
+        logger.log(AuditLevel.INFO, "Test action", evidence_id="E-001")
+
+        export_path = tmp_path / "audit_export.txt"
+        logger.export_audit_trail(export_path, format="txt")
+
+        assert export_path.exists()
+        content = export_path.read_text()
+        assert "INFO" in content
+        assert "User:" in content
+
+    def test_export_unsupported_format_raises(self, tmp_path):
+        """Test that unsupported export format raises ValueError."""
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        logger = AuditLogger(log_dir=log_dir)
+        logger.log(AuditLevel.INFO, "Test action")
+
+        export_path = tmp_path / "audit_export.xml"
+        with pytest.raises(ValueError) as excinfo:
+            logger.export_audit_trail(export_path, format="xml")
+        assert "Unsupported format" in str(excinfo.value)
+
+
+class TestGetSystemInfoException:
+    """Test _get_system_info exception handling."""
+
+    def test_get_system_info_socket_error(self, tmp_path):
+        """Test _get_system_info handles socket errors."""
+        from unittest.mock import patch
+
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        logger = AuditLogger(log_dir=log_dir)
+
+        # Mock socket functions to raise exceptions
+        with patch('socket.gethostname', side_effect=Exception("Socket error")):
+            with patch('socket.gethostbyname', side_effect=Exception("Socket error")):
+                # Should not raise - should return "unknown"
+                info = logger._get_system_info()
+                assert info["workstation"] == "unknown"
+                assert info["ip_address"] == "unknown"
+
+
+class TestGlobalAuditLogger:
+    """Test global audit logger singleton."""
+
+    def test_get_audit_logger_with_default_dir(self, tmp_path, monkeypatch):
+        """Test get_audit_logger uses default directory."""
+        import dwg_forensic.utils.audit as audit_module
+
+        # Reset global logger
+        audit_module._global_audit_logger = None
+
+        # Change cwd to tmp_path
+        monkeypatch.chdir(tmp_path)
+
+        logger = get_audit_logger()
+        assert logger is not None
+
+        # Clean up
+        audit_module._global_audit_logger = None
+
+
+class TestLogWithDetails:
+    """Test logging with details dict."""
+
+    def test_log_with_details_dict(self, tmp_path):
+        """Test log method with details parameter."""
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        logger = AuditLogger(log_dir=log_dir)
+        logger.log(
+            AuditLevel.INFO,
+            "Test action",
+            details={"key1": "value1", "key2": 123}
+        )
+
+        trail = logger.get_audit_trail()
+        assert len(trail) >= 1
+        assert "details" in trail[-1]
+        assert trail[-1]["details"]["key1"] == "value1"
+
+
+class TestLogAnalysisWithoutFindings:
+    """Test log_analysis without findings."""
+
+    def test_log_analysis_without_findings(self, tmp_path):
+        """Test log_analysis method without findings parameter."""
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        logger = AuditLogger(log_dir=log_dir)
+        logger.log_analysis(
+            evidence_id="E-001",
+            examiner="Analyst",
+            analysis_type="header_analysis"
+        )
+
+        trail = logger.get_audit_trail()
+        assert len(trail) >= 1
+
+
+class TestLogVerificationFailed:
+    """Test log_verification with failed verification."""
+
+    def test_log_verification_failed(self, tmp_path):
+        """Test log_verification with is_valid=False."""
+        log_dir = tmp_path / "audit_logs"
+        log_dir.mkdir()
+
+        logger = AuditLogger(log_dir=log_dir)
+        logger.log_verification(
+            evidence_id="E-001",
+            examiner="QA",
+            is_valid=False,
+            hash_computed="abc123"
+        )
+
+        trail = logger.get_audit_trail(level=AuditLevel.WARNING)
+        assert len(trail) >= 1

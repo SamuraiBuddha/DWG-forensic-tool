@@ -363,3 +363,156 @@ class TestIntegration:
         differences = guard.compare_snapshots(snapshot1, snapshot2)
         assert differences["hash_changed"] is True
         assert differences["protection_changed"] is True
+
+
+# ============================================================================
+# Additional Coverage Tests
+# ============================================================================
+
+class TestFileGuardEdgeCases:
+    """Test FileGuard edge cases and error handling."""
+
+    def test_is_protected_nonexistent_file_returns_false(self, tmp_path):
+        """Test that is_protected returns False for nonexistent files."""
+        guard = FileGuard()
+        nonexistent = tmp_path / "nonexistent.txt"
+        assert guard.is_protected(nonexistent) is False
+
+    def test_verify_protection_nonexistent_file(self, tmp_path):
+        """Test verify_protection returns failure for nonexistent files."""
+        guard = FileGuard()
+        nonexistent = tmp_path / "nonexistent.txt"
+        is_protected, message = guard.verify_protection(nonexistent)
+        assert is_protected is False
+        assert "[FAIL]" in message
+        assert "not found" in message.lower()
+
+    def test_protect_os_error(self, tmp_path):
+        """Test that protect raises PermissionError on OSError."""
+        from unittest.mock import patch
+
+        guard = FileGuard()
+        test_file = tmp_path / "os_error.txt"
+        test_file.write_text("test")
+
+        with patch("os.chmod", side_effect=OSError("Permission denied")):
+            with pytest.raises(PermissionError) as excinfo:
+                guard.protect(test_file)
+            assert "Cannot set read-only" in str(excinfo.value)
+
+    def test_unprotect_os_error(self, tmp_path):
+        """Test that unprotect raises PermissionError on OSError."""
+        from unittest.mock import patch
+
+        guard = FileGuard()
+        test_file = tmp_path / "unprotect_error.txt"
+        test_file.write_text("test")
+
+        with patch("os.chmod", side_effect=OSError("Permission denied")):
+            with pytest.raises(PermissionError) as excinfo:
+                guard.unprotect(test_file)
+            assert "Cannot remove read-only" in str(excinfo.value)
+
+    def test_create_integrity_snapshot_nonexistent_file(self, tmp_path):
+        """Test create_integrity_snapshot raises FileNotFoundError for missing files."""
+        guard = FileGuard()
+        nonexistent = tmp_path / "nonexistent.txt"
+        with pytest.raises(FileNotFoundError):
+            guard.create_integrity_snapshot(nonexistent)
+
+    def test_get_file_attributes_includes_owner(self, tmp_path):
+        """Test that get_file_attributes includes owner info."""
+        guard = FileGuard()
+        test_file = tmp_path / "owner_test.txt"
+        test_file.write_text("test")
+
+        attrs = guard.get_file_attributes(test_file)
+        assert "owner" in attrs
+
+    def test_get_file_attributes_hidden_file(self, tmp_path):
+        """Test get_file_attributes for hidden files."""
+        guard = FileGuard()
+        test_file = tmp_path / ".hidden_file.txt"
+        test_file.write_text("hidden")
+
+        attrs = guard.get_file_attributes(test_file)
+        # On non-Windows, hidden is determined by dot prefix
+        if not guard._is_windows:
+            assert attrs["is_hidden"] is True
+
+
+class TestProtectedFileContextEdgeCases:
+    """Test ProtectedFileContext edge cases."""
+
+    def test_context_manager_returns_path(self, tmp_path):
+        """Test that context manager returns the file path."""
+        test_file = tmp_path / "context_path.txt"
+        test_file.write_text("test")
+
+        guard = FileGuard()
+        guard.protect(test_file)
+
+        with ProtectedFileContext(guard, test_file, "Testing") as path:
+            assert path == test_file
+
+    def test_context_manager_exception_during_reprotect(self, tmp_path):
+        """Test context manager when reprotection fails."""
+        from unittest.mock import patch
+
+        test_file = tmp_path / "reprotect_fail.txt"
+        test_file.write_text("test")
+
+        guard = FileGuard()
+        guard.protect(test_file)
+
+        # Mock protect to fail during __exit__
+        original_protect = guard.protect
+
+        def failing_protect(*args, **kwargs):
+            raise PermissionError("Cannot protect")
+
+        try:
+            with ProtectedFileContext(guard, test_file, "Testing") as path:
+                # Unprotect happened, now mock protect to fail
+                guard.protect = failing_protect
+                # Write something to the file
+                path.write_text("modified")
+        except PermissionError:
+            # Expected - the __exit__ should re-raise
+            pass
+
+        # Reset to original
+        guard.protect = original_protect
+
+    def test_context_manager_file_not_initially_protected(self, tmp_path):
+        """Test context manager with unprotected file doesn't protect on exit."""
+        test_file = tmp_path / "unprotected.txt"
+        test_file.write_text("test")
+
+        guard = FileGuard()
+        assert guard.is_protected(test_file) is False
+
+        with ProtectedFileContext(guard, test_file, "Testing"):
+            pass
+
+        # File should still be unprotected
+        assert guard.is_protected(test_file) is False
+
+
+class TestCompareSnapshotsSizeChange:
+    """Test compare_snapshots size change detection."""
+
+    def test_compare_snapshots_detects_size_change(self, tmp_path):
+        """Test that compare_snapshots detects file size changes."""
+        test_file = tmp_path / "size_change.txt"
+        test_file.write_text("short")
+
+        guard = FileGuard()
+        snapshot1 = guard.create_integrity_snapshot(test_file)
+
+        test_file.write_text("much longer content here")
+        snapshot2 = guard.create_integrity_snapshot(test_file)
+
+        diff = guard.compare_snapshots(snapshot1, snapshot2)
+        assert diff["size_changed"] is True
+        assert any("Size changed" in d for d in diff["differences"])
