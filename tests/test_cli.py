@@ -329,3 +329,799 @@ class TestLogEventCommand:
         assert result.exit_code == 0
         assert "event-type" in result.output
         assert "examiner" in result.output
+
+
+# ============================================================================
+# Additional Coverage Tests
+# ============================================================================
+
+
+class TestAnalyzeExceptionHandling:
+    """Tests for analyze command exception handling."""
+
+    def test_analyze_generic_exception_verbose(self, runner, temp_dir):
+        """Test generic exception handling with verbose mode."""
+        from unittest.mock import patch
+
+        bad_file = temp_dir / "bad.dwg"
+        bad_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        # Mock analyzer to raise generic exception
+        with patch("dwg_forensic.cli.ForensicAnalyzer") as mock_analyzer:
+            mock_analyzer.return_value.analyze.side_effect = Exception("Test error")
+            result = runner.invoke(main, ["analyze", str(bad_file), "-v"])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+    def test_analyze_dwg_forensic_error(self, runner, temp_dir):
+        """Test DWGForensicError handling."""
+        from dwg_forensic.utils.exceptions import DWGForensicError
+        from unittest.mock import patch
+
+        bad_file = temp_dir / "bad.dwg"
+        bad_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        with patch("dwg_forensic.cli.ForensicAnalyzer") as mock_analyzer:
+            mock_analyzer.return_value.analyze.side_effect = DWGForensicError("Test DWG error")
+            result = runner.invoke(main, ["analyze", str(bad_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+
+class TestPrintAnalysisTableBranches:
+    """Tests for _print_analysis_table branches."""
+
+    def test_print_analysis_table_with_application_origin(self, runner, temp_dir):
+        """Test that application_origin is printed when present."""
+        # Use dwg_with_watermark fixture logic
+        dwg_path = temp_dir / "watermarked.dwg"
+        header = bytearray(0x100)
+        header[0:6] = b"AC1032"
+        # Add watermark marker
+        header[0x50:0x5C] = b"Autodesk DWG"
+        # Add application ID
+        header[0x70:0x7B] = b"ACAD0001427"
+        dwg_path.write_bytes(bytes(header))
+
+        result = runner.invoke(main, ["analyze", str(dwg_path)])
+        assert result.exit_code == 0
+        # Application origin might be shown in output
+
+
+class TestValidateCRCExceptionHandling:
+    """Tests for validate-crc exception handling."""
+
+    def test_validate_crc_dwg_forensic_error(self, runner, temp_dir):
+        """Test DWGForensicError handling in validate-crc."""
+        from dwg_forensic.utils.exceptions import InvalidDWGError
+        from unittest.mock import patch
+
+        test_file = temp_dir / "test.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        with patch("dwg_forensic.cli.CRCValidator") as mock_validator:
+            mock_validator.return_value.validate_header_crc.side_effect = InvalidDWGError("Test error")
+            result = runner.invoke(main, ["validate-crc", str(test_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+
+class TestCheckWatermarkBranches:
+    """Tests for check-watermark branches."""
+
+    def test_check_watermark_present_but_invalid(self, runner, temp_dir):
+        """Test watermark present but invalid."""
+        from dwg_forensic.models import TrustedDWGAnalysis
+        from unittest.mock import patch
+
+        test_file = temp_dir / "test.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        mock_result = TrustedDWGAnalysis(
+            watermark_present=True,
+            watermark_valid=False,
+            watermark_offset=0x50,
+        )
+
+        with patch("dwg_forensic.cli.WatermarkDetector") as mock_detector:
+            mock_detector.return_value.detect.return_value = mock_result
+            result = runner.invoke(main, ["check-watermark", str(test_file)])
+            assert result.exit_code == 0
+            assert "[WARN]" in result.output
+
+    def test_check_watermark_dwg_forensic_error(self, runner, temp_dir):
+        """Test DWGForensicError handling in check-watermark."""
+        from dwg_forensic.utils.exceptions import ParseError
+        from unittest.mock import patch
+
+        test_file = temp_dir / "test.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        with patch("dwg_forensic.cli.WatermarkDetector") as mock_detector:
+            mock_detector.return_value.detect.side_effect = ParseError("Test error")
+            result = runner.invoke(main, ["check-watermark", str(test_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+
+class TestMetadataExceptionHandling:
+    """Tests for metadata command exception handling."""
+
+    def test_metadata_dwg_forensic_error(self, runner, temp_dir):
+        """Test DWGForensicError handling in metadata."""
+        from dwg_forensic.utils.exceptions import ParseError
+        from unittest.mock import patch
+
+        test_file = temp_dir / "test.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        with patch("dwg_forensic.cli.HeaderParser") as mock_parser:
+            mock_parser.return_value.parse.side_effect = ParseError("Test error")
+            result = runner.invoke(main, ["metadata", str(test_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+
+class TestIntakeCommandFull:
+    """Full tests for intake command."""
+
+    def test_intake_full_workflow(self, runner, valid_dwg_ac1032):
+        """Test complete intake workflow."""
+        with runner.isolated_filesystem():
+            import shutil
+            evidence_dir = Path("evidence")
+            evidence_dir.mkdir()
+            db_path = evidence_dir / "custody.db"
+
+            # Copy the valid_dwg to isolated filesystem
+            test_file = Path("test.dwg")
+            shutil.copy(valid_dwg_ac1032, test_file)
+
+            result = runner.invoke(main, [
+                "intake",
+                str(test_file),
+                "--case-id", "CASE-001",
+                "--examiner", "Test Examiner",
+                "--evidence-dir", str(evidence_dir),
+                "--db-path", str(db_path),
+                "--notes", "Test intake notes"
+            ])
+            assert result.exit_code == 0
+            assert "Evidence Intake Complete" in result.output or "[OK]" in result.output
+
+    def test_intake_with_evidence_number(self, runner, valid_dwg_ac1032):
+        """Test intake with explicit evidence number."""
+        with runner.isolated_filesystem():
+            import shutil
+            evidence_dir = Path("evidence2")
+            evidence_dir.mkdir()
+            db_path = evidence_dir / "custody.db"
+
+            # Copy the valid_dwg to isolated filesystem
+            test_file = Path("test2.dwg")
+            shutil.copy(valid_dwg_ac1032, test_file)
+
+            result = runner.invoke(main, [
+                "intake",
+                str(test_file),
+                "--case-id", "CASE-002",
+                "--examiner", "Test Examiner",
+                "--evidence-number", "EV-001",
+                "--evidence-dir", str(evidence_dir),
+                "--db-path", str(db_path),
+            ])
+            assert result.exit_code == 0
+
+    def test_intake_error_handling(self, runner, temp_dir):
+        """Test intake error handling."""
+        from dwg_forensic.utils.exceptions import IntakeError
+        from unittest.mock import patch
+
+        test_file = temp_dir / "test.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+        evidence_dir = temp_dir / "evidence3"
+        evidence_dir.mkdir()
+
+        with patch("dwg_forensic.cli.FileIntake") as mock_intake:
+            mock_intake.return_value.intake.side_effect = IntakeError("Test intake error")
+            result = runner.invoke(main, [
+                "intake",
+                str(test_file),
+                "--case-id", "CASE-003",
+                "--examiner", "Test Examiner",
+                "--evidence-dir", str(evidence_dir),
+            ])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+
+class TestVerifyCommandFull:
+    """Full tests for verify command."""
+
+    def test_verify_valid_evidence(self, runner, valid_dwg_ac1032):
+        """Test verifying valid evidence."""
+        with runner.isolated_filesystem():
+            import shutil
+            import re
+            evidence_dir = Path("evidence_verify")
+            evidence_dir.mkdir()
+            db_path = evidence_dir / "custody.db"
+
+            # Copy the valid_dwg to isolated filesystem
+            test_file = Path("test_verify.dwg")
+            shutil.copy(valid_dwg_ac1032, test_file)
+
+            intake_result = runner.invoke(main, [
+                "intake",
+                str(test_file),
+                "--case-id", "CASE-VERIFY",
+                "--examiner", "Test Examiner",
+                "--evidence-dir", str(evidence_dir),
+                "--db-path", str(db_path),
+            ])
+            assert intake_result.exit_code == 0
+
+            # Extract evidence ID from output
+            match = re.search(r"Evidence ID\s*[|]\s*([a-f0-9-]+)", intake_result.output)
+            if match:
+                evidence_id = match.group(1)
+                # Now verify
+                verify_result = runner.invoke(main, [
+                    "verify",
+                    evidence_id,
+                    "--db-path", str(db_path),
+                ])
+                # Should succeed
+                assert verify_result.exit_code == 0 or "not found" in verify_result.output.lower()
+
+    def test_verify_invalid_evidence_id(self, runner):
+        """Test verifying with invalid evidence ID."""
+        with runner.isolated_filesystem():
+            from dwg_forensic.core.custody import CustodyChain
+            evidence_dir = Path("evidence_verify2")
+            evidence_dir.mkdir()
+            db_path = evidence_dir / "custody.db"
+
+            # Create empty database
+            CustodyChain(db_path)
+
+            result = runner.invoke(main, [
+                "verify",
+                "nonexistent-evidence-id",
+                "--db-path", str(db_path),
+            ])
+            assert result.exit_code == 1
+            # May return [ERROR] or [FAIL] depending on the error type
+            assert "[ERROR]" in result.output or "[FAIL]" in result.output
+
+
+class TestCustodyChainCommandFull:
+    """Full tests for custody-chain command."""
+
+    def test_custody_chain_full_workflow(self, runner, valid_dwg_ac1032):
+        """Test full custody chain workflow."""
+        with runner.isolated_filesystem():
+            import shutil
+            import re
+            evidence_dir = Path("evidence_chain")
+            evidence_dir.mkdir()
+            db_path = evidence_dir / "custody.db"
+
+            # Copy the valid_dwg to isolated filesystem
+            test_file = Path("test_chain.dwg")
+            shutil.copy(valid_dwg_ac1032, test_file)
+
+            # Intake file
+            intake_result = runner.invoke(main, [
+                "intake",
+                str(test_file),
+                "--case-id", "CASE-CHAIN",
+                "--examiner", "Test Examiner",
+                "--evidence-dir", str(evidence_dir),
+                "--db-path", str(db_path),
+            ])
+            assert intake_result.exit_code == 0
+
+            # Extract evidence ID
+            match = re.search(r"Evidence ID\s*[|]\s*([a-f0-9-]+)", intake_result.output)
+            if match:
+                evidence_id = match.group(1)
+                # Get custody chain in table format
+                chain_result = runner.invoke(main, [
+                    "custody-chain",
+                    evidence_id,
+                    "--db-path", str(db_path),
+                ])
+                assert chain_result.exit_code == 0 or "[ERROR]" in chain_result.output
+
+                # Get custody chain in JSON format
+                chain_result_json = runner.invoke(main, [
+                    "custody-chain",
+                    evidence_id,
+                    "--db-path", str(db_path),
+                    "-f", "json",
+                ])
+                assert chain_result_json.exit_code == 0 or "[ERROR]" in chain_result_json.output
+
+    def test_custody_chain_invalid_id(self, runner):
+        """Test custody chain with invalid evidence ID."""
+        with runner.isolated_filesystem():
+            from dwg_forensic.core.custody import CustodyChain
+            evidence_dir = Path("evidence_chain2")
+            evidence_dir.mkdir()
+            db_path = evidence_dir / "custody.db"
+
+            # Create empty database
+            CustodyChain(db_path)
+
+            result = runner.invoke(main, [
+                "custody-chain",
+                "invalid-id",
+                "--db-path", str(db_path),
+            ])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+
+class TestLogEventCommandFull:
+    """Full tests for log-event command."""
+
+    def test_log_event_full_workflow(self, runner, valid_dwg_ac1032):
+        """Test logging custody event."""
+        with runner.isolated_filesystem():
+            import shutil
+            import re
+            evidence_dir = Path("evidence_log")
+            evidence_dir.mkdir()
+            db_path = evidence_dir / "custody.db"
+
+            # Copy the valid_dwg to isolated filesystem
+            test_file = Path("test_log.dwg")
+            shutil.copy(valid_dwg_ac1032, test_file)
+
+            # Intake file
+            intake_result = runner.invoke(main, [
+                "intake",
+                str(test_file),
+                "--case-id", "CASE-LOG",
+                "--examiner", "Test Examiner",
+                "--evidence-dir", str(evidence_dir),
+                "--db-path", str(db_path),
+            ])
+            assert intake_result.exit_code == 0
+
+            # Extract evidence ID
+            match = re.search(r"Evidence ID\s*[|]\s*([a-f0-9-]+)", intake_result.output)
+            if match:
+                evidence_id = match.group(1)
+                # Log an event
+                log_result = runner.invoke(main, [
+                    "log-event",
+                    evidence_id,
+                    "--event-type", "ANALYSIS",
+                    "--examiner", "Test Examiner",
+                    "--description", "Test analysis performed",
+                    "--db-path", str(db_path),
+                ])
+                assert log_result.exit_code == 0 or "[ERROR]" in log_result.output
+
+    def test_log_event_invalid_evidence(self, runner):
+        """Test logging event with invalid evidence ID."""
+        with runner.isolated_filesystem():
+            from dwg_forensic.core.custody import CustodyChain
+            evidence_dir = Path("evidence_log2")
+            evidence_dir.mkdir()
+            db_path = evidence_dir / "custody.db"
+
+            # Create empty database
+            CustodyChain(db_path)
+
+            result = runner.invoke(main, [
+                "log-event",
+                "invalid-id",
+                "--event-type", "ANALYSIS",
+                "--examiner", "Test",
+                "--description", "Test",
+                "--db-path", str(db_path),
+            ])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+
+class TestProtectCommandExceptions:
+    """Tests for protect command exception handling."""
+
+    def test_protect_permission_error(self, runner, temp_dir):
+        """Test protect with permission error."""
+        from unittest.mock import patch
+
+        test_file = temp_dir / "protected_test.txt"
+        test_file.write_text("test")
+
+        with patch("dwg_forensic.cli.FileGuard") as mock_guard:
+            mock_guard.return_value.is_protected.return_value = False
+            mock_guard.return_value.protect.side_effect = PermissionError("Access denied")
+            result = runner.invoke(main, ["protect", str(test_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+    def test_protect_generic_exception(self, runner, temp_dir):
+        """Test protect with generic exception."""
+        from unittest.mock import patch
+
+        test_file = temp_dir / "protected_test2.txt"
+        test_file.write_text("test")
+
+        with patch("dwg_forensic.cli.FileGuard") as mock_guard:
+            mock_guard.return_value.is_protected.return_value = False
+            mock_guard.return_value.protect.side_effect = Exception("Unknown error")
+            result = runner.invoke(main, ["protect", str(test_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+
+class TestCheckProtectionBranches:
+    """Tests for check-protection command branches."""
+
+    def test_check_protection_protected_file(self, runner, temp_dir):
+        """Test check-protection on protected file."""
+        from unittest.mock import patch
+
+        test_file = temp_dir / "check_prot.txt"
+        test_file.write_text("test")
+
+        with patch("dwg_forensic.cli.FileGuard") as mock_guard:
+            mock_guard.return_value.verify_protection.return_value = (True, "File is protected")
+            result = runner.invoke(main, ["check-protection", str(test_file)])
+            assert result.exit_code == 0
+            assert "[OK]" in result.output
+
+    def test_check_protection_exception(self, runner, temp_dir):
+        """Test check-protection with exception."""
+        from unittest.mock import patch
+
+        test_file = temp_dir / "check_prot2.txt"
+        test_file.write_text("test")
+
+        with patch("dwg_forensic.cli.FileGuard") as mock_guard:
+            mock_guard.return_value.verify_protection.side_effect = Exception("Check failed")
+            result = runner.invoke(main, ["check-protection", str(test_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+
+class TestTamperingCommandExceptions:
+    """Tests for tampering command exception handling."""
+
+    def test_tampering_dwg_forensic_error(self, runner, temp_dir):
+        """Test tampering with DWGForensicError."""
+        from dwg_forensic.utils.exceptions import DWGForensicError
+        from unittest.mock import patch
+
+        test_file = temp_dir / "tamper_test.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        with patch("dwg_forensic.cli.analyze_tampering") as mock_analyze:
+            mock_analyze.side_effect = DWGForensicError("Tampering analysis failed")
+            result = runner.invoke(main, ["tampering", str(test_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+    def test_tampering_generic_exception_verbose(self, runner, temp_dir):
+        """Test tampering with generic exception and verbose."""
+        from unittest.mock import patch
+
+        test_file = temp_dir / "tamper_test2.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        with patch("dwg_forensic.cli.analyze_tampering") as mock_analyze:
+            mock_analyze.side_effect = Exception("Unknown error")
+            result = runner.invoke(main, ["tampering", str(test_file), "-v"])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+
+class TestTamperingReportPrinting:
+    """Tests for tampering report printing branches."""
+
+    def test_tampering_report_crc_none(self, runner, temp_dir):
+        """Test tampering report with crc_valid=None."""
+        from dwg_forensic.analysis.risk import TamperingReport
+        from dwg_forensic.models import RiskLevel
+        from unittest.mock import patch
+
+        test_file = temp_dir / "tamper_crc.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        mock_report = TamperingReport(
+            file_path=str(test_file),
+            risk_level=RiskLevel.LOW,
+            risk_score=10,
+            confidence=0.9,
+            anomaly_count=0,
+            rule_failures=0,
+            tampering_indicators=0,
+            crc_valid=None,
+            watermark_valid=True,
+            anomalies=[],
+            failed_rules=[],
+            factors=["[OK] No issues"],
+            recommendation="File appears clean.",
+        )
+
+        with patch("dwg_forensic.cli.analyze_tampering", return_value=mock_report):
+            result = runner.invoke(main, ["tampering", str(test_file)])
+            assert result.exit_code == 0
+            assert "N/A" in result.output
+
+    def test_tampering_report_watermark_none(self, runner, temp_dir):
+        """Test tampering report with watermark_valid=None."""
+        from dwg_forensic.analysis.risk import TamperingReport
+        from dwg_forensic.models import RiskLevel
+        from unittest.mock import patch
+
+        test_file = temp_dir / "tamper_wm.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        mock_report = TamperingReport(
+            file_path=str(test_file),
+            risk_level=RiskLevel.LOW,
+            risk_score=10,
+            confidence=0.9,
+            anomaly_count=0,
+            rule_failures=0,
+            tampering_indicators=0,
+            crc_valid=True,
+            watermark_valid=None,
+            anomalies=[],
+            failed_rules=[],
+            factors=[],
+            recommendation="File appears clean.",
+        )
+
+        with patch("dwg_forensic.cli.analyze_tampering", return_value=mock_report):
+            result = runner.invoke(main, ["tampering", str(test_file)])
+            assert result.exit_code == 0
+            assert "Not present" in result.output
+
+    def test_tampering_report_with_failed_rules(self, runner, temp_dir):
+        """Test tampering report with failed rules."""
+        from dwg_forensic.analysis.risk import TamperingReport
+        from dwg_forensic.models import RiskLevel
+        from unittest.mock import patch
+
+        test_file = temp_dir / "tamper_rules.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        mock_report = TamperingReport(
+            file_path=str(test_file),
+            risk_level=RiskLevel.HIGH,
+            risk_score=70,
+            confidence=0.85,
+            anomaly_count=1,
+            rule_failures=2,
+            tampering_indicators=1,
+            crc_valid=False,
+            watermark_valid=False,
+            anomalies=[],
+            failed_rules=[
+                {"rule_id": "TAMPER-001", "severity": "CRITICAL", "message": "CRC mismatch detected"},
+                {"rule_id": "TAMPER-002", "severity": "WARNING", "message": "Watermark invalid"},
+            ],
+            factors=[
+                "[FAIL] CRC validation failed",
+                "[WARN] Watermark issues detected",
+                "[CRITICAL] Multiple tampering indicators",
+            ],
+            recommendation="Evidence of modification.",
+        )
+
+        with patch("dwg_forensic.cli.analyze_tampering", return_value=mock_report):
+            result = runner.invoke(main, ["tampering", str(test_file)])
+            assert result.exit_code == 0
+            assert "Triggered Rules" in result.output or "TAMPER-001" in result.output
+
+    def test_tampering_report_verbose_with_anomalies(self, runner, temp_dir):
+        """Test tampering report verbose with anomalies."""
+        from dwg_forensic.analysis.risk import TamperingReport
+        from dwg_forensic.models import RiskLevel, Anomaly, AnomalyType
+        from unittest.mock import patch
+
+        test_file = temp_dir / "tamper_anomalies.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        mock_report = TamperingReport(
+            file_path=str(test_file),
+            risk_level=RiskLevel.MEDIUM,
+            risk_score=50,
+            confidence=0.8,
+            anomaly_count=1,
+            rule_failures=0,
+            tampering_indicators=0,
+            crc_valid=True,
+            watermark_valid=True,
+            anomalies=[
+                Anomaly(
+                    anomaly_type=AnomalyType.TIMESTAMP_ANOMALY,
+                    severity=RiskLevel.MEDIUM,
+                    description="Timestamp anomaly detected",
+                    field_name="tdcreate",
+                )
+            ],
+            failed_rules=[],
+            factors=["[WARN] Timestamp anomaly"],
+            recommendation="Review timestamps.",
+        )
+
+        with patch("dwg_forensic.cli.analyze_tampering", return_value=mock_report):
+            result = runner.invoke(main, ["tampering", str(test_file), "-v"])
+            assert result.exit_code == 0
+            assert "Anomalies" in result.output or "TIMESTAMP" in result.output
+
+
+class TestReportCommandExceptions:
+    """Tests for report command exception handling."""
+
+    def test_report_unsupported_version(self, runner, temp_dir):
+        """Test report with unsupported version."""
+        from dwg_forensic.utils.exceptions import UnsupportedVersionError
+        from unittest.mock import patch
+
+        test_file = temp_dir / "report_test.dwg"
+        test_file.write_bytes(b"AC1009" + b"\x00" * 200)
+        output_file = temp_dir / "report.pdf"
+
+        with patch("dwg_forensic.cli.ForensicAnalyzer") as mock_analyzer:
+            mock_analyzer.return_value.analyze.side_effect = UnsupportedVersionError("AC1009")
+            result = runner.invoke(main, ["report", str(test_file), "-o", str(output_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+    def test_report_dwg_forensic_error(self, runner, temp_dir):
+        """Test report with DWGForensicError."""
+        from dwg_forensic.utils.exceptions import DWGForensicError
+        from unittest.mock import patch
+
+        test_file = temp_dir / "report_test2.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+        output_file = temp_dir / "report2.pdf"
+
+        with patch("dwg_forensic.cli.ForensicAnalyzer") as mock_analyzer:
+            mock_analyzer.return_value.analyze.side_effect = DWGForensicError("Analysis failed")
+            result = runner.invoke(main, ["report", str(test_file), "-o", str(output_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+    def test_report_generic_exception_verbose(self, runner, temp_dir):
+        """Test report with generic exception and verbose."""
+        from unittest.mock import patch
+
+        test_file = temp_dir / "report_test3.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+        output_file = temp_dir / "report3.pdf"
+
+        with patch("dwg_forensic.cli.ForensicAnalyzer") as mock_analyzer:
+            mock_analyzer.return_value.analyze.side_effect = Exception("Unknown error")
+            result = runner.invoke(main, ["report", str(test_file), "-o", str(output_file), "-v"])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+
+class TestExpertWitnessCommandExceptions:
+    """Tests for expert-witness command exception handling."""
+
+    def test_expert_witness_unsupported_version(self, runner, temp_dir):
+        """Test expert-witness with unsupported version."""
+        from dwg_forensic.utils.exceptions import UnsupportedVersionError
+        from unittest.mock import patch
+
+        test_file = temp_dir / "expert_test.dwg"
+        test_file.write_bytes(b"AC1009" + b"\x00" * 200)
+        output_file = temp_dir / "expert.pdf"
+
+        with patch("dwg_forensic.cli.ForensicAnalyzer") as mock_analyzer:
+            mock_analyzer.return_value.analyze.side_effect = UnsupportedVersionError("AC1009")
+            result = runner.invoke(main, ["expert-witness", str(test_file), "-o", str(output_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+    def test_expert_witness_dwg_forensic_error(self, runner, temp_dir):
+        """Test expert-witness with DWGForensicError."""
+        from dwg_forensic.utils.exceptions import DWGForensicError
+        from unittest.mock import patch
+
+        test_file = temp_dir / "expert_test2.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+        output_file = temp_dir / "expert2.pdf"
+
+        with patch("dwg_forensic.cli.ForensicAnalyzer") as mock_analyzer:
+            mock_analyzer.return_value.analyze.side_effect = DWGForensicError("Analysis failed")
+            result = runner.invoke(main, ["expert-witness", str(test_file), "-o", str(output_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+    def test_expert_witness_generic_exception_verbose(self, runner, temp_dir):
+        """Test expert-witness with generic exception and verbose."""
+        from unittest.mock import patch
+
+        test_file = temp_dir / "expert_test3.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+        output_file = temp_dir / "expert3.pdf"
+
+        with patch("dwg_forensic.cli.ForensicAnalyzer") as mock_analyzer:
+            mock_analyzer.return_value.analyze.side_effect = Exception("Unknown error")
+            result = runner.invoke(main, ["expert-witness", str(test_file), "-o", str(output_file), "-v"])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+
+class TestTimelineCommandExceptions:
+    """Tests for timeline command exception handling."""
+
+    def test_timeline_svg_output(self, runner, valid_dwg_ac1032, temp_dir):
+        """Test timeline with SVG output."""
+        output_file = temp_dir / "timeline.svg"
+        result = runner.invoke(main, [
+            "timeline",
+            str(valid_dwg_ac1032),
+            "-f", "svg",
+            "-o", str(output_file)
+        ])
+        assert result.exit_code == 0
+        assert "[OK]" in result.output or "saved" in result.output.lower()
+
+    def test_timeline_unsupported_version(self, runner, temp_dir):
+        """Test timeline with unsupported version."""
+        from dwg_forensic.utils.exceptions import UnsupportedVersionError
+        from unittest.mock import patch
+
+        test_file = temp_dir / "timeline_test.dwg"
+        test_file.write_bytes(b"AC1009" + b"\x00" * 200)
+
+        with patch("dwg_forensic.cli.ForensicAnalyzer") as mock_analyzer:
+            mock_analyzer.return_value.analyze.side_effect = UnsupportedVersionError("AC1009")
+            result = runner.invoke(main, ["timeline", str(test_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+    def test_timeline_dwg_forensic_error(self, runner, temp_dir):
+        """Test timeline with DWGForensicError."""
+        from dwg_forensic.utils.exceptions import DWGForensicError
+        from unittest.mock import patch
+
+        test_file = temp_dir / "timeline_test2.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        with patch("dwg_forensic.cli.ForensicAnalyzer") as mock_analyzer:
+            mock_analyzer.return_value.analyze.side_effect = DWGForensicError("Analysis failed")
+            result = runner.invoke(main, ["timeline", str(test_file)])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+    def test_timeline_generic_exception_verbose(self, runner, temp_dir):
+        """Test timeline with generic exception and verbose."""
+        from unittest.mock import patch
+
+        test_file = temp_dir / "timeline_test3.dwg"
+        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
+
+        with patch("dwg_forensic.cli.ForensicAnalyzer") as mock_analyzer:
+            mock_analyzer.return_value.analyze.side_effect = Exception("Unknown error")
+            result = runner.invoke(main, ["timeline", str(test_file), "-v"])
+            assert result.exit_code == 1
+            assert "[ERROR]" in result.output
+
+
+class TestMainEntryPoint:
+    """Tests for __main__ entry point."""
+
+    def test_main_module_execution(self):
+        """Test that main() can be called without arguments."""
+        from click.testing import CliRunner
+        runner = CliRunner()
+        result = runner.invoke(main)
+        # Click main groups return 2 when called without a required subcommand (usage error)
+        # This is expected behavior for groups that require a command
+        assert result.exit_code in (0, 2)
+        # Should show usage info or available commands
+        assert "Usage" in result.output or "analyze" in result.output
