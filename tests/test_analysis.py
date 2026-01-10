@@ -193,18 +193,18 @@ class TestTamperingRuleEngine:
     """Test TamperingRuleEngine functionality."""
 
     def test_init_loads_builtin_rules(self):
-        """Test that engine loads 16 built-in rules (12 original + 4 advanced)."""
+        """Test that engine loads 35 built-in rules (12 original + 6 advanced + 10 NTFS + 7 CAD fingerprinting)."""
         engine = TamperingRuleEngine()
         rules = engine.get_builtin_rules()
-        assert len(rules) == 16
+        assert len(rules) == 35
 
     def test_builtin_rule_ids(self):
-        """Test that all 16 TAMPER rules exist."""
+        """Test that all 35 TAMPER rules exist."""
         engine = TamperingRuleEngine()
         rules = engine.get_builtin_rules()
         rule_ids = [r.rule_id for r in rules]
 
-        for i in range(1, 17):
+        for i in range(1, 36):
             expected_id = f"TAMPER-{i:03d}"
             assert expected_id in rule_ids, f"Missing rule {expected_id}"
 
@@ -289,8 +289,8 @@ rules:
         engine = TamperingRuleEngine()
         engine.load_rules(rules_file)
 
-        # Should have 17 rules now (16 built-in + 1 custom)
-        assert len(engine.rules) == 17
+        # Should have 36 rules now (35 built-in + 1 custom)
+        assert len(engine.rules) == 36
 
 
 # ============================================================================
@@ -518,6 +518,26 @@ class TestPhase3Integration:
             },
             "header": {
                 "version_string": valid_header.version_string,
+            },
+            # Provide metadata for CAD fingerprinting rules (TAMPER-029 to TAMPER-035)
+            "metadata": {
+                "fingerprintguid": "{12345678-1234-1234-1234-123456789012}",
+                "versionguid": "{87654321-4321-4321-4321-210987654321}",
+                "tdcreate": 2459000.5,  # Non-zero timestamp
+                "tdupdate": 2459001.5,  # Different from tdcreate
+                "tdindwg": 1.5,         # Non-zero editing time
+            },
+            "timestamp_anomalies": {
+                "detected": False,
+                "patterns": [],
+                "likely_third_party": False,
+            },
+            "cad_fingerprint": {
+                "detected_application": "autocad",
+                "is_oda_based": False,
+            },
+            "oda_detection": {
+                "is_oda_based": False,
             },
         }
         rule_results = engine.evaluate_all(context)
@@ -1430,3 +1450,544 @@ class TestTamperingScore:
 
         assert score > 0.0
         assert score <= 1.0
+
+
+class TestTDUSRTIMERResetRule:
+    """Test TAMPER-017 TDUSRTIMER reset rule."""
+
+    def test_tdusrtimer_reset_detection(self):
+        """Test TDUSRTIMER reset detection when significantly less than TDINDWG."""
+        engine = TamperingRuleEngine()
+        context = {
+            "timestamp_data": {
+                "tdindwg": 1.0,  # 1 day = 24 hours editing time
+                "tdusrtimer": 0.1,  # 0.1 day = 2.4 hours (only 10%)
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        reset_result = next(r for r in results if r.rule_id == "TAMPER-017")
+
+        assert reset_result.status == RuleStatus.FAILED
+        assert "reset" in reset_result.description.lower()
+
+    def test_tdusrtimer_consistent(self):
+        """Test TDUSRTIMER passes when consistent with TDINDWG."""
+        engine = TamperingRuleEngine()
+        context = {
+            "timestamp_data": {
+                "tdindwg": 1.0,  # 1 day = 24 hours
+                "tdusrtimer": 0.95,  # 0.95 day = ~23 hours (within 10%)
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        reset_result = next(r for r in results if r.rule_id == "TAMPER-017")
+
+        assert reset_result.status == RuleStatus.PASSED
+
+    def test_tdusrtimer_minimal_editing(self):
+        """Test TDUSRTIMER passes with minimal editing time."""
+        engine = TamperingRuleEngine()
+        context = {
+            "timestamp_data": {
+                "tdindwg": 0.001,  # Very small editing time
+                "tdusrtimer": 0.0,
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        reset_result = next(r for r in results if r.rule_id == "TAMPER-017")
+
+        assert reset_result.status == RuleStatus.PASSED
+        assert "minimal" in reset_result.description.lower()
+
+    def test_tdusrtimer_from_metadata(self):
+        """Test TDUSRTIMER detection from metadata when timestamp_data missing."""
+        engine = TamperingRuleEngine()
+        context = {
+            "metadata": {
+                "tdindwg": 2.0,  # 48 hours
+                "tdusrtimer": 0.1,  # 2.4 hours (5%)
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        reset_result = next(r for r in results if r.rule_id == "TAMPER-017")
+
+        assert reset_result.status == RuleStatus.FAILED
+
+    def test_tdusrtimer_inconclusive_no_data(self):
+        """Test TDUSRTIMER inconclusive when data missing."""
+        engine = TamperingRuleEngine()
+        context = {}
+
+        results = engine.evaluate_all(context)
+        reset_result = next(r for r in results if r.rule_id == "TAMPER-017")
+
+        assert reset_result.status == RuleStatus.INCONCLUSIVE
+
+
+class TestNetworkPathLeakageRule:
+    """Test TAMPER-018 network path leakage rule."""
+
+    def test_unc_path_detection(self):
+        """Test detection of UNC paths."""
+        engine = TamperingRuleEngine()
+        context = {
+            "metadata": {
+                "network_paths_detected": [
+                    "\\\\SERVER01\\Projects\\CAD\\drawing.dwg",
+                    "\\\\FILESERVER\\Engineering\\ref.dwg",
+                ]
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        path_result = next(r for r in results if r.rule_id == "TAMPER-018")
+
+        assert path_result.status == RuleStatus.FAILED
+        assert "SERVER01" in path_result.description or "FILESERVER" in path_result.description
+        assert path_result.details["path_count"] == 2
+        assert "SERVER01" in path_result.details["servers_detected"]
+
+    def test_url_path_detection(self):
+        """Test detection of URL paths."""
+        engine = TamperingRuleEngine()
+        context = {
+            "metadata": {
+                "network_paths_detected": [
+                    "https://cdn.company.com/assets/drawing.dwg",
+                    "http://internal.corp/files/ref.dwg",
+                ]
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        path_result = next(r for r in results if r.rule_id == "TAMPER-018")
+
+        assert path_result.status == RuleStatus.FAILED
+        assert "cdn.company.com" in path_result.details["servers_detected"]
+        assert "internal.corp" in path_result.details["servers_detected"]
+
+    def test_no_network_paths(self):
+        """Test passes when no network paths present."""
+        engine = TamperingRuleEngine()
+        context = {
+            "metadata": {
+                "network_paths_detected": []
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        path_result = next(r for r in results if r.rule_id == "TAMPER-018")
+
+        assert path_result.status == RuleStatus.PASSED
+
+    def test_xref_paths_extraction(self):
+        """Test extraction of network paths from xref_paths when network_paths_detected empty."""
+        engine = TamperingRuleEngine()
+        context = {
+            "metadata": {
+                "xref_paths": [
+                    "\\\\CADSERVER\\xrefs\\floor_plan.dwg",
+                    "C:\\Local\\reference.dwg",  # Local path, should be ignored
+                ],
+                "network_paths_detected": [],
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        path_result = next(r for r in results if r.rule_id == "TAMPER-018")
+
+        assert path_result.status == RuleStatus.FAILED
+        assert "CADSERVER" in path_result.description
+
+    def test_network_path_inconclusive_no_metadata(self):
+        """Test passes when metadata is None (no paths to check)."""
+        engine = TamperingRuleEngine()
+        context = {}
+
+        results = engine.evaluate_all(context)
+        path_result = next(r for r in results if r.rule_id == "TAMPER-018")
+
+        # With no metadata, there are no network paths, so it passes
+        assert path_result.status == RuleStatus.PASSED
+
+
+# ============================================================================
+# NTFS Cross-Validation Rules Tests (TAMPER-019 through TAMPER-028)
+# ============================================================================
+
+class TestNTFSTimestompingRule:
+    """Test TAMPER-019 NTFS Timestomping Detection rule."""
+
+    def test_timestomping_detected(self):
+        """Test detection of NTFS timestomping via SI/FN mismatch."""
+        engine = TamperingRuleEngine()
+        context = {
+            "ntfs_data": {
+                "si_fn_mismatch": True,  # Correct field name
+                "mismatch_details": "SI created 2020-01-01, FN created 2024-06-15",
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-019")
+
+        assert result.status == RuleStatus.FAILED
+        assert result.severity.value == "critical"
+        assert "DEFINITIVE" in result.description or "TIMESTOMPING" in result.description
+
+    def test_no_timestomping(self):
+        """Test passes when no timestomping detected."""
+        engine = TamperingRuleEngine()
+        context = {
+            "ntfs_data": {
+                "si_fn_mismatch": False,
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-019")
+
+        assert result.status == RuleStatus.PASSED
+
+
+class TestNTFSNanosecondTruncationRule:
+    """Test TAMPER-020 NTFS Nanosecond Truncation rule."""
+
+    def test_nanosecond_truncation_detected(self):
+        """Test detection of nanosecond truncation (tool signature)."""
+        engine = TamperingRuleEngine()
+        context = {
+            "ntfs_data": {
+                "nanoseconds_truncated": True,  # Correct field name
+                "truncation_details": "All timestamps end in .0000000",
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-020")
+
+        assert result.status == RuleStatus.FAILED
+        assert "TOOL" in result.description or "truncat" in result.description.lower()
+
+    def test_no_nanosecond_truncation(self):
+        """Test passes when nanoseconds are normal."""
+        engine = TamperingRuleEngine()
+        context = {
+            "ntfs_data": {
+                "nanoseconds_truncated": False,
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-020")
+
+        assert result.status == RuleStatus.PASSED
+
+
+class TestNTFSImpossibleTimestampRule:
+    """Test TAMPER-021 NTFS Impossible Timestamp rule."""
+
+    def test_impossible_timestamp_detected(self):
+        """Test detection of impossible timestamps (created > modified)."""
+        engine = TamperingRuleEngine()
+        context = {
+            "ntfs_data": {
+                "creation_after_modification": True,  # Correct field name
+                "si_created": "2024-06-15T10:00:00",
+                "si_modified": "2024-01-01T10:00:00",
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-021")
+
+        assert result.status == RuleStatus.FAILED
+        assert "IMPOSSIBLE" in result.description or "cannot" in result.description.lower()
+
+    def test_no_impossible_timestamps(self):
+        """Test passes when timestamps are logically consistent."""
+        engine = TamperingRuleEngine()
+        context = {
+            "ntfs_data": {
+                "creation_after_modification": False,
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-021")
+
+        assert result.status == RuleStatus.PASSED
+
+
+class TestDWGNTFSCreationContradictionRule:
+    """Test TAMPER-022 DWG/NTFS Creation Contradiction rule."""
+
+    def test_creation_contradiction_detected(self):
+        """Test detection of DWG creation predating filesystem creation."""
+        engine = TamperingRuleEngine()
+        context = {
+            "ntfs_contradictions": {
+                "creation_contradiction": True,
+                "creation_details": {
+                    "dwg_created": "2020-01-01T10:00:00",
+                    "ntfs_created": "2024-06-15T10:00:00",
+                    "forensic_conclusion": "DWG claims creation 4+ years before file existed",
+                },
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-022")
+
+        assert result.status == RuleStatus.FAILED
+        assert "BACKDATING" in result.description or "contradiction" in result.description.lower()
+
+    def test_no_creation_contradiction(self):
+        """Test passes when DWG and NTFS creation times are consistent."""
+        engine = TamperingRuleEngine()
+        context = {
+            "ntfs_data": {
+                "si_created": "2024-01-01T10:00:00",
+            },
+            "ntfs_contradictions": {
+                "creation_contradiction": False,
+            },
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-022")
+
+        # Returns PASSED when we have ntfs_data and no contradiction
+        assert result.status == RuleStatus.PASSED
+
+
+class TestDWGNTFSModificationContradictionRule:
+    """Test TAMPER-023 DWG/NTFS Modification Contradiction rule."""
+
+    def test_modification_contradiction_detected(self):
+        """Test detection of DWG modification predating filesystem creation."""
+        engine = TamperingRuleEngine()
+        context = {
+            "ntfs_contradictions": {
+                "modification_contradiction": True,
+                "modification_details": {
+                    "dwg_modified": "2019-06-15T10:00:00",
+                    "ntfs_created": "2024-06-15T10:00:00",
+                    "forensic_conclusion": "DWG claims modification 5 years before file existed",
+                },
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-023")
+
+        assert result.status == RuleStatus.FAILED
+
+    def test_no_modification_contradiction(self):
+        """Test passes when DWG and NTFS modification times are consistent."""
+        engine = TamperingRuleEngine()
+        context = {
+            "ntfs_data": {
+                "si_modified": "2024-06-15T10:00:00",
+            },
+            "ntfs_contradictions": {
+                "modification_contradiction": False,
+            },
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-023")
+
+        # Returns PASSED when we have ntfs_data and no contradiction
+        assert result.status == RuleStatus.PASSED
+
+
+class TestZeroEditTimeRule:
+    """Test TAMPER-024 Zero Edit Time rule."""
+
+    def test_zero_edit_time_detected(self):
+        """Test detection of zero or near-zero editing time."""
+        engine = TamperingRuleEngine()
+        context = {
+            "timestamp_data": {
+                "tdindwg": 0.00001,  # Near-zero editing time
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-024")
+
+        assert result.status == RuleStatus.FAILED
+
+    def test_normal_edit_time(self):
+        """Test passes when editing time is reasonable."""
+        engine = TamperingRuleEngine()
+        context = {
+            "timestamp_data": {
+                "tdindwg": 0.5,  # 12 hours of editing time
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-024")
+
+        assert result.status == RuleStatus.PASSED
+
+
+class TestImplausibleEditRatioRule:
+    """Test TAMPER-025 Implausible Edit Ratio rule."""
+
+    def test_implausible_ratio_detected(self):
+        """Test detection of implausible edit time to file size ratio."""
+        engine = TamperingRuleEngine()
+        context = {
+            "timestamp_data": {
+                "tdindwg": 0.0001,  # Very little editing time
+            },
+            "file": {
+                "size": 10_000_000,  # 10 MB file
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-025")
+
+        assert result.status == RuleStatus.FAILED
+
+    def test_plausible_ratio(self):
+        """Test passes when edit ratio is reasonable."""
+        engine = TamperingRuleEngine()
+        context = {
+            "timestamp_data": {
+                "tdindwg": 1.0,  # 24 hours of editing
+            },
+            "file": {
+                "size": 100_000,  # 100 KB file
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-025")
+
+        assert result.status == RuleStatus.PASSED
+
+
+class TestThirdPartyToolRule:
+    """Test TAMPER-026 Third-Party Tool Detection rule."""
+
+    def test_third_party_tool_detected(self):
+        """Test detection of known third-party tools from watermark."""
+        engine = TamperingRuleEngine()
+        context = {
+            "watermark": {
+                "present": False,  # No valid Autodesk watermark
+                "valid": False,
+                "application_origin": "LibreCAD",  # Known third-party tool
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-026")
+
+        assert result.status == RuleStatus.FAILED
+
+    def test_autodesk_tool(self):
+        """Test passes with valid Autodesk software watermark."""
+        engine = TamperingRuleEngine()
+        context = {
+            "watermark": {
+                "present": True,
+                "valid": True,
+                "application_origin": "Autodesk AutoCAD 2024",
+            }
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-026")
+
+        assert result.status == RuleStatus.PASSED
+
+
+class TestCompoundTimestampAnomalyRule:
+    """Test TAMPER-027 Compound Timestamp Anomaly rule."""
+
+    def test_compound_anomaly_detected(self):
+        """Test detection of multiple timestamp anomalies."""
+        engine = TamperingRuleEngine()
+        context = {
+            "anomalies": [
+                {"anomaly_type": "TIMESTAMP_ANOMALY", "description": "Created after modified"},
+                {"anomaly_type": "TDINDWG_EXCEEDS_SPAN", "description": "Edit time exceeds span"},
+                {"anomaly_type": "NTFS_SI_FN_MISMATCH", "description": "SI/FN mismatch"},
+            ],
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-027")
+
+        assert result.status == RuleStatus.FAILED
+        assert "COMPOUND" in result.description
+
+    def test_no_compound_anomalies(self):
+        """Test passes when only one anomaly present."""
+        engine = TamperingRuleEngine()
+        context = {
+            "anomalies": [
+                {"anomaly_type": "TIMESTAMP_ANOMALY", "description": "Single anomaly"},
+            ],
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-027")
+
+        assert result.status == RuleStatus.PASSED
+
+
+class TestForensicImpossibilityScoreRule:
+    """Test TAMPER-028 Forensic Impossibility Score rule."""
+
+    def test_high_impossibility_score(self):
+        """Test detection of high forensic impossibility score."""
+        engine = TamperingRuleEngine()
+        context = {
+            "ntfs_data": {
+                "si_fn_mismatch": True,  # +40 points (impossible condition)
+                "creation_after_modification": True,  # +30 points (impossible condition)
+                "nanoseconds_truncated": True,  # +10 points (strong indicator)
+            },
+            "ntfs_contradictions": {
+                "creation_contradiction": True,  # +20 points (impossible condition)
+            },
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-028")
+
+        # With multiple impossible conditions, should fail
+        assert result.status == RuleStatus.FAILED
+        # Should be definitive with this many impossible conditions
+        assert "DEFINITIVE" in result.description or "STRONG" in result.description or "SUBSTANTIAL" in result.description
+
+    def test_low_impossibility_score(self):
+        """Test passes with low impossibility score."""
+        engine = TamperingRuleEngine()
+        context = {
+            "ntfs_data": {
+                "si_fn_mismatch": False,
+                "creation_after_modification": False,
+                "nanoseconds_truncated": False,
+            },
+            "ntfs_contradictions": {
+                "creation_contradiction": False,
+                "modification_contradiction": False,
+            },
+        }
+
+        results = engine.evaluate_all(context)
+        result = next(r for r in results if r.rule_id == "TAMPER-028")
+
+        assert result.status == RuleStatus.PASSED
