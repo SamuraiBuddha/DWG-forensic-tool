@@ -676,7 +676,7 @@ RAW EVIDENCE - AUTOCAD INTERNAL TIMESTAMPS:
 DERIVED CALCULATIONS:
 - Calendar span between TDCREATE and TDUPDATE: {calendar_span}
 - TDINDWG editing time: {f"{editing_hours:.2f} hours" if editing_hours else "Not available"}
-- Is editing time <= calendar span: {"YES - VALID" if editing_hours <= float(calendar_span.split()[0]) * 1.1 else "NO - IMPOSSIBLE" if calendar_span != "N/A" else "Cannot determine"}
+- Is editing time <= calendar span: {"Cannot determine" if calendar_span == "N/A" else ("YES - VALID" if editing_hours <= float(calendar_span.split()[0]) * 1.1 else "NO - IMPOSSIBLE")}
 
 ANALYSIS REQUIREMENTS:
 1. State the exact timestamp values
