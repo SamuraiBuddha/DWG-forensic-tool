@@ -32,6 +32,15 @@ from reportlab.platypus import (
 
 from dwg_forensic import __version__
 from dwg_forensic.models import ForensicAnalysis, RiskLevel
+from dwg_forensic.output.text_utils import sanitize_llm_output
+
+# LLM integration (optional - gracefully degrades if unavailable)
+try:
+    from dwg_forensic.llm import ForensicNarrator
+    LLM_AVAILABLE = True
+except ImportError:
+    LLM_AVAILABLE = False
+    ForensicNarrator = None
 
 
 class ExpertWitnessGenerator:
@@ -50,6 +59,8 @@ class ExpertWitnessGenerator:
         expert_name: str = "Digital Forensics Expert",
         expert_credentials: Optional[str] = None,
         company_name: Optional[str] = None,
+        use_llm_narration: bool = False,
+        llm_model: Optional[str] = None,
     ):
         """
         Initialize the expert witness generator.
@@ -58,12 +69,33 @@ class ExpertWitnessGenerator:
             expert_name: Name of the expert witness
             expert_credentials: Expert's credentials/certifications
             company_name: Company or organization name
+            use_llm_narration: Use LLM for enhanced narrative generation
+            llm_model: Ollama model to use for LLM narration
         """
         self.expert_name = expert_name
         self.expert_credentials = expert_credentials or "Certified Digital Forensics Examiner"
         self.company_name = company_name or "Digital Forensics Laboratory"
         self.styles = getSampleStyleSheet()
         self._add_custom_styles()
+
+        # Initialize LLM narrator if requested and available
+        self.narrator = None
+        self.use_llm = use_llm_narration and LLM_AVAILABLE
+        if self.use_llm and ForensicNarrator:
+            try:
+                self.narrator = ForensicNarrator(model=llm_model, enabled=True)
+                if self.narrator.is_available():
+                    # LLM is ready to use
+                    pass
+                else:
+                    self.narrator = None
+                    self.use_llm = False
+            except Exception as e:
+                # Log the error but continue without LLM
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to initialize LLM narrator: {e}")
+                self.narrator = None
+                self.use_llm = False
 
     def _add_custom_styles(self) -> None:
         """Add custom paragraph styles."""
@@ -99,6 +131,34 @@ class ExpertWitnessGenerator:
             fontSize=11,
             leftIndent=20,
             spaceAfter=5,
+        ))
+
+        # Narrative style for LLM-generated analysis
+        self.styles.add(ParagraphStyle(
+            name='AnalysisNarrative',
+            parent=self.styles['Normal'],
+            fontSize=11,
+            leading=16,
+            alignment=TA_JUSTIFY,
+            spaceAfter=12,
+            leftIndent=10,
+            rightIndent=10,
+        ))
+
+        # Critical finding style
+        self.styles.add(ParagraphStyle(
+            name='CriticalFinding',
+            parent=self.styles['Normal'],
+            fontSize=11,
+            leading=16,
+            alignment=TA_JUSTIFY,
+            spaceAfter=12,
+            leftIndent=10,
+            rightIndent=10,
+            backColor=colors.HexColor('#fff3cd'),
+            borderWidth=1,
+            borderColor=colors.HexColor('#dc3545'),
+            borderPadding=8,
         ))
 
     def generate_methodology_document(
@@ -140,6 +200,11 @@ class ExpertWitnessGenerator:
 
         # Tool information
         story.extend(self._build_tool_section(analysis))
+
+        # Comprehensive Forensic Analysis (when LLM enabled)
+        if self.narrator:
+            story.append(PageBreak())
+            story.extend(self._build_comprehensive_analysis_section(analysis))
 
         # Reproducibility
         story.extend(self._build_reproducibility_section(analysis))
@@ -285,11 +350,133 @@ class ExpertWitnessGenerator:
 
         return elements
 
+    def _build_comprehensive_analysis_section(self, analysis: ForensicAnalysis) -> list:
+        """
+        Build the comprehensive forensic analysis section using LLM.
+
+        This is the core analysis section with detailed reasoning,
+        evidence cross-validation, and expert conclusions.
+        """
+        elements = []
+
+        elements.append(Paragraph("3. COMPREHENSIVE FORENSIC ANALYSIS", self.styles['SectionTitle']))
+
+        elements.append(Paragraph(
+            "The following forensic analysis was conducted using AI-assisted analysis technology "
+            "to provide detailed interpretation of the technical evidence. The analysis follows "
+            "a structured methodology: evidence inventory, technical interpretation, cross-validation "
+            "between independent sources, step-by-step reasoning, and conclusions that distinguish "
+            "between what is PROVEN, what is INDICATED, and what remains UNCERTAIN.",
+            self.styles['ExpertBodyText']
+        ))
+
+        elements.append(Spacer(1, 0.2 * inch))
+
+        # Generate the full LLM analysis
+        result = self.narrator.generate_full_analysis(analysis)
+
+        if result.success:
+            # Display the raw forensic data summary first
+            elements.append(Paragraph("<b>3.1 Evidence Summary</b>", self.styles['Normal']))
+
+            # Key facts table
+            evidence_data = [
+                ["Evidence Item", "Value", "Status"],
+                [
+                    "File Hash (SHA-256)",
+                    analysis.file_info.sha256[:24] + "...",
+                    "Calculated"
+                ],
+                [
+                    "CRC Validation",
+                    f"Stored: {analysis.crc_validation.header_crc_stored}",
+                    "[OK] MATCH" if analysis.crc_validation.is_valid else "[FAIL] MISMATCH"
+                ],
+                [
+                    "TrustedDWG Watermark",
+                    analysis.trusted_dwg.application_origin or "Not detected",
+                    "[OK] Valid" if analysis.trusted_dwg.watermark_valid else "[WARN] Invalid/Absent"
+                ],
+                [
+                    "DWG Version",
+                    f"{analysis.header_analysis.version_name} ({analysis.header_analysis.version_string})",
+                    "[OK] Supported" if analysis.header_analysis.is_supported else "[WARN] Unsupported"
+                ],
+                [
+                    "Risk Assessment",
+                    analysis.risk_assessment.overall_risk.value,
+                    f"{len(analysis.tampering_indicators)} indicators"
+                ],
+            ]
+
+            table = Table(evidence_data, colWidths=[2 * inch, 2.5 * inch, 1.5 * inch])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ]))
+            elements.append(table)
+            elements.append(Spacer(1, 0.3 * inch))
+
+            # Full LLM analysis
+            elements.append(Paragraph("<b>3.2 Detailed Analysis and Reasoning</b>", self.styles['Normal']))
+            elements.append(Spacer(1, 0.1 * inch))
+
+            # Sanitize and parse the LLM response into paragraphs
+            # This converts markdown to HTML and fixes character encoding
+            narrative_text = sanitize_llm_output(result.narrative)
+            paragraphs = [p.strip() for p in narrative_text.split('\n\n') if p.strip()]
+
+            for para in paragraphs:
+                # Check if this is a section header
+                if para.startswith(('1.', '2.', '3.', '4.', '5.', '6.')) or para.isupper():
+                    elements.append(Spacer(1, 0.1 * inch))
+                    elements.append(Paragraph(f"<b>{para}</b>", self.styles['Normal']))
+                elif 'CRITICAL' in para.upper() or 'PROOF' in para.upper() or 'IMPOSSIBLE' in para.upper() or 'DEFINITIVE' in para.upper():
+                    # Critical finding - use highlighted style
+                    elements.append(Paragraph(para, self.styles['CriticalFinding']))
+                elif para.startswith('- ') or para.startswith('* '):
+                    # Bullet point - format properly
+                    bullet_text = para[2:] if para.startswith('- ') or para.startswith('* ') else para
+                    elements.append(Paragraph(f"[*] {bullet_text}", self.styles['BulletPoint']))
+                else:
+                    # Regular analysis paragraph
+                    elements.append(Paragraph(para, self.styles['AnalysisNarrative']))
+
+            elements.append(Spacer(1, 0.2 * inch))
+
+            # Attribution
+            gen_time = f" - {result.generation_time_ms}ms" if result.generation_time_ms else ""
+            elements.append(Paragraph(
+                f"<i>[Analysis generated by AI Forensic Expert - Model: {result.model_used}{gen_time}]</i>",
+                self.styles['Normal']
+            ))
+
+        else:
+            # LLM generation failed
+            elements.append(Paragraph(
+                f"<b>Note:</b> Automated analysis generation was unavailable. "
+                f"Error: {result.error or 'Unknown error'}. "
+                f"Please refer to the static analysis sections that follow.",
+                self.styles['ExpertBodyText']
+            ))
+
+        elements.append(Spacer(1, 0.3 * inch))
+
+        return elements
+
     def _build_reproducibility_section(self, analysis: ForensicAnalysis) -> list:
         """Build the reproducibility instructions section."""
         elements = []
 
-        elements.append(Paragraph("3. REPRODUCIBILITY", self.styles['SectionTitle']))
+        # Section number adjusts based on whether LLM section is included
+        section_num = "4" if self.narrator else "3"
+        elements.append(Paragraph(f"{section_num}. REPRODUCIBILITY", self.styles['SectionTitle']))
 
         elements.append(Paragraph(
             "The analysis results can be independently verified by following "
@@ -331,7 +518,8 @@ class ExpertWitnessGenerator:
         """Build the limitations statement section."""
         elements = []
 
-        elements.append(Paragraph("4. LIMITATIONS", self.styles['SectionTitle']))
+        section_num = "5" if self.narrator else "4"
+        elements.append(Paragraph(f"{section_num}. LIMITATIONS", self.styles['SectionTitle']))
 
         elements.append(Paragraph(
             "The following limitations apply to this forensic analysis:",
@@ -370,7 +558,8 @@ class ExpertWitnessGenerator:
         """Build the opinion support framework section."""
         elements = []
 
-        elements.append(Paragraph("5. OPINION SUPPORT FRAMEWORK", self.styles['SectionTitle']))
+        section_num = "6" if self.narrator else "5"
+        elements.append(Paragraph(f"{section_num}. OPINION SUPPORT FRAMEWORK", self.styles['SectionTitle']))
 
         elements.append(Paragraph(
             "Based on the forensic analysis conducted, the following opinions can be "
@@ -390,8 +579,8 @@ class ExpertWitnessGenerator:
             )
         else:
             opinions.append(
-                "<b>File Integrity:</b> The CRC validation FAILED, supporting the opinion "
-                "that the file has been modified after its original save operation, possibly "
+                "<b>File Integrity:</b> The CRC validation FAILED, proving "
+                "that the file has been modified after its original save operation, "
                 "indicating tampering or corruption."
             )
 
@@ -404,9 +593,9 @@ class ExpertWitnessGenerator:
             )
         elif not analysis.trusted_dwg.watermark_present:
             opinions.append(
-                "<b>Application Origin:</b> No TrustedDWG watermark is present. This may "
-                "indicate the file was created by non-Autodesk software or the watermark "
-                "was removed. Further investigation may be warranted."
+                "<b>Application Origin:</b> No TrustedDWG watermark is present. This "
+                "indicates the file was created by non-Autodesk software or the watermark "
+                "was removed. Further investigation is warranted."
             )
 
         # Risk-based opinion
@@ -449,7 +638,8 @@ class ExpertWitnessGenerator:
         """Build the expert attestation section."""
         elements = []
 
-        elements.append(Paragraph("6. EXPERT ATTESTATION", self.styles['SectionTitle']))
+        section_num = "7" if self.narrator else "6"
+        elements.append(Paragraph(f"{section_num}. EXPERT ATTESTATION", self.styles['SectionTitle']))
 
         attestation_text = f"""
         I, {self.expert_name}, hereby attest that:
@@ -500,6 +690,8 @@ def generate_expert_witness_document(
     expert_name: str = "Digital Forensics Expert",
     expert_credentials: Optional[str] = None,
     company_name: Optional[str] = None,
+    use_llm_narration: bool = False,
+    llm_model: Optional[str] = None,
 ) -> Path:
     """
     Convenience function to generate expert witness documentation.
@@ -511,6 +703,8 @@ def generate_expert_witness_document(
         expert_name: Name of the expert witness
         expert_credentials: Expert's credentials
         company_name: Company or organization name
+        use_llm_narration: Use LLM for enhanced narrative generation
+        llm_model: Ollama model to use for LLM narration
 
     Returns:
         Path to the generated PDF file
@@ -519,5 +713,7 @@ def generate_expert_witness_document(
         expert_name=expert_name,
         expert_credentials=expert_credentials,
         company_name=company_name,
+        use_llm_narration=use_llm_narration,
+        llm_model=llm_model,
     )
     return generator.generate_methodology_document(analysis, output_path, case_id)

@@ -23,6 +23,7 @@ from dwg_forensic.models import (
     FileInfo,
     ForensicAnalysis,
     HeaderAnalysis,
+    NTFSTimestampAnalysis,
     RiskAssessment,
     RiskLevel,
     TamperingIndicator,
@@ -36,6 +37,8 @@ from dwg_forensic.parsers import (
     WatermarkDetector,
     TimestampParser,
     TimestampData,
+    NTFSTimestampParser,
+    NTFSForensicData,
 )
 from dwg_forensic.utils.exceptions import DWGForensicError
 
@@ -69,6 +72,9 @@ class ForensicAnalyzer:
 
         # Timestamp parser for advanced forensic analysis
         self.timestamp_parser = TimestampParser()
+
+        # NTFS timestamp parser for cross-validation forensics
+        self.ntfs_parser = NTFSTimestampParser()
 
         # Phase 3 analyzers
         self.anomaly_detector = AnomalyDetector()
@@ -121,25 +127,40 @@ class ForensicAnalyzer:
         # Build metadata from timestamp data
         metadata = self._build_metadata_from_timestamps(timestamp_data)
 
-        # Phase 3: Anomaly detection (including advanced timestamp anomalies)
-        anomalies = self._detect_all_anomalies(
-            header_analysis, crc_validation, trusted_dwg, file_path,
-            timestamp_data=timestamp_data, metadata=metadata
+        # Parse NTFS filesystem timestamps for cross-validation forensics
+        # This is critical for detecting timestomping and backdating attacks
+        ntfs_data = self.ntfs_parser.parse(file_path)
+
+        # Cross-validate DWG timestamps against NTFS filesystem timestamps
+        ntfs_contradictions = self._cross_validate_ntfs_timestamps(
+            timestamp_data, ntfs_data, metadata
         )
 
-        # Phase 3: Tampering rule evaluation
+        # Phase 3: Anomaly detection (including advanced timestamp anomalies and NTFS cross-validation)
+        anomalies = self._detect_all_anomalies(
+            header_analysis, crc_validation, trusted_dwg, file_path,
+            timestamp_data=timestamp_data, metadata=metadata,
+            ntfs_data=ntfs_data, ntfs_contradictions=ntfs_contradictions
+        )
+
+        # Phase 3: Tampering rule evaluation (with NTFS cross-validation data)
         rule_context = self._build_rule_context(
             header_analysis, crc_validation, trusted_dwg, file_path,
-            timestamp_data=timestamp_data, anomalies=anomalies, metadata=metadata
+            timestamp_data=timestamp_data, anomalies=anomalies, metadata=metadata,
+            ntfs_data=ntfs_data, ntfs_contradictions=ntfs_contradictions
         )
         rule_results = self.rule_engine.evaluate_all(rule_context)
         failed_rules = self.rule_engine.get_failed_rules(rule_results)
 
-        # Phase 3: Detect tampering indicators (version-aware)
+        # Phase 3: Detect tampering indicators (version-aware, with NTFS cross-validation)
         tampering_indicators = self._detect_tampering(
             crc_validation, trusted_dwg, failed_rules, version_string,
-            timestamp_data=timestamp_data
+            timestamp_data=timestamp_data, ntfs_data=ntfs_data,
+            ntfs_contradictions=ntfs_contradictions
         )
+
+        # Build NTFS analysis model for output
+        ntfs_analysis = self._build_ntfs_analysis(ntfs_data, ntfs_contradictions, metadata)
 
         # Phase 3: Risk assessment with scoring
         risk_assessment = self._assess_risk_phase3(
@@ -153,6 +174,7 @@ class ForensicAnalyzer:
             trusted_dwg=trusted_dwg,
             crc_validation=crc_validation,
             metadata=metadata,
+            ntfs_analysis=ntfs_analysis,
             application_fingerprint=None,  # Application fingerprinting in future phase
             anomalies=anomalies,
             tampering_indicators=tampering_indicators,
@@ -322,6 +344,8 @@ class ForensicAnalyzer:
         file_path: Path,
         timestamp_data: Optional[TimestampData] = None,
         metadata: Optional[DWGMetadata] = None,
+        ntfs_data: Optional[NTFSForensicData] = None,
+        ntfs_contradictions: Optional[Dict[str, Any]] = None,
     ) -> List[Anomaly]:
         """Detect all anomalies using Phase 3 AnomalyDetector.
 
@@ -332,6 +356,8 @@ class ForensicAnalyzer:
             file_path: Path to the DWG file
             timestamp_data: Optional parsed timestamp data for advanced detection
             metadata: Optional DWG metadata
+            ntfs_data: Optional NTFS forensic data for cross-validation
+            ntfs_contradictions: Optional dict of NTFS/DWG contradictions
 
         Returns:
             List of detected anomalies
@@ -386,6 +412,94 @@ class ForensicAnalyzer:
                 )
             )
 
+        # NTFS cross-validation anomalies (SMOKING GUN INDICATORS)
+        if ntfs_data:
+            # SI/FN mismatch = DEFINITIVE timestomping proof
+            if ntfs_data.si_fn_mismatch:
+                anomalies.append(
+                    Anomaly(
+                        anomaly_type=AnomalyType.NTFS_SI_FN_MISMATCH,
+                        description=(
+                            "DEFINITIVE TIMESTOMPING: $STANDARD_INFORMATION timestamps "
+                            "are earlier than kernel-protected $FILE_NAME timestamps. "
+                            "This is impossible without deliberate manipulation tools."
+                        ),
+                        severity=RiskLevel.CRITICAL,
+                        details={
+                            "si_created": str(ntfs_data.si_timestamps.created) if ntfs_data.si_timestamps.created else None,
+                            "fn_created": str(ntfs_data.fn_timestamps.created) if ntfs_data.fn_timestamps and ntfs_data.fn_timestamps.created else None,
+                            "forensic_conclusion": "File timestamps have been manipulated using timestomping tools",
+                        },
+                    )
+                )
+
+            # Nanosecond truncation = Tool signature
+            if ntfs_data.nanoseconds_truncated:
+                anomalies.append(
+                    Anomaly(
+                        anomaly_type=AnomalyType.NTFS_NANOSECOND_TRUNCATION,
+                        description=(
+                            "TOOL SIGNATURE DETECTED: NTFS timestamps have nanosecond values "
+                            "of exactly zero. Natural filesystem operations always include "
+                            "non-zero nanoseconds. This indicates use of timestamp manipulation tools."
+                        ),
+                        severity=RiskLevel.HIGH,
+                        details={
+                            "created_nanoseconds": ntfs_data.si_timestamps.created_nanoseconds,
+                            "modified_nanoseconds": ntfs_data.si_timestamps.modified_nanoseconds,
+                            "forensic_conclusion": "Timestamps were set programmatically, not by normal file operations",
+                        },
+                    )
+                )
+
+            # Creation after modification = Impossible condition
+            if ntfs_data.creation_after_modification:
+                anomalies.append(
+                    Anomaly(
+                        anomaly_type=AnomalyType.NTFS_CREATION_AFTER_MODIFICATION,
+                        description=(
+                            "IMPOSSIBLE TIMESTAMP ORDER: File creation timestamp is later than "
+                            "modification timestamp. This is physically impossible and proves "
+                            "deliberate timestamp manipulation."
+                        ),
+                        severity=RiskLevel.CRITICAL,
+                        details={
+                            "created": str(ntfs_data.si_timestamps.created) if ntfs_data.si_timestamps.created else None,
+                            "modified": str(ntfs_data.si_timestamps.modified) if ntfs_data.si_timestamps.modified else None,
+                            "forensic_conclusion": "Timestamps have been manipulated to create an impossible state",
+                        },
+                    )
+                )
+
+        # DWG vs NTFS contradictions
+        if ntfs_contradictions:
+            if ntfs_contradictions.get("creation_contradiction"):
+                anomalies.append(
+                    Anomaly(
+                        anomaly_type=AnomalyType.DWG_NTFS_CREATION_CONTRADICTION,
+                        description=(
+                            "PROVEN BACKDATING: DWG internal creation timestamp predates the "
+                            "NTFS filesystem creation timestamp. The file claims to have been "
+                            "created before it existed on this filesystem."
+                        ),
+                        severity=RiskLevel.CRITICAL,
+                        details=ntfs_contradictions.get("creation_details", {}),
+                    )
+                )
+
+            if ntfs_contradictions.get("modification_contradiction"):
+                anomalies.append(
+                    Anomaly(
+                        anomaly_type=AnomalyType.DWG_NTFS_MODIFICATION_CONTRADICTION,
+                        description=(
+                            "TIMESTAMP MANIPULATION: DWG internal modification timestamp "
+                            "contradicts NTFS modification timestamp beyond acceptable tolerance."
+                        ),
+                        severity=RiskLevel.HIGH,
+                        details=ntfs_contradictions.get("modification_details", {}),
+                    )
+                )
+
         return anomalies
 
     def _build_rule_context(
@@ -397,6 +511,8 @@ class ForensicAnalyzer:
         timestamp_data: Optional[TimestampData] = None,
         anomalies: Optional[List[Anomaly]] = None,
         metadata: Optional[DWGMetadata] = None,
+        ntfs_data: Optional[NTFSForensicData] = None,
+        ntfs_contradictions: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Build context dictionary for tampering rule evaluation.
 
@@ -408,6 +524,8 @@ class ForensicAnalyzer:
             timestamp_data: Optional parsed timestamp data
             anomalies: Optional list of detected anomalies
             metadata: Optional DWG metadata
+            ntfs_data: Optional NTFS forensic data for cross-validation
+            ntfs_contradictions: Optional dict of NTFS/DWG contradictions
 
         Returns:
             Context dictionary for rule evaluation
@@ -486,6 +604,25 @@ class ForensicAnalyzer:
                 for a in anomalies
             ]
 
+        # Add NTFS forensic data for cross-validation rules
+        if ntfs_data:
+            context["ntfs_data"] = {
+                "si_created": ntfs_data.si_timestamps.created.isoformat() if ntfs_data.si_timestamps.created else None,
+                "si_modified": ntfs_data.si_timestamps.modified.isoformat() if ntfs_data.si_timestamps.modified else None,
+                "si_accessed": ntfs_data.si_timestamps.accessed.isoformat() if ntfs_data.si_timestamps.accessed else None,
+                "si_created_nanoseconds": ntfs_data.si_timestamps.created_nanoseconds,
+                "si_modified_nanoseconds": ntfs_data.si_timestamps.modified_nanoseconds,
+                "fn_created": ntfs_data.fn_timestamps.created.isoformat() if ntfs_data.fn_timestamps and ntfs_data.fn_timestamps.created else None,
+                "fn_modified": ntfs_data.fn_timestamps.modified.isoformat() if ntfs_data.fn_timestamps and ntfs_data.fn_timestamps.modified else None,
+                "si_fn_mismatch": ntfs_data.si_fn_mismatch,
+                "nanoseconds_truncated": ntfs_data.nanoseconds_truncated,
+                "creation_after_modification": ntfs_data.creation_after_modification,
+            }
+
+        # Add NTFS contradictions for cross-validation rules
+        if ntfs_contradictions:
+            context["ntfs_contradictions"] = ntfs_contradictions
+
         return context
 
     def _detect_tampering(
@@ -495,8 +632,10 @@ class ForensicAnalyzer:
         failed_rules: List[Any],
         version_string: Optional[str] = None,
         timestamp_data: Optional[TimestampData] = None,
+        ntfs_data: Optional[NTFSForensicData] = None,
+        ntfs_contradictions: Optional[Dict[str, Any]] = None,
     ) -> List[TamperingIndicator]:
-        """Detect potential tampering indicators.
+        """Detect tampering indicators with definitive forensic conclusions.
 
         Args:
             crc_validation: CRC validation results
@@ -504,9 +643,11 @@ class ForensicAnalyzer:
             failed_rules: List of failed tampering rules
             version_string: DWG version string for version-aware detection
             timestamp_data: Optional parsed timestamp data
+            ntfs_data: Optional NTFS forensic data for cross-validation
+            ntfs_contradictions: Optional dict of NTFS/DWG contradictions
 
         Returns:
-            List of tampering indicators
+            List of tampering indicators with forensic conclusions
         """
         indicators = []
 
@@ -585,6 +726,89 @@ class ForensicAnalyzer:
                     )
                 )
 
+        # NTFS cross-validation tampering indicators (DEFINITIVE PROOF)
+        if ntfs_data:
+            # SI/FN mismatch = PROVEN timestomping
+            if ntfs_data.si_fn_mismatch:
+                indicators.append(
+                    TamperingIndicator(
+                        indicator_type=TamperingIndicatorType.NTFS_TIMESTOMPING_DETECTED,
+                        description=(
+                            "DEFINITIVE PROOF OF TIMESTOMPING: $STANDARD_INFORMATION timestamps "
+                            "predate kernel-protected $FILE_NAME timestamps. This is forensically "
+                            "impossible without deliberate manipulation."
+                        ),
+                        confidence=1.0,
+                        evidence=(
+                            f"SI Created: {ntfs_data.si_timestamps.created}, "
+                            f"FN Created: {ntfs_data.fn_timestamps.created if ntfs_data.fn_timestamps else 'N/A'}"
+                        ),
+                    )
+                )
+
+            # Nanosecond truncation = Tool signature
+            if ntfs_data.nanoseconds_truncated:
+                indicators.append(
+                    TamperingIndicator(
+                        indicator_type=TamperingIndicatorType.NTFS_TOOL_SIGNATURE,
+                        description=(
+                            "TIMESTAMP MANIPULATION TOOL DETECTED: NTFS timestamps have "
+                            "nanosecond values of exactly zero. Natural filesystem operations "
+                            "always include random nanosecond values."
+                        ),
+                        confidence=0.95,
+                        evidence=(
+                            f"Created nanoseconds: {ntfs_data.si_timestamps.created_nanoseconds}, "
+                            f"Modified nanoseconds: {ntfs_data.si_timestamps.modified_nanoseconds}"
+                        ),
+                    )
+                )
+
+            # Creation after modification = Impossible
+            if ntfs_data.creation_after_modification:
+                indicators.append(
+                    TamperingIndicator(
+                        indicator_type=TamperingIndicatorType.NTFS_IMPOSSIBLE_TIMESTAMP,
+                        description=(
+                            "IMPOSSIBLE TIMESTAMP CONDITION: File creation timestamp is later "
+                            "than modification timestamp. This proves deliberate manipulation."
+                        ),
+                        confidence=1.0,
+                        evidence=(
+                            f"Created: {ntfs_data.si_timestamps.created}, "
+                            f"Modified: {ntfs_data.si_timestamps.modified}"
+                        ),
+                    )
+                )
+
+        # DWG vs NTFS contradictions = Backdating proof
+        if ntfs_contradictions:
+            if ntfs_contradictions.get("creation_contradiction"):
+                indicators.append(
+                    TamperingIndicator(
+                        indicator_type=TamperingIndicatorType.PROVEN_BACKDATING,
+                        description=(
+                            "PROVEN BACKDATING: DWG internal creation timestamp predates NTFS "
+                            "filesystem creation. The file claims to exist before it was created."
+                        ),
+                        confidence=1.0,
+                        evidence=str(ntfs_contradictions.get("creation_details", {})),
+                    )
+                )
+
+            if ntfs_contradictions.get("modification_contradiction"):
+                indicators.append(
+                    TamperingIndicator(
+                        indicator_type=TamperingIndicatorType.DWG_NTFS_CONTRADICTION,
+                        description=(
+                            "DWG/NTFS TIMESTAMP CONTRADICTION: Internal DWG timestamps "
+                            "contradict filesystem timestamps beyond acceptable tolerance."
+                        ),
+                        confidence=0.9,
+                        evidence=str(ntfs_contradictions.get("modification_details", {})),
+                    )
+                )
+
         # Add indicators from failed tampering rules
         for rule_result in failed_rules:
             # High severity rules indicate stronger tampering evidence
@@ -607,6 +831,23 @@ class ForensicAnalyzer:
                 indicator_type = TamperingIndicatorType.TIMEZONE_MANIPULATION
             elif rule_result.rule_id == "TAMPER-016":
                 indicator_type = TamperingIndicatorType.EDUCATIONAL_VERSION
+            # NTFS Cross-Validation Rules (Smoking Gun Indicators)
+            elif rule_result.rule_id == "TAMPER-019":
+                indicator_type = TamperingIndicatorType.NTFS_TIMESTOMPING_DETECTED
+            elif rule_result.rule_id == "TAMPER-020":
+                indicator_type = TamperingIndicatorType.NTFS_TOOL_SIGNATURE
+            elif rule_result.rule_id == "TAMPER-021":
+                indicator_type = TamperingIndicatorType.NTFS_IMPOSSIBLE_TIMESTAMP
+            elif rule_result.rule_id == "TAMPER-022":
+                indicator_type = TamperingIndicatorType.PROVEN_BACKDATING
+            elif rule_result.rule_id == "TAMPER-023":
+                indicator_type = TamperingIndicatorType.DWG_NTFS_CONTRADICTION
+            elif rule_result.rule_id in ("TAMPER-024", "TAMPER-025"):
+                indicator_type = TamperingIndicatorType.TDINDWG_MANIPULATION
+            elif rule_result.rule_id == "TAMPER-026":
+                indicator_type = TamperingIndicatorType.SUSPICIOUS_PATTERN
+            elif rule_result.rule_id in ("TAMPER-027", "TAMPER-028"):
+                indicator_type = TamperingIndicatorType.PROVEN_BACKDATING
 
             indicators.append(
                 TamperingIndicator(
@@ -667,6 +908,168 @@ class ForensicAnalyzer:
             overall_risk=risk_level,
             factors=factors,
             recommendation=recommendation,
+        )
+
+    def _cross_validate_ntfs_timestamps(
+        self,
+        timestamp_data: Optional[TimestampData],
+        ntfs_data: Optional[NTFSForensicData],
+        metadata: Optional[DWGMetadata],
+    ) -> Dict[str, Any]:
+        """Cross-validate DWG internal timestamps against NTFS filesystem timestamps.
+
+        This is critical for detecting backdating attacks where DWG internal
+        timestamps claim an earlier date than the filesystem allows.
+
+        Args:
+            timestamp_data: Parsed DWG timestamp data
+            ntfs_data: NTFS forensic data from filesystem
+            metadata: DWG metadata with converted timestamps
+
+        Returns:
+            Dictionary containing contradiction flags and details
+        """
+        from dwg_forensic.parsers.timestamp import mjd_to_datetime
+
+        contradictions = {
+            "creation_contradiction": False,
+            "modification_contradiction": False,
+            "creation_details": {},
+            "modification_details": {},
+        }
+
+        if not timestamp_data or not ntfs_data:
+            return contradictions
+
+        # Get DWG creation timestamp
+        dwg_created = None
+        if timestamp_data.tdcreate is not None:
+            try:
+                dwg_created = mjd_to_datetime(timestamp_data.tdcreate)
+            except (ValueError, OverflowError):
+                pass
+
+        # Get DWG modification timestamp
+        dwg_modified = None
+        if timestamp_data.tdupdate is not None:
+            try:
+                dwg_modified = mjd_to_datetime(timestamp_data.tdupdate)
+            except (ValueError, OverflowError):
+                pass
+
+        # Cross-validate creation timestamps
+        # If DWG claims earlier creation than NTFS filesystem, it's backdated
+        if dwg_created and ntfs_data.si_timestamps.created:
+            ntfs_created = ntfs_data.si_timestamps.created
+            # Allow 1 hour tolerance for timezone differences
+            tolerance_hours = 1
+            time_diff = (ntfs_created - dwg_created).total_seconds() / 3600
+
+            if time_diff > tolerance_hours:
+                # DWG claims creation BEFORE filesystem creation = BACKDATING
+                contradictions["creation_contradiction"] = True
+                contradictions["creation_details"] = {
+                    "dwg_created": dwg_created.isoformat(),
+                    "ntfs_created": ntfs_created.isoformat(),
+                    "difference_hours": round(time_diff, 2),
+                    "forensic_conclusion": (
+                        f"DWG claims creation {round(time_diff, 1)} hours before "
+                        f"filesystem creation. This is PROVEN BACKDATING."
+                    ),
+                }
+
+        # Cross-validate modification timestamps
+        if dwg_modified and ntfs_data.si_timestamps.modified:
+            ntfs_modified = ntfs_data.si_timestamps.modified
+            # Allow 24 hour tolerance for normal file operations
+            tolerance_hours = 24
+            time_diff = abs((ntfs_modified - dwg_modified).total_seconds()) / 3600
+
+            if time_diff > tolerance_hours:
+                contradictions["modification_contradiction"] = True
+                contradictions["modification_details"] = {
+                    "dwg_modified": dwg_modified.isoformat(),
+                    "ntfs_modified": ntfs_modified.isoformat(),
+                    "difference_hours": round(time_diff, 2),
+                    "forensic_conclusion": (
+                        f"DWG internal modification timestamp differs from NTFS by "
+                        f"{round(time_diff, 1)} hours. This indicates timestamp manipulation."
+                    ),
+                }
+
+        return contradictions
+
+    def _build_ntfs_analysis(
+        self,
+        ntfs_data: Optional[NTFSForensicData],
+        ntfs_contradictions: Optional[Dict[str, Any]],
+        metadata: Optional[DWGMetadata],
+    ) -> Optional[NTFSTimestampAnalysis]:
+        """Build NTFSTimestampAnalysis model from parsed NTFS data.
+
+        Args:
+            ntfs_data: Parsed NTFS forensic data
+            ntfs_contradictions: Cross-validation contradiction results
+            metadata: DWG metadata for reference
+
+        Returns:
+            NTFSTimestampAnalysis model or None if no NTFS data available
+        """
+        if not ntfs_data:
+            return None
+
+        # Build forensic conclusion based on findings
+        conclusions = []
+        if ntfs_data.si_fn_mismatch:
+            conclusions.append(
+                "DEFINITIVE TIMESTOMPING: $STANDARD_INFORMATION timestamps predate "
+                "$FILE_NAME timestamps, which is impossible without manipulation tools."
+            )
+        if ntfs_data.nanoseconds_truncated:
+            conclusions.append(
+                "TOOL SIGNATURE: Nanosecond values are exactly zero, indicating "
+                "programmatic timestamp manipulation rather than normal file operations."
+            )
+        if ntfs_data.creation_after_modification:
+            conclusions.append(
+                "IMPOSSIBLE STATE: Creation timestamp is later than modification timestamp."
+            )
+
+        contradiction_details = None
+        dwg_ntfs_contradiction = False
+        if ntfs_contradictions:
+            if ntfs_contradictions.get("creation_contradiction"):
+                dwg_ntfs_contradiction = True
+                conclusions.append(
+                    ntfs_contradictions.get("creation_details", {}).get(
+                        "forensic_conclusion", "DWG/NTFS creation timestamp contradiction."
+                    )
+                )
+            if ntfs_contradictions.get("modification_contradiction"):
+                dwg_ntfs_contradiction = True
+                conclusions.append(
+                    ntfs_contradictions.get("modification_details", {}).get(
+                        "forensic_conclusion", "DWG/NTFS modification timestamp contradiction."
+                    )
+                )
+            contradiction_details = str(ntfs_contradictions) if dwg_ntfs_contradiction else None
+
+        forensic_conclusion = " ".join(conclusions) if conclusions else None
+
+        return NTFSTimestampAnalysis(
+            si_created=ntfs_data.si_timestamps.created,
+            si_modified=ntfs_data.si_timestamps.modified,
+            si_accessed=ntfs_data.si_timestamps.accessed,
+            si_created_nanoseconds=ntfs_data.si_timestamps.created_nanoseconds,
+            si_modified_nanoseconds=ntfs_data.si_timestamps.modified_nanoseconds,
+            fn_created=ntfs_data.fn_timestamps.created if ntfs_data.fn_timestamps else None,
+            fn_modified=ntfs_data.fn_timestamps.modified if ntfs_data.fn_timestamps else None,
+            timestomping_detected=ntfs_data.si_fn_mismatch,
+            nanosecond_truncation=ntfs_data.nanoseconds_truncated,
+            impossible_timestamps=ntfs_data.creation_after_modification,
+            dwg_ntfs_contradiction=dwg_ntfs_contradiction,
+            contradiction_details=contradiction_details,
+            forensic_conclusion=forensic_conclusion,
         )
 
 

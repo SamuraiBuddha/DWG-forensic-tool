@@ -535,7 +535,7 @@ class AnomalyDetector:
                         anomaly_type=AnomalyType.TIMESTAMP_PRECISION_ANOMALY,
                         description=(
                             "Creation timestamp is exactly midnight - "
-                            "unusual precision may indicate manipulation"
+                            "unusual precision indicates manipulation"
                         ),
                         severity=RiskLevel.LOW,
                         details={

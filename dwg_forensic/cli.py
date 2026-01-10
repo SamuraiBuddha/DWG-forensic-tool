@@ -807,9 +807,11 @@ def batch(directory: str, recursive: bool, output_dir: str):
 @click.option("--examiner", default="Digital Forensics Examiner", help="Examiner name")
 @click.option("--organization", help="Organization name")
 @click.option("--include-hex", is_flag=True, help="Include hex dump appendix")
+@click.option("--llm/--no-llm", default=False, help="Enable LLM-enhanced narratives (requires Ollama)")
+@click.option("--llm-model", default="phi4", help="Ollama model for LLM narration")
 @click.option("-v", "--verbose", count=True, help="Verbosity level")
 def report(filepath: str, output: str, case_id: str, examiner: str,
-           organization: str, include_hex: bool, verbose: int):
+           organization: str, include_hex: bool, llm: bool, llm_model: str, verbose: int):
     """Generate a PDF forensic report for a DWG file.
 
     FILEPATH is the path to the DWG file to analyze.
@@ -823,6 +825,10 @@ def report(filepath: str, output: str, case_id: str, examiner: str,
     - Anomaly and tampering detection results
     - Hash attestation
     - Optional hex dump appendix
+
+    Use --llm to enable AI-powered narrative generation using a local
+    Ollama instance. This provides more detailed, context-aware explanations
+    suitable for non-technical audiences. Requires Ollama to be running.
     """
     file_path = Path(filepath)
     output_path = Path(output)
@@ -840,6 +846,22 @@ def report(filepath: str, output: str, case_id: str, examiner: str,
         analyzer = ForensicAnalyzer()
         result = analyzer.analyze(file_path)
 
+        # Check LLM availability if requested
+        if llm:
+            print_status("[INFO]", f"LLM narration enabled (model: {llm_model})")
+            try:
+                from dwg_forensic.llm import OllamaClient
+                client = OllamaClient(model=llm_model)
+                if not client.is_available():
+                    print_status("[WARN]", "Ollama not available - falling back to static narratives")
+                    llm = False
+                elif not client.is_model_available(llm_model):
+                    print_status("[WARN]", f"Model '{llm_model}' not installed - falling back to static narratives")
+                    llm = False
+            except ImportError:
+                print_status("[WARN]", "LLM module not available - falling back to static narratives")
+                llm = False
+
         # Generate report
         print_status("[INFO]", "Generating PDF report...")
         report_path = generate_pdf_report(
@@ -849,6 +871,8 @@ def report(filepath: str, output: str, case_id: str, examiner: str,
             examiner_name=examiner,
             company_name=organization,
             include_hex_dumps=include_hex,
+            use_llm_narration=llm,
+            llm_model=llm_model,
         )
 
         print_status("[OK]", f"Report generated: {report_path}")
@@ -884,9 +908,11 @@ def report(filepath: str, output: str, case_id: str, examiner: str,
 @click.option("--expert-name", default="Digital Forensics Expert", help="Expert witness name")
 @click.option("--credentials", help="Expert credentials/certifications")
 @click.option("--company", help="Company or organization name")
+@click.option("--llm/--no-llm", default=False, help="Enable LLM-enhanced analysis (requires Ollama)")
+@click.option("--llm-model", default="phi4", help="Ollama model for LLM analysis")
 @click.option("-v", "--verbose", count=True, help="Verbosity level")
 def expert_witness(filepath: str, output: str, case_id: str, expert_name: str,
-                   credentials: str, company: str, verbose: int):
+                   credentials: str, company: str, llm: bool, llm_model: str, verbose: int):
     """Generate expert witness methodology documentation.
 
     FILEPATH is the path to the DWG file to analyze.
@@ -915,8 +941,39 @@ def expert_witness(filepath: str, output: str, case_id: str, expert_name: str,
         analyzer = ForensicAnalyzer()
         result = analyzer.analyze(file_path)
 
+        # Check LLM availability if requested
+        if llm:
+            print_status("[INFO]", f"LLM analysis enabled (model: {llm_model})")
+            try:
+                from dwg_forensic.llm import OllamaClient, ForensicNarrator
+                client = OllamaClient(model=llm_model)
+                if not client.is_available():
+                    print_status("[WARN]", "Ollama not available - falling back to static analysis")
+                    llm = False
+                elif not client.is_model_available(llm_model):
+                    print_status("[WARN]", f"Model '{llm_model}' not installed - falling back to static analysis")
+                    llm = False
+                else:
+                    print_status("[OK]", f"Ollama connected - model '{llm_model}' ready")
+                    # Verify ForensicNarrator can be created
+                    test_narrator = ForensicNarrator(model=llm_model, enabled=True)
+                    if test_narrator.is_available():
+                        print_status("[OK]", "ForensicNarrator initialized successfully")
+                    else:
+                        print_status("[WARN]", "ForensicNarrator not available - check logs")
+                        llm = False
+            except ImportError as e:
+                print_status("[WARN]", f"LLM module not available: {e}")
+                llm = False
+            except Exception as e:
+                print_status("[WARN]", f"LLM initialization failed: {e}")
+                llm = False
+
         # Generate document
-        print_status("[INFO]", "Generating expert witness document...")
+        if llm:
+            print_status("[INFO]", f"Generating expert witness document with LLM analysis ({llm_model})...")
+        else:
+            print_status("[INFO]", "Generating expert witness document...")
         doc_path = generate_expert_witness_document(
             analysis=result,
             output_path=output_path,
@@ -924,6 +981,8 @@ def expert_witness(filepath: str, output: str, case_id: str, expert_name: str,
             expert_name=expert_name,
             expert_credentials=credentials,
             company_name=company,
+            use_llm_narration=llm,
+            llm_model=llm_model,
         )
 
         print_status("[OK]", f"Document generated: {doc_path}")
@@ -933,6 +992,8 @@ def expert_witness(filepath: str, output: str, case_id: str, expert_name: str,
         console.print("[bold]Document Contents:[/bold]")
         console.print("  [*] Methodology description")
         console.print("  [*] Tool information and dependencies")
+        if llm:
+            console.print("  [*] Comprehensive Forensic Analysis (LLM-generated)")
         console.print("  [*] Reproducibility instructions")
         console.print("  [*] Limitations statement")
         console.print("  [*] Opinion support framework")

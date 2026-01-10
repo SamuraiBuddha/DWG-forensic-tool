@@ -7,7 +7,7 @@ for forensic purposes. Supports R18+ versions only (AC1024, AC1027, AC1032).
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -33,6 +33,12 @@ class AnomalyType(str, Enum):
     VERSION_ANACHRONISM = "VERSION_ANACHRONISM"
     TIMEZONE_DISCREPANCY = "TIMEZONE_DISCREPANCY"
     TIMESTAMP_PRECISION_ANOMALY = "TIMESTAMP_PRECISION_ANOMALY"
+    # NTFS Cross-Validation Anomalies (Smoking Gun Indicators)
+    NTFS_SI_FN_MISMATCH = "NTFS_SI_FN_MISMATCH"  # Definitive timestomping proof
+    NTFS_NANOSECOND_TRUNCATION = "NTFS_NANOSECOND_TRUNCATION"  # Tool signature
+    NTFS_CREATION_AFTER_MODIFICATION = "NTFS_CREATION_AFTER_MODIFICATION"  # Impossible
+    DWG_NTFS_CREATION_CONTRADICTION = "DWG_NTFS_CREATION_CONTRADICTION"  # Backdating proof
+    DWG_NTFS_MODIFICATION_CONTRADICTION = "DWG_NTFS_MODIFICATION_CONTRADICTION"
 
 
 class TamperingIndicatorType(str, Enum):
@@ -48,6 +54,12 @@ class TamperingIndicatorType(str, Enum):
     VERSION_ANACHRONISM = "VERSION_ANACHRONISM"
     TIMEZONE_MANIPULATION = "TIMEZONE_MANIPULATION"
     EDUCATIONAL_VERSION = "EDUCATIONAL_VERSION"
+    # NTFS Cross-Validation Tampering Indicators (Definitive Proof)
+    NTFS_TIMESTOMPING_DETECTED = "NTFS_TIMESTOMPING_DETECTED"  # SI/FN mismatch
+    NTFS_TOOL_SIGNATURE = "NTFS_TOOL_SIGNATURE"  # Nanosecond truncation
+    NTFS_IMPOSSIBLE_TIMESTAMP = "NTFS_IMPOSSIBLE_TIMESTAMP"  # Created > Modified
+    DWG_NTFS_CONTRADICTION = "DWG_NTFS_CONTRADICTION"  # Internal vs filesystem mismatch
+    PROVEN_BACKDATING = "PROVEN_BACKDATING"  # Definitive backdating evidence
 
 
 class FileInfo(BaseModel):
@@ -178,6 +190,16 @@ class DWGMetadata(BaseModel):
         description="Whether Educational Version watermark is present (student license)"
     )
 
+    # External Reference Paths - May reveal file origin
+    xref_paths: Optional[List[str]] = Field(
+        default=None,
+        description="External reference (xref) paths found in the file"
+    )
+    network_paths_detected: Optional[List[str]] = Field(
+        default=None,
+        description="Network paths (UNC or URLs) that may reveal original file location"
+    )
+
 
 class Anomaly(BaseModel):
     """Detected anomaly in DWG file analysis."""
@@ -213,6 +235,78 @@ class RiskAssessment(BaseModel):
     recommendation: str = Field(..., description="Recommended action based on risk assessment")
 
 
+class NTFSTimestampAnalysis(BaseModel):
+    """NTFS filesystem timestamp analysis for cross-validation.
+
+    This is critical for detecting timestomping attacks where internal
+    DWG timestamps may have been manipulated. NTFS provides multiple
+    timestamp sources that are harder to forge.
+    """
+    # Standard Information timestamps (visible to users, can be timestomped)
+    si_created: Optional[datetime] = Field(
+        None,
+        description="$STANDARD_INFORMATION created timestamp (can be timestomped)"
+    )
+    si_modified: Optional[datetime] = Field(
+        None,
+        description="$STANDARD_INFORMATION modified timestamp (can be timestomped)"
+    )
+    si_accessed: Optional[datetime] = Field(
+        None,
+        description="$STANDARD_INFORMATION accessed timestamp"
+    )
+
+    # Nanosecond precision data (critical for forensic analysis)
+    si_created_nanoseconds: Optional[int] = Field(
+        None,
+        description="Nanosecond component of created timestamp (0 = suspicious)"
+    )
+    si_modified_nanoseconds: Optional[int] = Field(
+        None,
+        description="Nanosecond component of modified timestamp (0 = suspicious)"
+    )
+
+    # File Name timestamps (kernel-only, resistant to timestomping)
+    fn_created: Optional[datetime] = Field(
+        None,
+        description="$FILE_NAME created timestamp (kernel-protected, cannot be timestomped)"
+    )
+    fn_modified: Optional[datetime] = Field(
+        None,
+        description="$FILE_NAME modified timestamp (kernel-protected)"
+    )
+
+    # Forensic findings
+    timestomping_detected: bool = Field(
+        default=False,
+        description="DEFINITIVE: SI timestamps earlier than FN timestamps proves timestomping"
+    )
+    nanosecond_truncation: bool = Field(
+        default=False,
+        description="Timestamps ending in .0000000 indicate manipulation tool usage"
+    )
+    impossible_timestamps: bool = Field(
+        default=False,
+        description="Created > Modified is physically impossible"
+    )
+
+    # Cross-validation with DWG internal timestamps
+    dwg_ntfs_contradiction: bool = Field(
+        default=False,
+        description="DWG internal timestamps contradict NTFS timestamps"
+    )
+    contradiction_details: Optional[str] = Field(
+        None,
+        description="Detailed explanation of timestamp contradictions"
+    )
+
+    # Forensic conclusion
+    forensic_conclusion: Optional[str] = Field(
+        None,
+        description="Expert forensic conclusion based on NTFS analysis"
+    )
+
+
 class ForensicAnalysis(BaseModel):
     """Complete forensic analysis results for a DWG file."""
     file_info: FileInfo = Field(..., description="Basic file information")
@@ -220,6 +314,10 @@ class ForensicAnalysis(BaseModel):
     trusted_dwg: TrustedDWGAnalysis = Field(..., description="TrustedDWG watermark analysis")
     crc_validation: CRCValidation = Field(..., description="CRC validation results")
     metadata: Optional[DWGMetadata] = Field(None, description="File metadata")
+    ntfs_analysis: Optional[NTFSTimestampAnalysis] = Field(
+        None,
+        description="NTFS filesystem timestamp analysis for cross-validation"
+    )
     application_fingerprint: Optional[ApplicationFingerprint] = Field(
         None,
         description="Application fingerprint"

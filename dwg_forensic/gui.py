@@ -16,6 +16,15 @@ from dwg_forensic.output.pdf_report import generate_pdf_report
 from dwg_forensic.output.expert_witness import generate_expert_witness_document
 from dwg_forensic.output.json_export import JSONExporter
 
+# LLM integration (optional)
+try:
+    from dwg_forensic.llm import OllamaClient, ForensicNarrator
+    LLM_AVAILABLE = True
+except ImportError:
+    LLM_AVAILABLE = False
+    OllamaClient = None
+    ForensicNarrator = None
+
 
 class ForensicGUI:
     """Main GUI application for DWG Forensic Tool."""
@@ -23,19 +32,30 @@ class ForensicGUI:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title(f"DWG Forensic Tool v{__version__}")
-        self.root.geometry("900x700")
-        self.root.minsize(800, 600)
+        self.root.geometry("1000x750")
+        self.root.minsize(900, 650)
 
         # State
         self.current_file: Path | None = None
         self.current_analysis = None
         self.analyzer = ForensicAnalyzer()
 
+        # LLM State
+        self.llm_enabled = tk.BooleanVar(value=False)
+        self.llm_model = tk.StringVar(value="")
+        self.llm_status = tk.StringVar(value="Not connected")
+        self.ollama_client = None
+        self.available_models: list[str] = []
+
         # Build UI
         self._create_menu()
         self._create_toolbar()
         self._create_main_content()
         self._create_status_bar()
+
+        # Check LLM availability on startup
+        if LLM_AVAILABLE:
+            self.root.after(500, self._check_ollama_connection)
 
     def _create_menu(self):
         """Create menu bar."""
@@ -75,22 +95,33 @@ class ForensicGUI:
 
     def _create_main_content(self):
         """Create main content area."""
-        # Main container
+        # Main container with two panes
         main = ttk.Frame(self.root, padding=10)
         main.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
+        # Left side - File info and LLM settings
+        left_panel = ttk.Frame(main, width=280)
+        left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+        left_panel.pack_propagate(False)
+
         # File info section
-        file_frame = ttk.LabelFrame(main, text="File Information", padding=10)
+        file_frame = ttk.LabelFrame(left_panel, text="File Information", padding=10)
         file_frame.pack(fill=tk.X, pady=(0, 10))
 
-        self.file_label = ttk.Label(file_frame, text="No file selected", font=("", 10))
+        self.file_label = ttk.Label(file_frame, text="No file selected", font=("", 10), wraplength=250)
         self.file_label.pack(anchor=tk.W)
 
-        self.hash_label = ttk.Label(file_frame, text="SHA-256: --", font=("Consolas", 9))
+        self.hash_label = ttk.Label(file_frame, text="SHA-256: --", font=("Consolas", 8), wraplength=250)
         self.hash_label.pack(anchor=tk.W)
 
-        # Results notebook (tabs)
-        notebook = ttk.Notebook(main)
+        # LLM Settings section
+        self._create_llm_panel(left_panel)
+
+        # Right side - Results notebook (tabs)
+        right_panel = ttk.Frame(main)
+        right_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        notebook = ttk.Notebook(right_panel)
         notebook.pack(fill=tk.BOTH, expand=True)
 
         # Summary tab
@@ -175,6 +206,119 @@ class ForensicGUI:
             padding=(5, 2)
         )
         status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+
+    def _create_llm_panel(self, parent):
+        """Create LLM settings panel."""
+        llm_frame = ttk.LabelFrame(parent, text="AI Narrative Generation", padding=10)
+        llm_frame.pack(fill=tk.X, pady=(0, 10))
+
+        if not LLM_AVAILABLE:
+            ttk.Label(
+                llm_frame,
+                text="LLM module not available.\nInstall with: pip install -e .",
+                foreground="gray"
+            ).pack(anchor=tk.W)
+            return
+
+        # Enable checkbox
+        enable_check = ttk.Checkbutton(
+            llm_frame,
+            text="Enable AI-powered narratives",
+            variable=self.llm_enabled,
+            command=self._on_llm_toggle
+        )
+        enable_check.pack(anchor=tk.W, pady=(0, 5))
+
+        # Status indicator
+        status_frame = ttk.Frame(llm_frame)
+        status_frame.pack(fill=tk.X, pady=(0, 5))
+
+        ttk.Label(status_frame, text="Ollama:").pack(side=tk.LEFT)
+        self.llm_status_label = ttk.Label(
+            status_frame,
+            textvariable=self.llm_status,
+            foreground="gray"
+        )
+        self.llm_status_label.pack(side=tk.LEFT, padx=(5, 0))
+
+        # Model selection
+        model_frame = ttk.Frame(llm_frame)
+        model_frame.pack(fill=tk.X, pady=(5, 0))
+
+        ttk.Label(model_frame, text="Model:").pack(side=tk.LEFT)
+        self.model_combo = ttk.Combobox(
+            model_frame,
+            textvariable=self.llm_model,
+            state="readonly",
+            width=20
+        )
+        self.model_combo.pack(side=tk.LEFT, padx=(5, 0), fill=tk.X, expand=True)
+
+        # Refresh button
+        ttk.Button(
+            llm_frame,
+            text="Refresh Connection",
+            command=self._check_ollama_connection
+        ).pack(fill=tk.X, pady=(10, 0))
+
+        # Info label
+        ttk.Label(
+            llm_frame,
+            text="AI generates detailed explanations\nfor forensic findings using local LLM.",
+            font=("", 8),
+            foreground="gray",
+            wraplength=240
+        ).pack(anchor=tk.W, pady=(10, 0))
+
+    def _check_ollama_connection(self):
+        """Check Ollama connection and refresh available models."""
+        if not LLM_AVAILABLE or not OllamaClient:
+            self.llm_status.set("Module not available")
+            return
+
+        def check():
+            try:
+                self.ollama_client = OllamaClient()
+                if self.ollama_client.is_available():
+                    version = self.ollama_client.get_version() or "unknown"
+                    models = self.ollama_client.list_models()
+                    self.root.after(0, lambda: self._update_llm_status(True, version, models))
+                else:
+                    self.root.after(0, lambda: self._update_llm_status(False, None, []))
+            except Exception as e:
+                self.root.after(0, lambda: self._update_llm_status(False, None, []))
+
+        thread = threading.Thread(target=check, daemon=True)
+        thread.start()
+
+    def _update_llm_status(self, connected: bool, version: str | None, models: list[str]):
+        """Update LLM status in UI."""
+        if connected:
+            self.llm_status.set(f"Connected (v{version})")
+            self.llm_status_label.config(foreground="green")
+            self.available_models = models
+            self.model_combo["values"] = models
+            if models and not self.llm_model.get():
+                # Auto-select first model
+                self.llm_model.set(models[0])
+        else:
+            self.llm_status.set("Not running")
+            self.llm_status_label.config(foreground="red")
+            self.available_models = []
+            self.model_combo["values"] = []
+
+    def _on_llm_toggle(self):
+        """Handle LLM enable/disable toggle."""
+        if self.llm_enabled.get():
+            if not self.available_models:
+                messagebox.showwarning(
+                    "Ollama Not Available",
+                    "Ollama is not running or no models are installed.\n\n"
+                    "1. Start Ollama\n"
+                    "2. Install a model: ollama pull phi4\n"
+                    "3. Click 'Refresh Connection'"
+                )
+                self.llm_enabled.set(False)
 
     def open_file(self):
         """Open a DWG file."""
@@ -410,13 +554,25 @@ class ForensicGUI:
             # Ask for case ID
             case_id = self._ask_string("Case ID", "Enter Case ID (optional):")
 
+            # Check if LLM is enabled
+            use_llm = self.llm_enabled.get() and self.llm_model.get()
+            llm_model = self.llm_model.get() if use_llm else None
+
+            if use_llm:
+                self.status_var.set(f"Generating report with AI narration ({llm_model})...")
+                self.root.update()
+
             generate_pdf_report(
                 analysis=self.current_analysis,
                 output_path=file_path,
                 case_id=case_id if case_id else None,
+                use_llm_narration=use_llm,
+                llm_model=llm_model,
             )
-            self.status_var.set(f"Generated: {Path(file_path).name}")
-            messagebox.showinfo("Report Generated", f"PDF report saved to:\n{file_path}")
+
+            llm_note = " (with AI narratives)" if use_llm else ""
+            self.status_var.set(f"Generated: {Path(file_path).name}{llm_note}")
+            messagebox.showinfo("Report Generated", f"PDF report saved to:\n{file_path}\n\n{'AI-powered narratives enabled' if use_llm else 'Standard narratives'}")
 
     def generate_expert(self):
         """Generate expert witness document."""
@@ -434,14 +590,30 @@ class ForensicGUI:
             case_id = self._ask_string("Case ID", "Enter Case ID (optional):")
             expert_name = self._ask_string("Expert Name", "Enter Expert Name:", "Digital Forensics Expert")
 
+            # Check if LLM is enabled
+            use_llm = self.llm_enabled.get() and self.llm_model.get()
+            llm_model = self.llm_model.get() if use_llm else None
+
+            if use_llm:
+                self.status_var.set(f"Generating expert witness document with AI analysis ({llm_model})...")
+                self.root.update()
+
             generate_expert_witness_document(
                 analysis=self.current_analysis,
                 output_path=file_path,
                 case_id=case_id if case_id else None,
                 expert_name=expert_name if expert_name else "Digital Forensics Expert",
+                use_llm_narration=use_llm,
+                llm_model=llm_model,
             )
-            self.status_var.set(f"Generated: {Path(file_path).name}")
-            messagebox.showinfo("Document Generated", f"Expert witness document saved to:\n{file_path}")
+
+            llm_note = " (with AI analysis)" if use_llm else ""
+            self.status_var.set(f"Generated: {Path(file_path).name}{llm_note}")
+            messagebox.showinfo(
+                "Document Generated",
+                f"Expert witness document saved to:\n{file_path}\n\n"
+                f"{'AI-powered forensic analysis enabled' if use_llm else 'Standard analysis'}"
+            )
 
     def _ask_string(self, title: str, prompt: str, default: str = "") -> str:
         """Show a simple string input dialog."""
