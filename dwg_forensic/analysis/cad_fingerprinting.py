@@ -23,7 +23,7 @@ Forensic significance:
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 
 class CADApplication(str, Enum):
@@ -494,7 +494,7 @@ class CADFingerprinter:
     def fingerprint(
         self,
         file_path: Path,
-        header_crc: Optional[int] = None,
+        header_crc: Optional[Union[int, str]] = None,
         has_trusted_dwg: Optional[bool] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> FingerprintResult:
@@ -503,7 +503,7 @@ class CADFingerprinter:
 
         Args:
             file_path: Path to the DWG file
-            header_crc: Pre-extracted header CRC value (for efficiency)
+            header_crc: Pre-extracted header CRC value (int or hex string like "0x12345678")
             has_trusted_dwg: Pre-determined TrustedDWG status
             metadata: Pre-extracted metadata dictionary
 
@@ -513,6 +513,18 @@ class CADFingerprinter:
         file_path = Path(file_path)
         matching_signatures: List[CADSignature] = []
         evidence: Dict[str, Any] = {}
+
+        # Convert header_crc from string to int if needed
+        crc_int: Optional[int] = None
+        if header_crc is not None:
+            if isinstance(header_crc, str):
+                # Handle hex string like "0x12345678" or "12345678"
+                try:
+                    crc_int = int(header_crc, 16) if header_crc.startswith("0x") else int(header_crc, 16)
+                except ValueError:
+                    crc_int = None
+            else:
+                crc_int = header_crc
 
         # Read file content for pattern matching
         try:
@@ -526,11 +538,11 @@ class CADFingerprinter:
             )
 
         # Check CRC-based signatures
-        if header_crc is not None:
-            crc_matches = self._check_crc_signatures(header_crc)
+        if crc_int is not None:
+            crc_matches = self._check_crc_signatures(crc_int)
             matching_signatures.extend(crc_matches)
-            evidence["crc_value"] = f"0x{header_crc:08X}"
-            evidence["crc_is_zero"] = header_crc == 0
+            evidence["crc_value"] = f"0x{crc_int:08X}"
+            evidence["crc_is_zero"] = crc_int == 0
 
         # Check string-based signatures
         string_matches = self._check_string_signatures(data)

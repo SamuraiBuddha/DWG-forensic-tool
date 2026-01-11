@@ -57,6 +57,62 @@ def main():
     pass
 
 
+def _create_progress_callback(verbose: int):
+    """Create a progress callback for the analyzer.
+
+    Args:
+        verbose: Verbosity level (0=quiet, 1=normal, 2+=detailed)
+
+    Returns:
+        Callback function for progress updates
+    """
+    # Step descriptions for critical steps (always shown)
+    critical_steps = {
+        "fingerprint": "CAD Application Detection",  # CRITICAL: determines all subsequent analysis
+        "sections": "Deep Analysis: Section Map",
+        "drawing_vars": "Deep Analysis: Drawing Variables",
+        "handles": "Deep Analysis: Handle Gap Detection",
+    }
+
+    # All step descriptions (shown in verbose mode)
+    all_steps = {
+        "file_info": "File Information",
+        "header": "DWG Header",
+        "crc": "CRC Validation",
+        "watermark": "TrustedDWG Watermark",
+        "timestamps": "Embedded Timestamps",
+        "ntfs": "NTFS Timestamps",
+        "anomalies": "Anomaly Detection",
+        "rules": "Tampering Rules",
+        "tampering": "Tampering Indicators",
+        "risk": "Risk Assessment",
+        **critical_steps,
+    }
+
+    def callback(step: str, status: str, message: str) -> None:
+        is_critical = step in critical_steps
+        step_name = all_steps.get(step, step)
+
+        # Always show critical steps (fingerprint, deep parsing); show others only in verbose mode
+        should_show = is_critical or verbose >= 1
+
+        if not should_show:
+            return
+
+        if status == "start":
+            # Don't print start in non-verbose mode
+            if verbose >= 2:
+                console.print(f"  [dim][...] {step_name}[/dim]")
+        elif status == "complete":
+            console.print(f"  [green][OK][/green] {step_name}: {message}")
+        elif status == "error":
+            console.print(f"  [red][FAIL][/red] {step_name}: {message}")
+        elif status == "skip":
+            console.print(f"  [yellow][SKIP][/yellow] {step_name}: {message}")
+
+    return callback
+
+
 @main.command()
 @click.argument("filepath", type=click.Path(exists=True))
 @click.option("-o", "--output", help="Output file path for JSON report")
@@ -71,7 +127,9 @@ def analyze(filepath: str, output: str, output_format: str, verbose: int):
     console.print(Panel(f"[bold]DWG Forensic Analysis[/bold]\nFile: {file_path.name}", style="blue"))
 
     try:
-        analyzer = ForensicAnalyzer()
+        # Create progress callback for terminal display
+        progress_callback = _create_progress_callback(verbose)
+        analyzer = ForensicAnalyzer(progress_callback=progress_callback)
         result = analyzer.analyze(file_path)
 
         if output_format == "json" or output:

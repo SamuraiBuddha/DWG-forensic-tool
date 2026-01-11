@@ -377,11 +377,20 @@ class PDFReportGenerator:
 
         elements.append(Spacer(1, 0.5 * inch))
 
+        # Get CAD application info for cover page
+        cad_app = "Unknown"
+        cad_confidence = ""
+        if analysis.application_fingerprint:
+            cad_app = analysis.application_fingerprint.detected_application.upper()
+            conf_pct = int(analysis.application_fingerprint.confidence * 100)
+            cad_confidence = f" ({conf_pct}% confidence)"
+
         # Report metadata table
         report_data = [
             ["Case ID:", case_id or "N/A"],
             ["Analysis Date:", analysis.analysis_timestamp.strftime("%Y-%m-%d %H:%M:%S")],
             ["Analyzer Version:", analysis.analyzer_version],
+            ["CAD Application:", f"{cad_app}{cad_confidence}"],
             ["File SHA-256:", analysis.file_info.sha256[:32] + "..."],
             ["Risk Level:", analysis.risk_assessment.overall_risk.value],
         ]
@@ -437,8 +446,16 @@ class PDFReportGenerator:
         elements.append(Paragraph("<b>Key Findings:</b>", styles['Normal']))
         elements.append(Spacer(1, 0.1 * inch))
 
+        # Get CAD application for key findings
+        cad_app_finding = "Unknown"
+        if analysis.application_fingerprint:
+            app_name = analysis.application_fingerprint.detected_application.upper()
+            is_autodesk = analysis.application_fingerprint.is_autodesk
+            cad_app_finding = f"{app_name}" + (" [Autodesk]" if is_autodesk else "")
+
         findings_data = [
             ["Finding", "Status"],
+            ["Authoring Application", cad_app_finding],
             ["File Integrity (CRC)", "[OK]" if analysis.crc_validation.is_valid else "[FAIL]"],
             ["TrustedDWG Watermark", "[OK]" if analysis.trusted_dwg.watermark_valid else "[WARN]"],
             ["Anomalies Detected", str(len(analysis.anomalies))],
@@ -480,11 +497,23 @@ class PDFReportGenerator:
             f"version {analysis.analyzer_version}."
         )
 
-        # File identification
+        # File identification with CAD application
+        cad_app_text = ""
+        if analysis.application_fingerprint:
+            app = analysis.application_fingerprint
+            app_name = app.detected_application.upper()
+            conf_pct = int(app.confidence * 100)
+            if app.is_autodesk:
+                cad_app_text = f" Forensic fingerprinting identified this file as created by {app_name} (genuine Autodesk software) with {conf_pct}% confidence."
+            elif app.is_oda_based:
+                cad_app_text = f" Forensic fingerprinting identified this file as created by {app_name} (ODA SDK-based CAD application) with {conf_pct}% confidence."
+            else:
+                cad_app_text = f" Forensic fingerprinting identified this file as created by {app_name} with {conf_pct}% confidence."
+
         paragraphs.append(
             f"The file is identified as {analysis.header_analysis.version_name} format "
             f"(version string: {analysis.header_analysis.version_string}). "
-            f"The file size is {analysis.file_info.file_size_bytes:,} bytes."
+            f"The file size is {analysis.file_info.file_size_bytes:,} bytes.{cad_app_text}"
         )
 
         # Integrity assessment
@@ -584,9 +613,39 @@ class PDFReportGenerator:
         # TrustedDWG Narrative Explanation
         elements.append(Paragraph("What This Means:", styles['NarrativeHeader']))
         elements.extend(self._generate_watermark_narrative(analysis))
+        elements.append(Spacer(1, 0.3 * inch))
+
+        # Application Fingerprint Analysis
+        elements.append(Paragraph("<b>Application Fingerprint Analysis</b>", styles['Heading3']))
+        if analysis.application_fingerprint:
+            fp = analysis.application_fingerprint
+            fingerprint_data = [
+                ["Property", "Value"],
+                ["Detected Application", fp.detected_application.upper()],
+                ["Detection Confidence", f"{int(fp.confidence * 100)}%"],
+                ["Is Autodesk Software", "Yes" if fp.is_autodesk else "No"],
+                ["Uses ODA SDK", "Yes" if fp.is_oda_based else "No"],
+            ]
+
+            table = Table(fingerprint_data, colWidths=[2.5 * inch, 4 * inch])
+            table.setStyle(self._get_standard_table_style())
+            elements.append(table)
+            elements.append(Spacer(1, 0.15 * inch))
+
+            # Forensic significance explanation
+            elements.append(Paragraph("What This Means:", styles['NarrativeHeader']))
+            if fp.forensic_summary:
+                elements.append(Paragraph(fp.forensic_summary, styles['Narrative']))
+            else:
+                elements.extend(self._generate_fingerprint_narrative(analysis))
+        else:
+            elements.append(Paragraph(
+                "Application fingerprinting was not performed or no conclusive identification was made.",
+                styles['Normal']
+            ))
+        elements.append(Spacer(1, 0.3 * inch))
 
         # Section Summary
-        elements.append(Spacer(1, 0.3 * inch))
         elements.append(Paragraph("Technical Findings Summary:", styles['NarrativeHeader']))
         elements.extend(self._generate_technical_summary(analysis))
 
@@ -1276,6 +1335,54 @@ class PDFReportGenerator:
                 "into the file's true origin."
             )
             elements.append(Paragraph(why_matters, styles['Narrative']))
+
+        return elements
+
+    def _generate_fingerprint_narrative(self, analysis: ForensicAnalysis) -> List:
+        """Generate plain-English explanation of application fingerprint results."""
+        elements = []
+        styles = self.styles.styles
+
+        if not analysis.application_fingerprint:
+            elements.append(Paragraph(
+                "<b>Application Detection:</b> No application fingerprint data is available for this file.",
+                styles['Narrative']
+            ))
+            return elements
+
+        fp = analysis.application_fingerprint
+        app_name = fp.detected_application.upper()
+        conf_pct = int(fp.confidence * 100)
+
+        if fp.is_autodesk:
+            narrative = (
+                f"<b>Genuine Autodesk Software Detected:</b> This file was identified as being created "
+                f"or last saved by {app_name}, which is genuine Autodesk software. Detection confidence "
+                f"is {conf_pct}%. Files from Autodesk applications maintain proper TrustedDWG watermarks "
+                f"and internal timestamp structures. The tampering detection rules for Autodesk files "
+                f"apply fully to this file."
+            )
+            elements.append(Paragraph(narrative, styles['Narrative']))
+        elif fp.is_oda_based:
+            narrative = (
+                f"<b>ODA SDK-Based Application Detected:</b> This file was identified as being created "
+                f"or last saved by {app_name} with {conf_pct}% confidence. This application uses the "
+                f"Open Design Alliance (ODA) SDK for DWG file handling. ODA-based applications can read "
+                f"and write DWG files, but they do NOT produce TrustedDWG watermarks (which are "
+                f"proprietary to Autodesk). Therefore, the absence of a TrustedDWG watermark is "
+                f"EXPECTED for this file and should NOT be considered evidence of tampering. Some "
+                f"internal timestamp fields may also differ from native AutoCAD behavior."
+            )
+            elements.append(Paragraph(narrative, styles['Narrative']))
+        else:
+            narrative = (
+                f"<b>Non-Autodesk Application Detected:</b> This file was identified as being created "
+                f"or last saved by {app_name} with {conf_pct}% confidence. This application is not "
+                f"genuine Autodesk software and may not maintain all DWG metadata fields in the same "
+                f"manner as AutoCAD. The absence of TrustedDWG watermarks or differences in timestamp "
+                f"handling may be expected behavior for this application rather than evidence of tampering."
+            )
+            elements.append(Paragraph(narrative, styles['Narrative']))
 
         return elements
 

@@ -1,10 +1,10 @@
 # Product Requirements Document (PRD)
 # DWG Forensic Tool
 
-**Version:** 1.0  
-**Date:** January 5, 2025  
-**Author:** Jordan Paul Ehrig / Ehrig BIM & IT Consultation, Inc.  
-**Status:** Development
+**Version:** 2.0
+**Date:** January 10, 2025
+**Author:** Jordan Paul Ehrig / Ehrig BIM & IT Consultation, Inc.
+**Status:** Development - Deep Parsing Implementation Required
 
 ---
 
@@ -24,13 +24,23 @@ Digital forensics professionals and legal teams frequently need to analyze AutoC
 
 DWG Forensic Tool is an open-source Python-based toolkit that provides:
 
-1. **Automated forensic analysis** of DWG file internals
-2. **Chain of custody** documentation with cryptographic verification
-3. **Tampering detection** through CRC validation, watermark analysis, and anomaly detection
-4. **Litigation-ready reports** suitable for court submission
-5. **Expert witness support** documentation
+1. **Deep binary forensic analysis** of DWG file internals (NO external dependencies)
+2. **CAD application fingerprinting** to identify authoring software
+3. **Chain of custody** documentation with cryptographic verification
+4. **Tampering detection** through CRC validation, timestamp cross-validation, and structural analysis
+5. **Litigation-ready reports** suitable for court submission
+6. **Expert witness support** documentation
 
-### 1.3 Target Users
+### 1.3 Critical Architecture Decision: Direct Binary Parsing
+
+**This tool performs ALL parsing directly from binary data. NO external libraries (LibreDWG, ODA SDK) are used for parsing.** This ensures:
+
+- Forensic integrity (no third-party code modifying data)
+- Complete control over what bytes are read
+- Reproducible analysis methodology
+- No licensing complications
+
+### 1.4 Target Users
 
 | User Type | Primary Needs |
 |-----------|---------------|
@@ -43,20 +53,68 @@ DWG Forensic Tool is an open-source Python-based toolkit that provides:
 
 ---
 
-## 2. Goals & Success Metrics
+## 2. Current Implementation Status
 
-### 2.1 Primary Goals
+### 2.1 What Works
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| File intake with SHA-256 | [OK] | Working |
+| Header version detection | [OK] | AC1024, AC1027, AC1032 supported |
+| Header CRC32 validation | [OK] | Validates header checksum |
+| TrustedDWG watermark detection | [OK] | String-based detection |
+| CAD application fingerprinting | [OK] | 15+ applications supported |
+| NTFS timestamp extraction | [OK] | Cross-validation with DWG timestamps |
+| Chain of custody logging | [OK] | SQLite with audit trail |
+| PDF report generation | [OK] | With LLM narration option |
+| 40 tampering rules | [OK] | TAMPER-001 through TAMPER-040 |
+
+### 2.2 What Does NOT Work (Critical Gaps)
+
+| Feature | Status | Problem |
+|---------|--------|---------|
+| Section map parsing | [FAIL] | Cannot locate internal sections in AC1032 |
+| TDCREATE extraction | [FAIL] | Reading from wrong offset, returns None |
+| TDUPDATE extraction | [FAIL] | Reading from wrong offset, returns None |
+| TDINDWG extraction | [FAIL] | Reading garbage data (version string) |
+| Section decompression | [FAIL] | Not implemented for R2010+ format |
+| Handle map analysis | [PARTIAL] | Finds gaps but data may be invalid |
+| Drawing variables parsing | [FAIL] | Cannot locate AcDb:Header section |
+
+### 2.3 Root Cause Analysis
+
+The deep parsing modules exist but fail because:
+
+1. **Section map address calculation is wrong for AC1032**
+   - Current code reads from offset 0x34
+   - Returns address 0x202 but data there is compressed/encrypted
+   - Need to implement proper R2010+ section locator parsing
+
+2. **Section data is compressed but not decompressed**
+   - R2004+ uses compression (possibly encryption in R2018+)
+   - Current code reads raw bytes without decompression
+   - Need to implement section decompression algorithm
+
+3. **Drawing variables offset calculation is wrong**
+   - Without valid section map, cannot locate AcDb:Header
+   - Fallback code reads from file start (gets version string instead)
+
+---
+
+## 3. Goals & Success Metrics
+
+### 3.1 Primary Goals
 
 | Goal | Metric | Target |
 |------|--------|--------|
-| G1: Complete metadata extraction | Fields extracted vs. available | 100% of DWGPROPS fields |
-| G2: Accurate CRC validation | False positive/negative rate | <0.1% |
-| G3: TrustedDWG detection | Detection accuracy | 100% for supported versions |
-| G4: Chain of custody integrity | Audit log completeness | 100% of operations logged |
-| G5: Report generation | Time to generate report | <30 seconds per file |
-| G6: Version coverage | DWG versions supported | R13 through R2021 |
+| G1: Deep timestamp extraction | TDCREATE/TDUPDATE successfully extracted | 100% for AC1024/AC1027/AC1032 |
+| G2: Section decompression | All sections successfully decompressed | 100% for supported versions |
+| G3: CRC validation (all levels) | Header + all section CRCs validated | 100% accuracy |
+| G4: Handle map forensics | Accurate deleted object detection | <5% false positive rate |
+| G5: CAD fingerprinting | Correct application identification | >95% accuracy |
+| G6: Analysis depth | Time to analyze 1MB file | 2-5 seconds (real parsing, not skipping) |
 
-### 2.2 Non-Goals (Out of Scope for v1.0)
+### 3.2 Non-Goals (Out of Scope for v2.0)
 
 - DWG file repair or modification
 - Visual rendering of DWG content
@@ -67,716 +125,809 @@ DWG Forensic Tool is an open-source Python-based toolkit that provides:
 
 ---
 
-## 3. Technical Requirements
+## 4. Technical Requirements
 
-### 3.1 Core Dependencies
+### 4.1 Core Dependencies
 
 | Component | Version | Purpose | License |
 |-----------|---------|---------|--------|
 | Python | 3.10+ | Runtime | PSF |
-| LibreDWG | 0.13+ | DWG parsing | GPLv3 |
 | ReportLab | 4.0+ | PDF generation | BSD |
 | Click | 8.0+ | CLI framework | BSD |
 | SQLite | 3.35+ | Audit database | Public Domain |
 | Pydantic | 2.0+ | Data validation | MIT |
 | Rich | 13.0+ | CLI output formatting | MIT |
+| zlib | builtin | Section decompression | Python stdlib |
 
-### 3.2 System Requirements
+**NO EXTERNAL DWG LIBRARIES** - All parsing is direct binary.
+
+### 4.2 System Requirements
 
 | Requirement | Minimum | Recommended |
 |-------------|---------|-------------|
-| OS | Linux, macOS, Windows 10+ | Ubuntu 22.04 LTS |
+| OS | Windows 10+, Linux, macOS | Windows 11 |
 | RAM | 4 GB | 16 GB |
 | Storage | 500 MB (tool) | 10 GB (with evidence cache) |
-| Python | 3.10 | 3.12 |
+| Python | 3.10 | 3.12+ |
 
 ---
 
-## 4. Functional Requirements
+## 5. DWG Version Support Requirements
 
-### 4.1 Module: File Intake (FR-INTAKE)
+### 5.1 Version Coverage Matrix
 
-#### FR-INTAKE-001: Secure File Ingestion
-**Priority:** P0 (Critical)  
-**Description:** System shall ingest DWG files with immediate SHA-256 hash calculation  
-**Acceptance Criteria:**
-- Hash calculated before any parsing operations
-- Original file never modified
-- Hash stored in audit log with timestamp
-- Support for single file and batch intake
+**ALL versions from R13 onwards MUST be supported. Older versions are MORE important for litigation (historical evidence).**
 
-#### FR-INTAKE-002: Chain of Custody Record Creation
-**Priority:** P0 (Critical)  
-**Description:** System shall create a chain of custody record upon intake  
-**Acceptance Criteria:**
-- Unique evidence ID generated (UUID v4)
-- Case ID association (user-provided)
-- Examiner identification captured
-- Timestamp in ISO 8601 format with timezone
-- Record stored in SQLite database
-- Record exportable to JSON/PDF
+| Version Code | AutoCAD Version | Years | Priority | Status |
+|--------------|-----------------|-------|----------|--------|
+| AC1012 | R13 | 1994-1997 | P1 | NOT IMPLEMENTED |
+| AC1014 | R14 | 1997-1999 | P1 | NOT IMPLEMENTED |
+| AC1015 | 2000/2000i/2002 | 1999-2003 | P0 | NOT IMPLEMENTED |
+| AC1018 | 2004/2005/2006 | 2003-2007 | P0 | PARTIAL |
+| AC1021 | 2007/2008/2009 | 2007-2010 | P0 | PARTIAL |
+| AC1024 | 2010/2011/2012 | 2010-2013 | P0 | PARTIAL |
+| AC1027 | 2013-2017 | 2013-2018 | P0 | PARTIAL |
+| AC1032 | 2018+ | 2018-present | P0 | PARTIAL |
 
-#### FR-INTAKE-003: Write Protection Verification
-**Priority:** P1 (High)  
-**Description:** System shall verify file is not modified during analysis  
-**Acceptance Criteria:**
-- Pre-analysis hash recorded
-- Post-analysis hash calculated
-- Mismatch triggers immediate alert
-- Analysis aborted if file changes detected
+### 5.2 Version-Specific Parsing Requirements
 
----
+#### FR-VERSION-001: R13/R14 Support (AC1012/AC1014)
+**Priority:** P1 (HIGH)
+**Status:** NOT IMPLEMENTED
+**Description:** Support pre-2000 DWG format
 
-### 4.2 Module: Header Parsing (FR-HEADER)
+**Technical Specification:**
+```
+R13/R14 Format Differences:
+- No TrustedDWG watermark (not introduced until 2006)
+- Different header structure (shorter)
+- 8-bit CRC instead of 32-bit
+- No section compression
+- Simpler object encoding
 
-#### FR-HEADER-001: Version String Extraction
-**Priority:** P0 (Critical)  
-**Description:** System shall extract and decode the DWG version string  
-**Acceptance Criteria:**
-- Read bytes 0x00-0x05
-- Map to human-readable version (e.g., AC1027 → "AutoCAD 2013-2017")
-- Support versions R13 through R2021
-- Flag unknown version strings as anomalies
+Header Structure:
+  0x00-0x05: Version string "AC1012" or "AC1014"
+  0x06-0x0A: Unknown
+  0x0B: Maintenance version
+  0x0C-0x0F: Preview address
+  0x13-0x14: Codepage
+  No header CRC32 at 0x68 (different location)
+```
 
-#### FR-HEADER-002: Maintenance Version Extraction
-**Priority:** P1 (High)  
-**Description:** System shall extract maintenance/patch version  
-**Acceptance Criteria:**
-- Read byte 0x0B
-- Include in metadata output
-- Document known maintenance version meanings
+**Forensic Significance:**
+- R13/R14 files may be critical evidence in older construction disputes
+- Many legacy files still exist in archives
+- Timestamp format differs from modern versions
 
-#### FR-HEADER-003: Codepage Extraction
-**Priority:** P1 (High)  
-**Description:** System shall extract DWGCODEPAGE value  
-**Acceptance Criteria:**
-- Read bytes 0x13-0x14
-- Map to encoding name (e.g., ANSI_1252, UTF-8)
-- Use for proper string decoding in metadata
+#### FR-VERSION-002: R2000 Family Support (AC1015)
+**Priority:** P0 (CRITICAL)
+**Status:** NOT IMPLEMENTED
+**Description:** Support AutoCAD 2000/2000i/2002 format
 
-#### FR-HEADER-004: Preview Address Extraction
-**Priority:** P2 (Medium)  
-**Description:** System shall locate and extract thumbnail preview  
-**Acceptance Criteria:**
-- Read preview seeker at 0x0D
-- Extract BMP/PNG thumbnail if present
-- Save as separate file with evidence ID prefix
+**Technical Specification:**
+```
+R2000 Format (AC1015):
+- First version with 32-bit header CRC
+- CRC at offset 0x5C (not 0x68)
+- Header length 0x5C bytes
+- Introduced object-level CRCs
+- No TrustedDWG watermark
 
----
+Timestamp Variables Present:
+- TDCREATE (MJD format)
+- TDUPDATE (MJD format)
+- TDINDWG (days fraction)
+- No TDUCREATE/TDUUPDATE (UTC versions not yet added)
+```
 
-### 4.3 Module: CRC Validation (FR-CRC)
+**Forensic Significance:**
+- Critical transition version
+- Many legacy files from early 2000s
+- Construction projects from this era in litigation
 
-#### FR-CRC-001: Header CRC32 Validation
-**Priority:** P0 (Critical)  
-**Description:** System shall validate the header CRC32 checksum  
-**Acceptance Criteria:**
-- Calculate CRC32 over header bytes per ODA specification
-- Compare against stored CRC32 at offset 0x68
-- Report match/mismatch status
-- For R18+, use 32-bit CRC algorithm
-- For pre-R18, use 8-bit CRC algorithm
+#### FR-VERSION-003: R2004 Family Support (AC1018)
+**Priority:** P0 (CRITICAL)
+**Status:** PARTIAL
+**Description:** Support AutoCAD 2004/2005/2006 format
 
-#### FR-CRC-002: Section CRC Validation
-**Priority:** P1 (High)  
-**Description:** System shall validate CRCs for all file sections  
-**Acceptance Criteria:**
-- Identify all sections with CRC protection
-- Validate each section's CRC
-- Report per-section validation results
-- Flag sections with CRC mismatches
+**Technical Specification:**
+```
+R2004 Format (AC1018):
+- CRC at offset 0x5C
+- Introduced section-based compression
+- Compression type 2 (LZ-like)
+- First version with potential for TrustedDWG (2006)
 
-#### FR-CRC-003: CRC Mismatch Analysis
-**Priority:** P1 (High)  
-**Description:** System shall analyze CRC mismatches for tampering indicators  
-**Acceptance Criteria:**
-- Identify which sections have mismatches
-- Estimate likelihood of intentional vs. corruption
-- Generate tampering probability score
+Section Structure:
+- System section pages
+- Data section pages
+- Gap and recovery pages
+```
 
----
+#### FR-VERSION-004: R2007 Family Support (AC1021)
+**Priority:** P0 (CRITICAL)
+**Status:** PARTIAL
+**Description:** Support AutoCAD 2007/2008/2009 format
 
-### 4.4 Module: TrustedDWG Detection (FR-TRUST)
+**Technical Specification:**
+```
+R2007 Format (AC1021):
+- CRC at offset 0x68
+- Header length 0x68 bytes
+- Full TrustedDWG watermark support
+- Introduced TDUCREATE/TDUUPDATE (UTC timestamps)
+- Enhanced compression
 
-#### FR-TRUST-001: Watermark Presence Detection
-**Priority:** P0 (Critical)  
-**Description:** System shall detect presence of TrustedDWG watermark  
-**Acceptance Criteria:**
-- Search for "Autodesk DWG" string in file
-- Extract full watermark text if present
-- Report presence/absence
-- Note: Only applicable for AC1021 (R2007) and later
+New Forensic Fields:
+- TDUCREATE: UTC creation time
+- TDUUPDATE: UTC modification time
+- These allow timezone cross-validation
+```
 
-#### FR-TRUST-002: Watermark Validity Analysis
-**Priority:** P1 (High)  
-**Description:** System shall analyze TrustedDWG watermark validity  
-**Acceptance Criteria:**
-- Verify watermark format matches expected pattern
-- Detect partial or corrupted watermarks
-- Identify non-Autodesk watermarks (e.g., ODA files pre-2007 lawsuit)
+#### FR-VERSION-005: R2010+ Family Support (AC1024/AC1027/AC1032)
+**Priority:** P0 (CRITICAL)
+**Status:** PARTIAL (see Section 6)
+**Description:** Support modern DWG format
 
-#### FR-TRUST-003: Application Origin Detection
-**Priority:** P0 (Critical)  
-**Description:** System shall identify the application that created/modified the file  
-**Acceptance Criteria:**
-- Extract ACAD ID string (e.g., ACAD0001409)
-- Map to application (AutoCAD, Inventor, verticals)
-- Detect ODA-based applications
-- Detect other third-party applications
+**See Section 6 for detailed requirements.**
 
 ---
 
-### 4.5 Module: Metadata Extraction (FR-META)
+## 6. Deep Parsing Requirements (CRITICAL)
 
-#### FR-META-001: DWGPROPS Extraction
-**Priority:** P0 (Critical)  
-**Description:** System shall extract all DWGPROPS fields  
-**Acceptance Criteria:**
-- Extract: Title, Subject, Author, Keywords, Comments
-- Extract: Last Saved By, Revision Number, Hyperlink Base
-- Extract: Created Date, Modified Date
-- Handle missing/empty fields gracefully
+### 6.1 Module: Section Map Parser (FR-SECTION)
 
-#### FR-META-002: Editing Time Extraction
-**Priority:** P1 (High)  
-**Description:** System shall extract total editing time  
-**Acceptance Criteria:**
-- Extract cumulative editing time in hours/minutes
-- Convert to human-readable format
-- Include in metadata output
+**This is the foundation for all deep analysis. Without correct section parsing, nothing else works.**
 
-#### FR-META-003: Application Fingerprint Extraction
-**Priority:** P0 (Critical)  
-**Description:** System shall extract application fingerprint data  
-**Acceptance Criteria:**
-- Extract "Created By" application and version
-- Extract application ID (ACAD ID)
-- Extract build number
-- Extract registry version indicator
+#### FR-SECTION-001: R2010+ Section Locator Parsing
+**Priority:** P0 (CRITICAL)
+**Status:** NOT IMPLEMENTED
+**Description:** Parse the section locator structure for AC1024/AC1027/AC1032
 
-#### FR-META-004: Custom Properties Extraction
-**Priority:** P2 (Medium)  
-**Description:** System shall extract custom DWGPROPS  
+**Technical Specification:**
+```
+For AC1024/AC1027/AC1032 (R2010+):
+
+File Header Structure (first 0x100 bytes):
+  0x00-0x05: Version string "AC1032"
+  0x06:      Unknown
+  0x07-0x0A: Maintenance version
+  0x0B:      Unknown
+  0x0C-0x0F: Preview address (little-endian)
+  0x10-0x11: App version
+  0x12-0x13: App maintenance version
+  0x14-0x17: Codepage
+  0x18-0x1F: Unknown
+
+  0x20-0x3F: Section Locator Records (encrypted in R2018+)
+    - For R2018+: Need to decrypt using file-specific key
+
+  0x68-0x6B: Header CRC32 (calculated over 0x00-0x67)
+
+  0x80+: Encrypted/compressed data pages
+```
+
 **Acceptance Criteria:**
-- Enumerate all custom property names
-- Extract custom property values
-- Preserve data types
+- Correctly parse section locator from R2010+ headers
+- Handle R2018+ encryption if present
+- Return valid section map addresses
+- Report parsing errors clearly
+
+#### FR-SECTION-002: Section Page Decompression
+**Priority:** P0 (CRITICAL)
+**Status:** NOT IMPLEMENTED
+**Description:** Decompress section data pages
+
+**Technical Specification:**
+```
+R2004+ Section Compression:
+
+1. System pages use compression type 2 (LZ-like)
+2. Data pages may be compressed or uncompressed
+3. Decompression algorithm:
+   - Read compressed size and decompressed size
+   - Apply decompression (similar to LZ77)
+   - Verify decompressed size matches expected
+
+Page Header (for each page):
+  - Page type (4 bytes): 0x41630E3B = System, 0x4163003B = Data
+  - Decompressed size (4 bytes)
+  - Compressed size (4 bytes)
+  - Compression type (4 bytes): 0 = none, 2 = compressed
+  - CRC32 (4 bytes)
+```
+
+**Acceptance Criteria:**
+- Successfully decompress all section pages
+- Verify CRC32 after decompression
+- Handle both compressed and uncompressed pages
+- Report decompression failures with byte offset
+
+#### FR-SECTION-003: Section Enumeration
+**Priority:** P0 (CRITICAL)
+**Status:** PARTIAL (finds sections but data is wrong)
+**Description:** Enumerate all sections in the file
+
+**Required Sections to Locate:**
+| Section Type | Name | Forensic Use |
+|--------------|------|--------------|
+| 0x01 | AcDb:Header | TDCREATE, TDUPDATE, TDINDWG, GUIDs |
+| 0x02 | AcDb:Classes | Class version validation |
+| 0x03 | AcDb:Handles | Deleted object detection |
+| 0x06 | AcDb:AuxHeader | Auxiliary timestamps |
+| 0x08 | AcDb:AppInfo | Application fingerprinting |
+| 0x0B | AcDb:Security | Digital signatures |
+| 0x0D | AcDb:Signature | TrustedDWG signature data |
+| 0x0F | SummaryInfo | DWGPROPS metadata |
+
+**Acceptance Criteria:**
+- Locate all sections in file
+- Return correct offset, compressed size, decompressed size for each
+- Handle missing sections gracefully
+- Provide decompressed data for each section
 
 ---
 
-### 4.6 Module: Anomaly Detection (FR-ANOMALY)
+### 6.2 Module: Drawing Variables Parser (FR-DRAWVAR)
 
-#### FR-ANOMALY-001: Timestamp Anomaly Detection
-**Priority:** P0 (Critical)  
-**Description:** System shall detect timestamp anomalies  
-**Acceptance Criteria:**
-- Flag if Created Date > Modified Date
-- Flag if Modified Date is in the future
-- Flag if editing time inconsistent with date range
-- Flag if filesystem timestamps don't match internal timestamps
+**Extracts timestamps and GUIDs from the AcDb:Header section.**
 
-#### FR-ANOMALY-002: Version Anomaly Detection
-**Priority:** P1 (High)  
-**Description:** System shall detect version inconsistencies  
-**Acceptance Criteria:**
-- Compare header version vs. internal object versions
-- Flag downgraded files (newer objects in older format)
-- Flag version mismatches
+#### FR-DRAWVAR-001: Locate AcDb:Header Section
+**Priority:** P0 (CRITICAL)
+**Status:** NOT WORKING
+**Description:** Find and decompress the Header section
 
-#### FR-ANOMALY-003: Structural Anomaly Detection
-**Priority:** P1 (High)  
-**Description:** System shall detect structural anomalies  
+**Dependency:** Requires FR-SECTION-002 (decompression)
+
 **Acceptance Criteria:**
-- Detect orphaned objects
-- Detect corrupted object handles
-- Detect incomplete sections
-- Detect unusual padding or slack space
+- Use section map to locate AcDb:Header
+- Decompress section data
+- Return raw bytes for variable parsing
+
+#### FR-DRAWVAR-002: Parse TDCREATE (Creation Timestamp)
+**Priority:** P0 (CRITICAL)
+**Status:** NOT WORKING (returns None)
+**Description:** Extract creation timestamp as Modified Julian Date
+
+**Technical Specification:**
+```
+TDCREATE format:
+  - 8 bytes: IEEE 754 double-precision float
+  - Value: Modified Julian Date
+    - Integer part: Days since November 17, 1858
+    - Fractional part: Fraction of day elapsed
+  - Example: 59964.583333 = February 23, 2023, 2:00 PM
+
+Location in AcDb:Header:
+  - Variable code: Group code 40 with variable name
+  - Offset varies by version, must search or use variable table
+```
+
+**Acceptance Criteria:**
+- Extract raw 8-byte double from correct offset
+- Convert MJD to datetime
+- Handle timezone (TDCREATE is local time)
+- Report if variable not found
+
+#### FR-DRAWVAR-003: Parse TDUPDATE (Last Save Timestamp)
+**Priority:** P0 (CRITICAL)
+**Status:** NOT WORKING (returns None)
+**Description:** Extract last save timestamp as Modified Julian Date
+
+**Same format as TDCREATE. Must cross-validate:**
+- TDUPDATE >= TDCREATE (otherwise tampering)
+- TDUPDATE <= current date (no future dates)
+
+#### FR-DRAWVAR-004: Parse TDINDWG (Cumulative Edit Time)
+**Priority:** P0 (CRITICAL)
+**Status:** NOT WORKING (returns garbage)
+**Description:** Extract cumulative editing time
+
+**Technical Specification:**
+```
+TDINDWG format:
+  - 8 bytes: IEEE 754 double-precision float
+  - Value: Days of editing time
+  - Example: 0.125 = 3 hours of editing
+
+Critical Forensic Rule:
+  TDINDWG CANNOT exceed (TDUPDATE - TDCREATE)
+  If it does, file has been backdated (TAMPER-036)
+```
+
+**Acceptance Criteria:**
+- Extract from correct offset (NOT file header!)
+- Convert to hours/minutes for display
+- Cross-validate against TDCREATE/TDUPDATE span
+
+#### FR-DRAWVAR-005: Parse FINGERPRINTGUID
+**Priority:** P1 (HIGH)
+**Status:** NOT WORKING
+**Description:** Extract file fingerprint GUID
+
+**Technical Specification:**
+```
+FINGERPRINTGUID:
+  - 16 bytes: Raw GUID
+  - Persists across saves (identifies file lineage)
+  - Format: {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
+```
+
+#### FR-DRAWVAR-006: Parse VERSIONGUID
+**Priority:** P1 (HIGH)
+**Status:** NOT WORKING
+**Description:** Extract version GUID (changes each save)
 
 ---
 
-### 4.7 Module: Tampering Analysis (FR-TAMPER)
+### 6.3 Module: Handle Map Parser (FR-HANDLES)
 
-#### FR-TAMPER-001: Tampering Rule Engine
-**Priority:** P0 (Critical)  
-**Description:** System shall apply tampering detection rules  
-**Acceptance Criteria:**
-- Configurable rule definitions (YAML/JSON)
-- Each rule has: ID, description, severity, detection logic
-- Rules return: passed, failed, inconclusive
-- Support for custom rules
+**Analyzes object handles for deleted object detection.**
 
-#### FR-TAMPER-002: Risk Scoring
-**Priority:** P1 (High)  
-**Description:** System shall calculate tampering risk score  
-**Acceptance Criteria:**
-- Aggregate individual rule results
-- Weight by severity
-- Output: LOW, MEDIUM, HIGH, CRITICAL
-- Include confidence percentage
+#### FR-HANDLES-001: Locate AcDb:Handles Section
+**Priority:** P1 (HIGH)
+**Status:** NOT WORKING (data is invalid)
+**Description:** Find and decompress the Handles section
 
-#### FR-TAMPER-003: Tampering Evidence Documentation
-**Priority:** P0 (Critical)  
-**Description:** System shall document tampering evidence  
+**Dependency:** Requires FR-SECTION-002 (decompression)
+
+#### FR-HANDLES-002: Parse Handle Table
+**Priority:** P1 (HIGH)
+**Status:** NOT WORKING
+**Description:** Parse the handle allocation table
+
+**Technical Specification:**
+```
+Handle Table Structure:
+  - Handles are allocated sequentially
+  - Gaps indicate deleted objects
+  - Large gaps may indicate mass deletion (evidence destruction)
+
+Forensic Significance:
+  - Normal: Small scattered gaps from editing
+  - Suspicious: Large contiguous gaps (bulk deletion)
+  - Critical: Gaps in specific object types (drawings, blocks)
+```
+
 **Acceptance Criteria:**
-- For each failed rule, document:
-  - What was expected
-  - What was found
-  - Byte offset (if applicable)
-  - Hex dump of relevant section
-- Export to forensic report
+- Parse handle table correctly
+- Identify gaps in handle sequence
+- Classify gaps by size and location
+- Report suspicious patterns
 
 ---
 
-### 4.8 Module: Report Generation (FR-REPORT)
+### 6.4 Module: R2018+ Encryption Handler (FR-ENCRYPT)
 
-#### FR-REPORT-001: PDF Forensic Report
-**Priority:** P0 (Critical)  
-**Description:** System shall generate PDF forensic reports  
-**Acceptance Criteria:**
-- Executive summary (1 page, non-technical)
-- Technical findings section
-- Metadata table
-- Anomaly/tampering findings
-- Hash attestation page
-- Chain of custody log
-- Appendix with hex dumps (optional)
+**AC1032 (AutoCAD 2018+) may use encryption on header data.**
 
-#### FR-REPORT-002: JSON Export
-**Priority:** P0 (Critical)  
-**Description:** System shall export analysis to JSON  
-**Acceptance Criteria:**
-- Complete analysis data in JSON format
-- Schema documented
-- Valid JSON output
-- Support for pretty-print and compact modes
+#### FR-ENCRYPT-001: Detect Encryption
+**Priority:** P0 (CRITICAL)
+**Status:** NOT IMPLEMENTED
+**Description:** Detect if file uses R2018+ encryption
 
-#### FR-REPORT-003: Expert Witness Summary
-**Priority:** P1 (High)  
-**Description:** System shall generate expert witness documentation  
-**Acceptance Criteria:**
-- Methodology description
-- Tool version and dependencies
-- Reproducibility instructions
-- Limitations statement
-- Opinion support framework
+**Technical Specification:**
+```
+R2018+ Encryption Indicators:
+  - Section locator data at 0x20-0x3F appears random
+  - Specific byte patterns at 0x480+
+  - File metadata indicates R2018+ version
+```
 
-#### FR-REPORT-004: Timeline Visualization
-**Priority:** P2 (Medium)  
-**Description:** System shall generate visual timeline  
-**Acceptance Criteria:**
-- Show creation date, modifications, saves
-- SVG or PNG output
-- Include in PDF report
+#### FR-ENCRYPT-002: Decrypt Header Data
+**Priority:** P0 (CRITICAL)
+**Status:** NOT IMPLEMENTED
+**Description:** Decrypt header/section locator if encrypted
+
+**Note:** Encryption key derivation method must be researched. May require:
+- File-specific seed value
+- Known algorithm (likely proprietary)
+- Reference to ODA SDK implementation
 
 ---
 
-### 4.9 Module: CLI Interface (FR-CLI)
+## 7. CAD Ecosystem Fingerprinting Requirements (CRITICAL)
 
-#### FR-CLI-001: Analyze Command
-**Priority:** P0 (Critical)  
-**Description:** Primary analysis command  
-**Syntax:** `dwg-forensic analyze <file.dwg> [options]`  
-**Options:**
-- `--output, -o`: Output file path
-- `--format, -f`: Output format (pdf, json, both)
-- `--verbose, -v`: Verbosity level (0-3)
-- `--rules`: Custom rules file path
-- `--no-hash`: Skip hash calculation (not recommended)
+**Identifying the authoring application is ESSENTIAL for forensic analysis. Tampering rules must be adjusted based on the detected application.**
 
-#### FR-CLI-002: Intake Command
-**Priority:** P0 (Critical)  
-**Description:** Evidence intake command  
-**Syntax:** `dwg-forensic intake <file.dwg> --case-id <id> --examiner <name>`  
-**Options:**
-- `--case-id`: Case identifier (required)
-- `--examiner`: Examiner name (required)
-- `--notes`: Intake notes
-- `--copy-to`: Copy file to evidence store
+### 7.1 CAD Application Categories
 
-#### FR-CLI-003: Metadata Command
-**Priority:** P1 (High)  
-**Description:** Quick metadata extraction  
-**Syntax:** `dwg-forensic metadata <file.dwg> [--format json|yaml|table]`
+#### Category 1: Genuine Autodesk Software
+**TrustedDWG watermark expected. Full tampering rules apply.**
 
-#### FR-CLI-004: Validate-CRC Command
-**Priority:** P1 (High)  
-**Description:** CRC-only validation  
-**Syntax:** `dwg-forensic validate-crc <file.dwg>`
+| Application | Detection Method | ACAD ID Pattern | Notes |
+|-------------|------------------|-----------------|-------|
+| AutoCAD | TrustedDWG + ACAD ID | ACAD0001xxx | Base product |
+| AutoCAD LT | TrustedDWG + ACAD ID | ACLT0001xxx | Limited version |
+| AutoCAD Architecture | TrustedDWG | ACA00001xxx | Vertical |
+| AutoCAD Civil 3D | TrustedDWG | C3D00001xxx | Vertical |
+| AutoCAD MEP | TrustedDWG | MEP00001xxx | Vertical |
+| AutoCAD Electrical | TrustedDWG | ACE00001xxx | Vertical |
+| AutoCAD Plant 3D | TrustedDWG | PLNT0001xxx | Vertical |
+| AutoCAD Map 3D | TrustedDWG | MAP00001xxx | Vertical |
+| Autodesk Inventor | TrustedDWG | INV00001xxx | 3D CAD |
+| Revit (DWG export) | TrustedDWG | RVT00001xxx | BIM export |
 
-#### FR-CLI-005: Check-Watermark Command
-**Priority:** P1 (High)  
-**Description:** TrustedDWG check only  
-**Syntax:** `dwg-forensic check-watermark <file.dwg>`
+#### Category 2: ODA SDK-Based Applications
+**NO TrustedDWG watermark possible. Missing watermark is EXPECTED, not suspicious.**
 
-#### FR-CLI-006: Compare Command
-**Priority:** P2 (Medium)  
-**Description:** Compare two DWG files  
-**Syntax:** `dwg-forensic compare <file1.dwg> <file2.dwg> [--report diff.pdf]`
+| Application | Company | Detection Method | Market |
+|-------------|---------|------------------|--------|
+| BricsCAD | Bricsys | "BRICSCAD" string, ACAD_BRICSCAD_INFO dict | Global |
+| DraftSight | Dassault | "DRAFTSIGHT" APPID, DS_LICENSE_TYPE | Global |
+| NanoCAD | Nanosoft | CP1251 codepage, Cyrillic strings | Russia/CIS |
+| ZWCAD | ZWSOFT | "ZWCAD" APPID | China/Global |
+| GstarCAD | Gstarsoft | "GSTARCAD" string | China |
+| progeCAD | ProgeSOFT | "PROGECAD" string | Italy/Global |
+| CorelCAD | Corel | "CORELCAD" string | Global |
+| ActCAD | ActCAD | "ACTCAD" string | India/Global |
+| CMS IntelliCAD | CMS | ITC signatures | Global |
+| 4MCAD | CADian | "4MCAD" string | Korea |
+| SolidEdge 2D | Siemens | ODA patterns | Industrial |
+| TurboCAD | IMSI | "TURBOCAD" string | Consumer |
 
-#### FR-CLI-007: Batch Command
-**Priority:** P1 (High)  
-**Description:** Batch analysis  
-**Syntax:** `dwg-forensic batch <directory> [--recursive] [--output-dir reports/]`
+#### Category 3: Open Source Applications
+**Various DWG handling methods. Signatures may be subtle.**
 
----
+| Application | DWG Method | Detection Method | Notes |
+|-------------|------------|------------------|-------|
+| LibreCAD | No native (DXF only) | Conversion artifacts | Uses external converters |
+| FreeCAD | ODA or LibreDWG | ODA/LibreDWG signatures | Depends on build |
+| QCAD | DXF only (Pro has DWG) | Conversion artifacts | Pro uses Teigha |
+| OpenSCAD | No DWG support | N/A | 3D only |
+| Blender | Limited via addons | Addon signatures | 3D focused |
 
-## 5. Non-Functional Requirements
+#### Category 4: LibreDWG-Based Applications
+**Open source DWG library. Specific binary patterns.**
 
-### 5.1 Performance (NFR-PERF)
+| Application | Detection Method | Notes |
+|-------------|------------------|-------|
+| LibreDWG tools | "GNU LibreDWG" string | CLI tools |
+| FreeCAD (LibreDWG build) | LibreDWG version string | Open source build |
+| Custom tools | LibreDWG patterns | Developer tools |
 
-| ID | Requirement | Target |
-|----|-------------|--------|
-| NFR-PERF-001 | Single file analysis time | <10 seconds for <50MB file |
-| NFR-PERF-002 | Batch throughput | >100 files/hour |
-| NFR-PERF-003 | Memory usage | <500MB for single file analysis |
-| NFR-PERF-004 | Report generation | <30 seconds per report |
+### 7.2 Fingerprinting Detection Methods
 
-### 5.2 Reliability (NFR-REL)
+#### FR-FINGER-001: TrustedDWG Watermark Analysis
+**Priority:** P0 (CRITICAL)
+**Status:** [OK] - Working
 
-| ID | Requirement | Target |
-|----|-------------|--------|
-| NFR-REL-001 | Analysis completion rate | 99.9% (graceful failure on corrupt files) |
-| NFR-REL-002 | Hash accuracy | 100% (verified against reference implementations) |
-| NFR-REL-003 | Audit log durability | SQLite with WAL mode, ACID compliance |
+**Detection Logic:**
+```
+1. Search for "Autodesk DWG. This file is a Trusted DWG" string
+2. If found and complete: File is genuine Autodesk
+3. If found but truncated: Possible tampering (watermark stripped)
+4. If not found: File from non-Autodesk application (or pre-2006)
+```
 
-### 5.3 Security (NFR-SEC)
+**Watermark Locations:**
+- Typically at offset 0x5B-0xCF in header area
+- May also appear in AcDb:Signature section
 
-| ID | Requirement | Target |
-|----|-------------|--------|
-| NFR-SEC-001 | Read-only operation | Tool never modifies input files |
-| NFR-SEC-002 | Audit log integrity | HMAC signing of log entries |
-| NFR-SEC-003 | Evidence isolation | Each case in separate SQLite database |
+#### FR-FINGER-002: ACAD ID Extraction
+**Priority:** P0 (CRITICAL)
+**Status:** NOT IMPLEMENTED
 
-### 5.4 Maintainability (NFR-MAINT)
+**Detection Logic:**
+```
+1. Search for pattern: "ACAD" followed by digits
+2. Parse format: [APP][VERSION][BUILD]
+3. Map to specific Autodesk product
 
-| ID | Requirement | Target |
-|----|-------------|--------|
-| NFR-MAINT-001 | Code coverage | >80% unit test coverage |
-| NFR-MAINT-002 | Documentation | All public APIs documented |
-| NFR-MAINT-003 | Modularity | Each module independently testable |
+ACAD ID Format Examples:
+- ACAD00014092: AutoCAD 2020 build 14092
+- ACLT00014092: AutoCAD LT 2020
+- C3D00014092: Civil 3D 2020
+```
 
----
+#### FR-FINGER-003: ODA SDK Detection
+**Priority:** P0 (CRITICAL)
+**Status:** [OK] - Working
 
-## 6. Data Models
+**Detection Indicators:**
+```
+1. Missing TrustedDWG (post-2006 file)
+2. ODA-specific byte patterns in header
+3. Specific CRC calculation differences
+4. Handle allocation patterns
+5. String encoding differences
+```
 
-### 6.1 ForensicAnalysis Schema
+#### FR-FINGER-004: Application-Specific String Signatures
+**Priority:** P0 (CRITICAL)
+**Status:** [OK] - Working
+
+**Signature Database:**
+```python
+SIGNATURES = {
+    "bricscad": {
+        "patterns": ["BRICSCAD", "ACAD_BRICSCAD_INFO", "Bricsys"],
+        "confidence": 1.0,
+        "is_oda": True
+    },
+    "draftsight": {
+        "patterns": ["DRAFTSIGHT", "DS_LICENSE_TYPE", "Dassault"],
+        "confidence": 1.0,
+        "is_oda": True
+    },
+    "nanocad": {
+        "patterns": ["NANOCAD", "Nanosoft"],
+        "codepage": "CP1251",  # Cyrillic indicator
+        "confidence": 0.9,
+        "is_oda": True
+    },
+    "zwcad": {
+        "patterns": ["ZWCAD", "ZWSOFT"],
+        "confidence": 1.0,
+        "is_oda": True
+    },
+    # ... etc
+}
+```
+
+#### FR-FINGER-005: Codepage Analysis
+**Priority:** P1 (HIGH)
+**Status:** PARTIAL
+
+**Detection Logic:**
+```
+Codepage forensic indicators:
+- CP1251 (Cyrillic): Likely Russian origin (NanoCAD, Russian AutoCAD)
+- CP936 (Chinese): Likely Chinese origin (ZWCAD, GstarCAD)
+- CP949 (Korean): Likely Korean origin (4MCAD)
+- CP1252 (Western): Default for US/EU applications
+```
+
+#### FR-FINGER-006: CRC Pattern Analysis
+**Priority:** P1 (HIGH)
+**Status:** NOT IMPLEMENTED
+
+**Detection Logic:**
+```
+Different applications may calculate CRC differently:
+- Zero CRC: Possible non-Autodesk or stripped
+- ODA CRC patterns: Specific polynomial usage
+- Invalid CRC with valid watermark: Tampering indicator
+```
+
+### 7.3 Fingerprint-Based Rule Adjustment
+
+**CRITICAL: Tampering rules MUST be adjusted based on detected application.**
+
+#### Rule Adjustments for ODA-Based Applications
+
+| Rule | AutoCAD Behavior | ODA App Behavior |
+|------|------------------|------------------|
+| TAMPER-003 (Missing TrustedDWG) | SUSPICIOUS | EXPECTED (disable rule) |
+| TAMPER-004 (Invalid TrustedDWG) | CRITICAL | N/A (never present) |
+| TAMPER-005 (Timestamp Reversal) | CRITICAL | CRITICAL (same) |
+| CRC validation | Required | May differ |
+
+#### Implementation Requirement
 
 ```python
-class ForensicAnalysis(BaseModel):
-    """Root model for forensic analysis output"""
-    
-    # Identification
-    analysis_id: UUID
-    tool_version: str
-    analysis_timestamp: datetime
-    
-    # File Information
-    file_info: FileInfo
-    
-    # Analysis Results
-    header_analysis: HeaderAnalysis
-    crc_validation: CRCValidation
-    trusted_dwg: TrustedDWGAnalysis
-    metadata: DWGMetadata
-    application_fingerprint: ApplicationFingerprint
-    
-    # Findings
-    anomalies: List[Anomaly]
-    tampering_indicators: List[TamperingIndicator]
-    risk_assessment: RiskAssessment
-    
-    # Chain of Custody
-    custody_chain: Optional[CustodyChain]
+def evaluate_tampering_rules(analysis, fingerprint):
+    """Adjust rules based on detected application."""
+
+    if fingerprint.is_oda_based:
+        # Disable TrustedDWG rules for ODA apps
+        disable_rules(["TAMPER-003", "TAMPER-004"])
+        add_note("TrustedDWG rules disabled: ODA-based application detected")
+
+    if not fingerprint.is_autodesk:
+        # Adjust CRC expectations
+        relax_crc_validation()
+        add_note("CRC validation relaxed: non-Autodesk application")
+
+    # Always apply timestamp rules regardless of application
+    apply_timestamp_rules()  # These are universal
 ```
 
-### 6.2 CustodyChain Schema
+### 7.4 Fingerprint Report Section
 
-```python
-class CustodyChain(BaseModel):
-    """Chain of custody record"""
-    
-    evidence_id: UUID
-    case_id: str
-    
-    intake: CustodyEvent
-    events: List[CustodyEvent]
-    
-    file_hash_sha256: str
-    file_hash_verified: bool
+**Every forensic report MUST include:**
 
-class CustodyEvent(BaseModel):
-    """Single chain of custody event"""
-    
-    event_id: UUID
-    event_type: Literal["intake", "analysis", "export", "transfer"]
-    timestamp: datetime
-    examiner: str
-    notes: Optional[str]
-    hash_at_event: str
+1. **Detected Application**: Name and confidence
+2. **Application Category**: Autodesk/ODA/Open Source/Unknown
+3. **TrustedDWG Status**: Present/Absent/Invalid
+4. **Rule Adjustments**: Which rules were modified and why
+5. **Forensic Significance**: What this means for the investigation
+
+**Example Report Section:**
 ```
+APPLICATION FINGERPRINT ANALYSIS
+================================
+Detected Application: BricsCAD V23
+Detection Confidence: 98%
+Application Category: ODA SDK-based (Bricsys)
+TrustedDWG Status: Not Present (EXPECTED for this application)
 
-### 6.3 TamperingIndicator Schema
+Forensic Significance:
+This file was created by BricsCAD, which uses the Open Design Alliance
+SDK for DWG file handling. ODA-based applications CANNOT produce
+TrustedDWG watermarks, which are proprietary to Autodesk. Therefore,
+the absence of a TrustedDWG watermark is EXPECTED and should NOT be
+considered evidence of tampering.
 
-```python
-class TamperingIndicator(BaseModel):
-    """Single tampering indicator"""
-    
-    rule_id: str
-    rule_name: str
-    severity: Literal["info", "warning", "critical"]
-    status: Literal["passed", "failed", "inconclusive"]
-    
-    description: str
-    expected: str
-    found: str
-    
-    byte_offset: Optional[int]
-    hex_dump: Optional[str]
-    
-    confidence: float  # 0.0 - 1.0
+Rule Adjustments Applied:
+- TAMPER-003 (Missing TrustedDWG): DISABLED - Expected for ODA apps
+- TAMPER-004 (Invalid TrustedDWG): DISABLED - N/A for ODA apps
+- All timestamp rules: ACTIVE - Universal applicability
 ```
 
 ---
 
-## 7. Tampering Detection Rules
+## 8. Tampering Detection Rules
 
-### 7.1 Built-in Rules
+### 8.1 Timestamp Manipulation Rules (CRITICAL)
 
-| Rule ID | Name | Severity | Description |
-|---------|------|----------|-------------|
-| TAMPER-001 | CRC Header Mismatch | Critical | Header CRC32 doesn't match calculated value |
-| TAMPER-002 | CRC Section Mismatch | Critical | Section CRC doesn't match calculated value |
-| TAMPER-003 | Missing TrustedDWG | Warning | TrustedDWG watermark absent (R2007+) |
-| TAMPER-004 | Invalid TrustedDWG | Critical | TrustedDWG watermark present but malformed |
-| TAMPER-005 | Timestamp Reversal | Critical | Created date is after modified date |
-| TAMPER-006 | Future Timestamp | Critical | Modified date is in the future |
-| TAMPER-007 | Edit Time Mismatch | Warning | Editing time inconsistent with date range |
-| TAMPER-008 | Version Downgrade | Warning | Newer objects saved in older format |
-| TAMPER-009 | Version Mismatch | Warning | Header version doesn't match internal versions |
-| TAMPER-010 | Non-Autodesk Origin | Info | File created by non-Autodesk application |
-| TAMPER-011 | Orphaned Objects | Warning | Objects with invalid handle references |
-| TAMPER-012 | Unusual Slack Space | Info | Unexpected data in padding areas |
+| Rule ID | Name | Severity | Requires Deep Parsing |
+|---------|------|----------|----------------------|
+| TAMPER-036 | TDINDWG Exceeds Calendar Span | CRITICAL | YES - needs real TDINDWG |
+| TAMPER-037 | Version Anachronism | CRITICAL | YES - needs TDCREATE |
+| TAMPER-038 | NTFS/DWG Timestamp Contradiction | CRITICAL | YES - needs TDCREATE/TDUPDATE |
+| TAMPER-039 | Timezone Manipulation | HIGH | YES - needs TDUCREATE |
+| TAMPER-040 | Precision Anomaly | MEDIUM | YES - needs raw timestamp bytes |
 
-### 7.2 Custom Rule Format
+### 8.2 Current Rules (Working)
 
-```yaml
-# custom_rules.yaml
-rules:
-  - id: CUSTOM-001
-    name: "Specific Author Check"
-    severity: warning
-    description: "Check if author matches expected value"
-    condition:
-      field: metadata.author
-      operator: not_equals
-      value: "John Smith"
-    message: "Author is not the expected 'John Smith'"
+| Rule ID | Name | Severity | Status |
+|---------|------|----------|--------|
+| TAMPER-001 | CRC Header Mismatch | CRITICAL | [OK] |
+| TAMPER-002 | CRC Section Mismatch | CRITICAL | PARTIAL |
+| TAMPER-003 | Missing TrustedDWG | WARNING | [OK] |
+| TAMPER-004 | Invalid TrustedDWG | CRITICAL | [OK] |
+| TAMPER-005 | Timestamp Reversal | CRITICAL | NEEDS DEEP PARSING |
+| ... | ... | ... | ... |
+
+---
+
+## 9. Implementation Priorities
+
+### 9.1 Phase 1: Section Map Decompression (BLOCKING)
+
+**Without this, nothing else works.**
+
+| Task | Priority | Blocked By |
+|------|----------|------------|
+| Implement R2010+ section locator parsing | P0 | None |
+| Implement section page decompression (LZ) | P0 | Section locator |
+| Implement section CRC validation | P0 | Decompression |
+| Test with real AC1032 files | P0 | All above |
+
+### 9.2 Phase 2: Drawing Variables Extraction
+
+| Task | Priority | Blocked By |
+|------|----------|------------|
+| Locate AcDb:Header in decompressed sections | P0 | Phase 1 |
+| Parse TDCREATE from header | P0 | Header location |
+| Parse TDUPDATE from header | P0 | Header location |
+| Parse TDINDWG from header | P0 | Header location |
+| Parse GUIDs from header | P1 | Header location |
+| Validate cross-timestamp rules | P0 | All timestamps |
+
+### 9.3 Phase 3: Handle Map Analysis
+
+| Task | Priority | Blocked By |
+|------|----------|------------|
+| Locate AcDb:Handles in decompressed sections | P1 | Phase 1 |
+| Parse handle table | P1 | Handles location |
+| Implement gap detection | P1 | Handle parsing |
+| Implement suspicious pattern detection | P1 | Gap detection |
+
+### 9.4 Phase 4: R2018+ Encryption (If Needed)
+
+| Task | Priority | Blocked By |
+|------|----------|------------|
+| Research R2018+ encryption method | P1 | None |
+| Implement detection | P1 | Research |
+| Implement decryption (if legally possible) | P1 | Research |
+
+---
+
+## 9. Reference Documentation
+
+### 9.1 Primary References
+
+1. **Open Design Specification for .dwg files v5.4.1**
+   - https://www.opendesign.com/files/guestdownloads/OpenDesign_Specification_for_.dwg_files.pdf
+   - Section 4: File Structure
+   - Section 5: System Section Page Map
+   - Section 6: Data Section Page
+
+2. **LibreDWG Source Code**
+   - https://github.com/LibreDWG/libredwg
+   - `src/decode_r2004.c` - R2004+ decoding
+   - `src/decode_r2007.c` - R2007+ specifics
+   - `src/bits.c` - Bit reading utilities
+
+3. **ODA Teigha SDK Documentation** (if available)
+   - Section decompression algorithms
+   - Handle table parsing
+
+### 9.2 Key Binary Offsets (AC1032)
+
+```
+Header:
+  0x00-0x05: "AC1032" version string
+  0x0C-0x0F: Preview image address
+  0x20-0x3F: Section locator records (may be encrypted)
+  0x68-0x6B: Header CRC32
+  0x6C-0x7F: Sentinel data
+  0x80+: Section pages (compressed)
+
+Section Page Header:
+  0x00-0x03: Page type marker
+  0x04-0x07: Decompressed size
+  0x08-0x0B: Compressed size
+  0x0C-0x0F: Compression type
+  0x10-0x13: Section CRC32
+  0x14+: Page data
 ```
 
 ---
 
-## 8. Integration Points
+## 10. Testing Requirements
 
-### 8.1 LibreDWG Integration
+### 10.1 Test Files Required
 
-```python
-# Primary integration via subprocess + JSON output
-def parse_dwg_with_libredwg(filepath: Path) -> dict:
-    result = subprocess.run(
-        ["dwgread", "-O", "json", str(filepath)],
-        capture_output=True,
-        text=True
-    )
-    return json.loads(result.stdout)
-```
+| File | Description | Purpose |
+|------|-------------|---------|
+| autocad_2018.dwg | Real AutoCAD 2018 file | AC1032 baseline |
+| autocad_2021.dwg | Real AutoCAD 2021 file | Newer AC1032 |
+| bricscad_2023.dwg | Real BricsCAD file | ODA-based comparison |
+| nanocad_file.dwg | Real NanoCAD file | Russian origin testing |
+| tampered_timestamps.dwg | Manually backdated | Tampering detection |
+| large_file.dwg | 10MB+ real file | Performance testing |
 
-### 8.2 Direct Binary Parsing (for header forensics)
+### 10.2 Validation Criteria
 
-```python
-# Direct binary access for header-level forensics
-def parse_header_binary(filepath: Path) -> HeaderAnalysis:
-    with open(filepath, 'rb') as f:
-        version = f.read(6).decode('ascii')
-        f.seek(0x0B)
-        maintenance = struct.unpack('B', f.read(1))[0]
-        # ... etc
-```
-
-### 8.3 Future API Integration
-
-- REST API endpoint for remote analysis
-- Integration with EnCase via EnScript wrapper
-- Integration with Relativity for eDiscovery workflows
+| Test | Pass Criteria |
+|------|---------------|
+| TDCREATE extraction | Matches known creation date |
+| TDUPDATE extraction | Matches file save date |
+| TDINDWG extraction | Reasonable edit time (not garbage) |
+| Section count | Matches expected sections |
+| Decompression | All sections decompress without error |
+| CRC validation | All section CRCs valid for clean files |
 
 ---
 
-## 9. Development Phases
-
-### Phase 1: Core MVP (Week 1)
-**Goal:** Basic analysis and reporting
-
-| Task | Priority | Estimate |
-|------|----------|----------|
-| Project scaffolding | P0 | 2h |
-| Header parser (binary) | P0 | 4h |
-| CRC validation | P0 | 6h |
-| TrustedDWG detection | P0 | 4h |
-| DWGPROPS extraction (via LibreDWG JSON) | P0 | 4h |
-| Basic CLI (analyze command) | P0 | 4h |
-| JSON output | P0 | 2h |
-| Unit tests for core modules | P0 | 4h |
-
-**Deliverable:** CLI tool that extracts metadata and validates CRC
-
-### Phase 2: Chain of Custody (Week 1-2)
-**Goal:** Evidence handling infrastructure
-
-| Task | Priority | Estimate |
-|------|----------|----------|
-| SQLite schema design | P0 | 2h |
-| Intake module | P0 | 4h |
-| Custody chain logging | P0 | 4h |
-| Hash verification | P0 | 2h |
-| CLI intake command | P0 | 2h |
-| Custody export (JSON/PDF) | P1 | 4h |
-
-**Deliverable:** Evidence intake with chain of custody
-
-### Phase 3: Tampering Detection (Week 2)
-**Goal:** Advanced analysis capabilities
-
-| Task | Priority | Estimate |
-|------|----------|----------|
-| Anomaly detection module | P0 | 6h |
-| Tampering rule engine | P0 | 6h |
-| Built-in rules implementation | P0 | 4h |
-| Risk scoring | P1 | 3h |
-| Custom rules support | P1 | 4h |
-
-**Deliverable:** Automated tampering detection
-
-### Phase 4: Reporting (Week 2)
-**Goal:** Litigation-ready output
-
-| Task | Priority | Estimate |
-|------|----------|----------|
-| PDF report template | P0 | 4h |
-| Report generator | P0 | 6h |
-| Executive summary generator | P1 | 3h |
-| Hex dump formatter | P1 | 2h |
-| Timeline visualization | P2 | 4h |
-| Expert witness template | P1 | 3h |
-
-**Deliverable:** Professional forensic reports
-
-### Phase 5: Polish & Testing (Week 2-3)
-**Goal:** Production readiness
-
-| Task | Priority | Estimate |
-|------|----------|----------|
-| Integration tests | P0 | 6h |
-| Test with real-world samples | P0 | 4h |
-| Documentation | P1 | 4h |
-| Error handling improvements | P1 | 4h |
-| Performance optimization | P2 | 4h |
-| Package for distribution | P1 | 2h |
-
-**Deliverable:** v1.0 release
-
----
-
-## 10. Testing Strategy
-
-### 10.1 Test Categories
-
-| Category | Description | Tools |
-|----------|-------------|-------|
-| Unit | Individual function testing | pytest |
-| Integration | Module interaction testing | pytest |
-| Regression | Ensure fixes don't break | pytest + CI |
-| Forensic Validation | Compare against known samples | Manual + automated |
-| Performance | Throughput and memory | pytest-benchmark |
-
-### 10.2 Test Fixtures Required
-
-| Fixture | Description | Source |
-|---------|-------------|--------|
-| valid_r2013.dwg | Clean R2013 file | AutoCAD 2017 |
-| valid_r2018.dwg | Clean R2018 file | AutoCAD 2020 |
-| tampered_crc.dwg | File with modified CRC | Hex edited |
-| no_watermark.dwg | R2007+ without TrustedDWG | Third-party CAD |
-| backdated.dwg | File with timestamp manipulation | Manually created |
-| corrupted.dwg | Partially corrupted file | Truncated |
-
-### 10.3 Continuous Integration
-
-```yaml
-# .github/workflows/test.yml
-name: Tests
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install LibreDWG
-        run: sudo apt-get install libredwg-tools
-      - name: Install dependencies
-        run: pip install -r requirements.txt -r requirements-dev.txt
-      - name: Run tests
-        run: pytest tests/ -v --cov=dwg_forensic
-```
-
----
-
-## 11. Risk Assessment
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| LibreDWG doesn't parse newer versions | Medium | High | Fallback to binary header parsing |
-| CRC algorithm undocumented | Low | High | Reference ODA specification |
-| TrustedDWG format changes | Low | Medium | Version-specific detection logic |
-| Performance issues with large files | Medium | Medium | Streaming parsing, memory limits |
-| Legal concerns with reverse engineering | Low | High | GPL license, clean-room implementation |
-
----
-
-## 12. Glossary
+## 11. Glossary
 
 | Term | Definition |
 |------|------------|
-| **DWG** | Drawing file format, native to AutoCAD |
-| **DWGPROPS** | Drawing properties (metadata) stored in DWG |
-| **TrustedDWG** | Autodesk watermark embedded in DWG files |
-| **CRC** | Cyclic Redundancy Check, error-detecting code |
-| **ODA** | Open Design Alliance, creators of DWG specification |
-| **LibreDWG** | GNU open-source DWG library |
-| **Chain of Custody** | Documentation of evidence handling |
-| **R2013** | AutoCAD 2013 file format version (AC1027) |
+| **MJD** | Modified Julian Date - days since Nov 17, 1858 |
+| **TDCREATE** | Drawing creation timestamp (MJD, local time) |
+| **TDUPDATE** | Last save timestamp (MJD, local time) |
+| **TDINDWG** | Cumulative editing time (MJD fraction) |
+| **ODA** | Open Design Alliance - DWG specification maintainer |
+| **TrustedDWG** | Autodesk watermark proving genuine origin |
+| **Section Map** | Index of all sections in file |
+| **Handle** | Unique object identifier in DWG |
+| **R2010+** | AutoCAD 2010 and later (AC1024, AC1027, AC1032) |
 
 ---
 
-## 13. References
-
-1. [Open Design Specification for .dwg files v5.4.1](https://www.opendesign.com/files/guestdownloads/OpenDesign_Specification_for_.dwg_files.pdf)
-2. [GNU LibreDWG Documentation](https://www.gnu.org/software/libredwg/manual/)
-3. [Autodesk TrustedDWG Documentation](https://www.autodesk.com/blogs/autocad/trusteddwg-exploring-features-benefits-autocad/)
-4. [EnCase DWG EnScript](https://security.opentext.com/appDetails/AutoCAD-DWG-Summary-Info-Reader)
-5. [DWG File Format - Library of Congress](https://www.loc.gov/preservation/digital/formats/fdd/fdd000445.shtml)
-
----
-
-## 14. Approval
-
-| Role | Name | Date | Signature |
-|------|------|------|-----------|
-| Product Owner | Jordan Paul Ehrig | 2025-01-05 | ✓ |
-| Technical Lead | TBD | | |
-| QA Lead | TBD | | |
-
----
-
-**Document Version History**
+## 12. Document History
 
 | Version | Date | Author | Changes |
-|---------|------|--------|----------|
+|---------|------|--------|---------|
 | 1.0 | 2025-01-05 | J. Ehrig | Initial draft |
+| 2.0 | 2025-01-10 | J. Ehrig | Added deep parsing requirements, current status, implementation gaps |
+
+---
+
+## 13. Agent Implementation Notes
+
+**For agent crews implementing this specification:**
+
+1. **Start with FR-SECTION-001 and FR-SECTION-002** - these are blocking everything else
+2. **Reference LibreDWG source code** for decompression algorithm
+3. **Test incrementally** - verify section map before attempting variable extraction
+4. **Log extensively** - byte offsets, raw values, parsing decisions
+5. **Handle errors gracefully** - corrupted files should not crash
+6. **Update progress callback** - user needs to see deep analysis is happening
+7. **Validate against known files** - timestamps should match file properties
+
+**Current failure point:** `dwg_forensic/parsers/sections.py` line 194 - section_map_addr calculation is wrong for AC1032. Fix this first.

@@ -562,17 +562,37 @@ class ForensicGUI:
                 self.status_var.set(f"Generating report with AI narration ({llm_model})...")
                 self.root.update()
 
-            generate_pdf_report(
-                analysis=self.current_analysis,
-                output_path=file_path,
-                case_id=case_id if case_id else None,
-                use_llm_narration=use_llm,
-                llm_model=llm_model,
-            )
+            try:
+                generate_pdf_report(
+                    analysis=self.current_analysis,
+                    output_path=file_path,
+                    case_id=case_id if case_id else None,
+                    use_llm_narration=use_llm,
+                    llm_model=llm_model,
+                )
 
-            llm_note = " (with AI narratives)" if use_llm else ""
-            self.status_var.set(f"Generated: {Path(file_path).name}{llm_note}")
-            messagebox.showinfo("Report Generated", f"PDF report saved to:\n{file_path}\n\n{'AI-powered narratives enabled' if use_llm else 'Standard narratives'}")
+                llm_note = " (with AI narratives)" if use_llm else ""
+                self.status_var.set(f"Generated: {Path(file_path).name}{llm_note}")
+                messagebox.showinfo("Report Generated", f"PDF report saved to:\n{file_path}\n\n{'AI-powered narratives enabled' if use_llm else 'Standard narratives'}")
+            except PermissionError:
+                self.status_var.set("Error: File is in use")
+                messagebox.showerror(
+                    "Permission Denied",
+                    f"Cannot write to:\n{file_path}\n\n"
+                    "The file may be open in another application (PDF viewer).\n"
+                    "Please close the file and try again."
+                )
+            except (TimeoutError, OSError, ConnectionError) as e:
+                self.status_var.set("Error: LLM connection failed")
+                messagebox.showerror(
+                    "LLM Connection Error",
+                    f"Failed to connect to Ollama for AI narration.\n\n"
+                    f"Error: {e}\n\n"
+                    "Please ensure Ollama is running, or disable LLM in Settings."
+                )
+            except Exception as e:
+                self.status_var.set(f"Error: {type(e).__name__}")
+                messagebox.showerror("Report Generation Failed", f"An error occurred:\n\n{e}")
 
     def generate_expert(self):
         """Generate expert witness document."""
@@ -598,22 +618,42 @@ class ForensicGUI:
                 self.status_var.set(f"Generating expert witness document with AI analysis ({llm_model})...")
                 self.root.update()
 
-            generate_expert_witness_document(
-                analysis=self.current_analysis,
-                output_path=file_path,
-                case_id=case_id if case_id else None,
-                expert_name=expert_name if expert_name else "Digital Forensics Expert",
-                use_llm_narration=use_llm,
-                llm_model=llm_model,
-            )
+            try:
+                generate_expert_witness_document(
+                    analysis=self.current_analysis,
+                    output_path=file_path,
+                    case_id=case_id if case_id else None,
+                    expert_name=expert_name if expert_name else "Digital Forensics Expert",
+                    use_llm_narration=use_llm,
+                    llm_model=llm_model,
+                )
 
-            llm_note = " (with AI analysis)" if use_llm else ""
-            self.status_var.set(f"Generated: {Path(file_path).name}{llm_note}")
-            messagebox.showinfo(
-                "Document Generated",
-                f"Expert witness document saved to:\n{file_path}\n\n"
-                f"{'AI-powered forensic analysis enabled' if use_llm else 'Standard analysis'}"
-            )
+                llm_note = " (with AI analysis)" if use_llm else ""
+                self.status_var.set(f"Generated: {Path(file_path).name}{llm_note}")
+                messagebox.showinfo(
+                    "Document Generated",
+                    f"Expert witness document saved to:\n{file_path}\n\n"
+                    f"{'AI-powered forensic analysis enabled' if use_llm else 'Standard analysis'}"
+                )
+            except PermissionError:
+                self.status_var.set("Error: File is in use")
+                messagebox.showerror(
+                    "Permission Denied",
+                    f"Cannot write to:\n{file_path}\n\n"
+                    "The file may be open in another application (PDF viewer).\n"
+                    "Please close the file and try again."
+                )
+            except (TimeoutError, OSError, ConnectionError) as e:
+                self.status_var.set("Error: LLM connection failed")
+                messagebox.showerror(
+                    "LLM Connection Error",
+                    f"Failed to connect to Ollama for AI analysis.\n\n"
+                    f"Error: {e}\n\n"
+                    "Please ensure Ollama is running, or disable LLM in Settings."
+                )
+            except Exception as e:
+                self.status_var.set(f"Error: {type(e).__name__}")
+                messagebox.showerror("Document Generation Failed", f"An error occurred:\n\n{e}")
 
     def _ask_string(self, title: str, prompt: str, default: str = "") -> str:
         """Show a simple string input dialog."""

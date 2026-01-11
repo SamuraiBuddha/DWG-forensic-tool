@@ -19,6 +19,7 @@ from dwg_forensic import __version__
 from dwg_forensic.models import (
     Anomaly,
     AnomalyType,
+    ApplicationFingerprint,
     CRCValidation,
     FileInfo,
     ForensicAnalysis,
@@ -39,6 +40,18 @@ from dwg_forensic.parsers import (
     TimestampData,
     NTFSTimestampParser,
     NTFSForensicData,
+    # Deep parsing modules for AC1018+ support
+    SectionMapParser,
+    SectionMapResult,
+    DrawingVariablesParser,
+    DrawingVariablesResult,
+    HandleMapParser,
+    HandleMapResult,
+)
+from dwg_forensic.analysis.cad_fingerprinting import (
+    CADFingerprinter,
+    FingerprintResult,
+    CADApplication,
 )
 from dwg_forensic.utils.exceptions import DWGForensicError
 
@@ -59,12 +72,24 @@ class ForensicAnalyzer:
     forensic analysis report including Phase 3 tampering detection.
     """
 
-    def __init__(self, custom_rules_path: Optional[Path] = None):
+    def __init__(
+        self,
+        custom_rules_path: Optional[Path] = None,
+        progress_callback: Optional[callable] = None,
+    ):
         """Initialize the forensic analyzer with all required parsers.
 
         Args:
             custom_rules_path: Optional path to custom tampering rules YAML/JSON file
+            progress_callback: Optional callback for progress updates.
+                Signature: callback(step: str, status: str, message: str)
+                step: Current analysis step name
+                status: "start", "complete", "skip", "error"
+                message: Human-readable description
         """
+        # Progress callback for terminal display
+        self._progress_callback = progress_callback
+
         # Phase 1 parsers
         self.header_parser = HeaderParser()
         self.crc_validator = CRCValidator()
@@ -76,6 +101,14 @@ class ForensicAnalyzer:
         # NTFS timestamp parser for cross-validation forensics
         self.ntfs_parser = NTFSTimestampParser()
 
+        # Deep parsing modules for AC1018+ support
+        self.section_parser = SectionMapParser()
+        self.drawing_vars_parser = DrawingVariablesParser()
+        self.handle_parser = HandleMapParser()
+
+        # CAD application fingerprinting (identifies authoring software)
+        self.fingerprinter = CADFingerprinter()
+
         # Phase 3 analyzers
         self.anomaly_detector = AnomalyDetector()
         self.rule_engine = TamperingRuleEngine()
@@ -85,13 +118,28 @@ class ForensicAnalyzer:
         if custom_rules_path:
             self.rule_engine.load_rules(custom_rules_path)
 
+    def _report_progress(self, step: str, status: str, message: str) -> None:
+        """Report progress to callback if registered.
+
+        Args:
+            step: Current analysis step name
+            status: "start", "complete", "skip", "error"
+            message: Human-readable description
+        """
+        if self._progress_callback:
+            try:
+                self._progress_callback(step, status, message)
+            except Exception:
+                pass  # Don't let callback errors affect analysis
+
     def analyze(self, file_path: Path) -> ForensicAnalysis:
         """Perform complete forensic analysis on a DWG file.
 
         Includes Phase 3 tampering detection:
         - Anomaly detection (timestamp, version, structural)
-        - Tampering rule evaluation (12 built-in + custom rules)
+        - Tampering rule evaluation (40 built-in + custom rules)
         - Risk scoring with weighted algorithm
+        - Deep DWG parsing (section map, drawing variables, handle gaps)
 
         Args:
             file_path: Path to the DWG file to analyze
@@ -104,69 +152,164 @@ class ForensicAnalyzer:
         """
         file_path = Path(file_path)
 
-        # Collect file info
+        # Phase 1: Basic file analysis
+        self._report_progress("file_info", "start", "Collecting file information")
         file_info = self._collect_file_info(file_path)
+        self._report_progress("file_info", "complete", f"SHA-256: {file_info.sha256[:16]}...")
 
         # Parse header first to get version
+        self._report_progress("header", "start", "Parsing DWG header")
         header_analysis = self.header_parser.parse(file_path)
         version_string = header_analysis.version_string
+        self._report_progress("header", "complete", f"Version: {version_string} ({header_analysis.version_name})")
 
         # Validate CRC (version-aware)
+        self._report_progress("crc", "start", "Validating CRC32 checksum")
         crc_validation = self.crc_validator.validate_header_crc(
             file_path, version_string=version_string
         )
+        crc_status = "valid" if crc_validation.is_valid else "MISMATCH"
+        self._report_progress("crc", "complete", f"CRC: {crc_status}")
 
         # Detect watermark (version-aware)
+        self._report_progress("watermark", "start", "Detecting TrustedDWG watermark")
         trusted_dwg = self.watermark_detector.detect(
             file_path, version_string=version_string
         )
+        wm_status = "present" if trusted_dwg.watermark_present else "not found"
+        self._report_progress("watermark", "complete", f"Watermark: {wm_status}")
+
+        # CAD Application Fingerprinting - CRITICAL: identifies authoring software
+        # This must run early as it informs all subsequent tampering analysis
+        self._report_progress("fingerprint", "start", "Identifying CAD application")
+        fingerprint_result: Optional[FingerprintResult] = None
+        try:
+            fingerprint_result = self.fingerprinter.fingerprint(
+                file_path=file_path,
+                header_crc=crc_validation.header_crc_stored,
+                has_trusted_dwg=trusted_dwg.watermark_present and trusted_dwg.watermark_valid,
+            )
+            app_name = fingerprint_result.detected_application.value
+            confidence = f"{fingerprint_result.confidence:.0%}"
+            self._report_progress(
+                "fingerprint", "complete",
+                f"{app_name.upper()} (confidence: {confidence})"
+            )
+        except Exception as e:
+            self._report_progress("fingerprint", "error", f"Fingerprinting failed: {e}")
 
         # Parse timestamps for advanced forensic analysis
+        self._report_progress("timestamps", "start", "Extracting embedded timestamps")
         timestamp_data = self.timestamp_parser.parse(file_path, version_string)
+        self._report_progress("timestamps", "complete", "Timestamps extracted")
 
         # Build metadata from timestamp data
         metadata = self._build_metadata_from_timestamps(timestamp_data)
 
         # Parse NTFS filesystem timestamps for cross-validation forensics
-        # This is critical for detecting timestomping and backdating attacks
+        self._report_progress("ntfs", "start", "Parsing NTFS filesystem timestamps")
         ntfs_data = self.ntfs_parser.parse(file_path)
+        ntfs_status = "SI/FN mismatch detected" if ntfs_data and ntfs_data.si_fn_mismatch else "normal"
+        self._report_progress("ntfs", "complete", f"NTFS: {ntfs_status}")
 
         # Cross-validate DWG timestamps against NTFS filesystem timestamps
         ntfs_contradictions = self._cross_validate_ntfs_timestamps(
             timestamp_data, ntfs_data, metadata
         )
 
+        # Deep DWG Parsing: Section Map Analysis
+        self._report_progress("sections", "start", "Parsing DWG section map (deep analysis)")
+        section_map: Optional[SectionMapResult] = None
+        try:
+            section_map = self.section_parser.parse(file_path)
+            section_count = section_map.section_count if section_map else 0
+            if section_map and section_map.parsing_errors:
+                self._report_progress("sections", "error", section_map.parsing_errors[0])
+            else:
+                self._report_progress("sections", "complete", f"Sections found: {section_count}")
+        except Exception as e:
+            self._report_progress("sections", "error", f"Section parsing failed: {e}")
+
+        # Deep DWG Parsing: Drawing Variables Extraction
+        self._report_progress("drawing_vars", "start", "Extracting drawing variables (TDCREATE/TDUPDATE)")
+        drawing_vars: Optional[DrawingVariablesResult] = None
+        try:
+            drawing_vars = self.drawing_vars_parser.parse(file_path)
+            ts_count = sum([
+                1 if drawing_vars.tdcreate else 0,
+                1 if drawing_vars.tdupdate else 0,
+            ])
+            self._report_progress("drawing_vars", "complete", f"Timestamps found: {ts_count}")
+        except Exception as e:
+            self._report_progress("drawing_vars", "error", f"Drawing vars extraction failed: {e}")
+
+        # Deep DWG Parsing: Handle Gap Analysis
+        self._report_progress("handles", "start", "Analyzing handle map for deleted objects")
+        handle_map: Optional[HandleMapResult] = None
+        try:
+            handle_map = self.handle_parser.parse(file_path)
+            gap_count = len(handle_map.gaps) if handle_map.gaps else 0
+            critical_gaps = sum(1 for g in (handle_map.gaps or []) if g.severity == "critical")
+            if critical_gaps > 0:
+                self._report_progress("handles", "complete", f"Gaps: {gap_count} ({critical_gaps} critical)")
+            else:
+                self._report_progress("handles", "complete", f"Handle gaps: {gap_count}")
+        except Exception as e:
+            self._report_progress("handles", "error", f"Handle analysis failed: {e}")
+
         # Phase 3: Anomaly detection (including advanced timestamp anomalies and NTFS cross-validation)
+        self._report_progress("anomalies", "start", "Detecting anomalies")
         anomalies = self._detect_all_anomalies(
             header_analysis, crc_validation, trusted_dwg, file_path,
             timestamp_data=timestamp_data, metadata=metadata,
             ntfs_data=ntfs_data, ntfs_contradictions=ntfs_contradictions
         )
+        self._report_progress("anomalies", "complete", f"Anomalies detected: {len(anomalies)}")
 
-        # Phase 3: Tampering rule evaluation (with NTFS cross-validation data)
+        # Phase 3: Tampering rule evaluation (with NTFS cross-validation data + deep parsing)
+        self._report_progress("rules", "start", "Evaluating tampering rules")
         rule_context = self._build_rule_context(
             header_analysis, crc_validation, trusted_dwg, file_path,
             timestamp_data=timestamp_data, anomalies=anomalies, metadata=metadata,
-            ntfs_data=ntfs_data, ntfs_contradictions=ntfs_contradictions
+            ntfs_data=ntfs_data, ntfs_contradictions=ntfs_contradictions,
+            section_map=section_map, drawing_vars=drawing_vars, handle_map=handle_map,
+            fingerprint=fingerprint_result,
         )
         rule_results = self.rule_engine.evaluate_all(rule_context)
         failed_rules = self.rule_engine.get_failed_rules(rule_results)
+        self._report_progress("rules", "complete", f"Rules triggered: {len(failed_rules)}")
 
         # Phase 3: Detect tampering indicators (version-aware, with NTFS cross-validation)
+        self._report_progress("tampering", "start", "Analyzing tampering indicators")
         tampering_indicators = self._detect_tampering(
             crc_validation, trusted_dwg, failed_rules, version_string,
             timestamp_data=timestamp_data, ntfs_data=ntfs_data,
             ntfs_contradictions=ntfs_contradictions
         )
+        self._report_progress("tampering", "complete", f"Indicators: {len(tampering_indicators)}")
 
         # Build NTFS analysis model for output
         ntfs_analysis = self._build_ntfs_analysis(ntfs_data, ntfs_contradictions, metadata)
 
         # Phase 3: Risk assessment with scoring
+        self._report_progress("risk", "start", "Calculating risk score")
         risk_assessment = self._assess_risk_phase3(
             anomalies, tampering_indicators, failed_rules,
             crc_validation, trusted_dwg
         )
+        self._report_progress("risk", "complete", f"Risk level: {risk_assessment.overall_risk.value}")
+
+        # Build application fingerprint model from result
+        app_fingerprint: Optional[ApplicationFingerprint] = None
+        if fingerprint_result:
+            app_fingerprint = ApplicationFingerprint(
+                detected_application=fingerprint_result.detected_application.value,
+                confidence=fingerprint_result.confidence,
+                is_autodesk=fingerprint_result.is_autodesk,
+                is_oda_based=fingerprint_result.is_oda_based,
+                forensic_summary=fingerprint_result.forensic_summary,
+                created_by=fingerprint_result.detected_application.value,
+            )
 
         return ForensicAnalysis(
             file_info=file_info,
@@ -175,7 +318,7 @@ class ForensicAnalyzer:
             crc_validation=crc_validation,
             metadata=metadata,
             ntfs_analysis=ntfs_analysis,
-            application_fingerprint=None,  # Application fingerprinting in future phase
+            application_fingerprint=app_fingerprint,
             anomalies=anomalies,
             tampering_indicators=tampering_indicators,
             risk_assessment=risk_assessment,
@@ -513,6 +656,10 @@ class ForensicAnalyzer:
         metadata: Optional[DWGMetadata] = None,
         ntfs_data: Optional[NTFSForensicData] = None,
         ntfs_contradictions: Optional[Dict[str, Any]] = None,
+        section_map: Optional[SectionMapResult] = None,
+        drawing_vars: Optional[DrawingVariablesResult] = None,
+        handle_map: Optional[HandleMapResult] = None,
+        fingerprint: Optional[FingerprintResult] = None,
     ) -> Dict[str, Any]:
         """Build context dictionary for tampering rule evaluation.
 
@@ -526,6 +673,10 @@ class ForensicAnalyzer:
             metadata: Optional DWG metadata
             ntfs_data: Optional NTFS forensic data for cross-validation
             ntfs_contradictions: Optional dict of NTFS/DWG contradictions
+            section_map: Optional deep parsing section map results
+            drawing_vars: Optional deep parsing drawing variables results
+            handle_map: Optional deep parsing handle map results
+            fingerprint: Optional CAD application fingerprint result
 
         Returns:
             Context dictionary for rule evaluation
@@ -622,6 +773,80 @@ class ForensicAnalyzer:
         # Add NTFS contradictions for cross-validation rules
         if ntfs_contradictions:
             context["ntfs_contradictions"] = ntfs_contradictions
+
+        # Add deep parsing results for advanced rules (TAMPER-036 to TAMPER-040)
+        # Section map data
+        if section_map:
+            # Check success by absence of parsing errors
+            has_errors = bool(section_map.parsing_errors)
+            sections_list = list(section_map.sections.values()) if section_map.sections else []
+            context["section_map"] = {
+                "success": not has_errors,
+                "section_count": len(sections_list),
+                "has_header_section": any(
+                    s.section_type.name == "HEADER" for s in sections_list
+                ),
+                "has_handles_section": any(
+                    s.section_type.name == "HANDLES" for s in sections_list
+                ),
+                "error": section_map.parsing_errors[0] if section_map.parsing_errors else None,
+                "version_format": section_map.file_version,
+            }
+
+        # Drawing variables data (extracted TDCREATE/TDUPDATE from binary)
+        if drawing_vars:
+            context["drawing_vars"] = {
+                "tdcreate": {
+                    "julian_day": drawing_vars.tdcreate.julian_day if drawing_vars.tdcreate else None,
+                    "fraction": drawing_vars.tdcreate.fraction if drawing_vars.tdcreate else None,
+                    "datetime": drawing_vars.tdcreate.datetime.isoformat() if drawing_vars.tdcreate and drawing_vars.tdcreate.datetime else None,
+                } if drawing_vars.tdcreate else None,
+                "tdupdate": {
+                    "julian_day": drawing_vars.tdupdate.julian_day if drawing_vars.tdupdate else None,
+                    "fraction": drawing_vars.tdupdate.fraction if drawing_vars.tdupdate else None,
+                    "datetime": drawing_vars.tdupdate.datetime.isoformat() if drawing_vars.tdupdate and drawing_vars.tdupdate.datetime else None,
+                } if drawing_vars.tdupdate else None,
+                # Note: attribute names are fingerprintguid/versionguid (no underscore)
+                "fingerprint_guid": drawing_vars.fingerprintguid.guid_string if drawing_vars.fingerprintguid else None,
+                "version_guid": drawing_vars.versionguid.guid_string if drawing_vars.versionguid else None,
+                "timestamp_contradiction": drawing_vars.has_timestamp_contradiction() if hasattr(drawing_vars, 'has_timestamp_contradiction') else False,
+            }
+
+        # Handle map data for gap analysis
+        if handle_map:
+            gap_list = handle_map.gaps or []
+            critical_gaps = [g for g in gap_list if g.severity == "critical"]
+            high_gaps = [g for g in gap_list if g.severity == "high"]
+            has_errors = bool(handle_map.parsing_errors)
+            context["handle_map"] = {
+                "success": not has_errors,
+                "total_handles": handle_map.statistics.total_handles if handle_map.statistics else 0,
+                "gap_count": len(gap_list),
+                "critical_gap_count": len(critical_gaps),
+                "high_gap_count": len(high_gaps),
+                "gap_ratio": handle_map.statistics.gap_ratio if handle_map.statistics else 0.0,
+                "largest_gap": max((g.gap_size for g in gap_list), default=0) if gap_list else 0,
+                "error": handle_map.parsing_errors[0] if handle_map.parsing_errors else None,
+            }
+
+        # Add CAD application fingerprint for software-specific rules
+        if fingerprint:
+            context["fingerprint"] = {
+                "detected_application": fingerprint.detected_application.value,
+                "confidence": fingerprint.confidence,
+                "is_autodesk": fingerprint.is_autodesk,
+                "is_oda_based": fingerprint.is_oda_based,
+                "forensic_summary": fingerprint.forensic_summary,
+                "matching_signatures": [
+                    {
+                        "application": sig.application.value,
+                        "pattern_type": sig.pattern_type,
+                        "description": sig.description,
+                        "confidence": sig.confidence,
+                    }
+                    for sig in fingerprint.matching_signatures
+                ],
+            }
 
         return context
 

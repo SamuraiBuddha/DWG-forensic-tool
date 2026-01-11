@@ -118,7 +118,35 @@ class TrustedDWGAnalysis(BaseModel):
 
 
 class ApplicationFingerprint(BaseModel):
-    """Fingerprint of the application that created/modified the file."""
+    """Fingerprint of the CAD application that created/modified the DWG file.
+
+    Forensic significance: Identifying the authoring application is critical because
+    third-party CAD tools may not maintain Autodesk timestamp integrity, CRC values,
+    or TrustedDWG watermarks. This affects how tampering rules should be applied.
+    """
+    detected_application: str = Field(
+        ...,
+        description="Identified CAD application (e.g., 'autocad', 'bricscad', 'librecad')"
+    )
+    confidence: float = Field(
+        ...,
+        description="Detection confidence level (0.0-1.0)",
+        ge=0.0,
+        le=1.0
+    )
+    is_autodesk: bool = Field(
+        False,
+        description="Whether file was created by genuine Autodesk software"
+    )
+    is_oda_based: bool = Field(
+        False,
+        description="Whether application uses ODA (Open Design Alliance) SDK"
+    )
+    forensic_summary: str = Field(
+        "",
+        description="Summary of forensic significance of the fingerprint"
+    )
+    # Legacy fields for backward compatibility
     created_by: Optional[str] = Field(None, description="Application that created the file")
     application_id: Optional[str] = Field(None, description="Application identifier code")
     build_number: Optional[str] = Field(None, description="Build number of the application")
