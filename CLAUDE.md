@@ -71,13 +71,35 @@ The codebase is organized by functional layers:
 - AC1027: AutoCAD 2013-2017 (R21)
 - AC1032: AutoCAD 2018+ (R24)
 
-**Tampering Rules** (analysis/rules.py): 12 built-in rules (TAMPER-001 through TAMPER-012) covering CRC mismatch, missing/invalid watermarks, timestamp anomalies, version inconsistencies. Custom rules loaded from YAML/JSON.
+**Tampering Rules** (analysis/rules/): 40 built-in rules (TAMPER-001 through TAMPER-040) organized into modular mixin classes:
+- `rules_basic.py`: TAMPER-001 to 012 - CRC, watermarks, basic timestamps
+- `rules_timestamp.py`: TAMPER-013 to 018 - Advanced timestamp manipulation (TDINDWG, version anachronism)
+- `rules_ntfs.py`: TAMPER-019 to 028 - NTFS cross-validation ("smoking gun" indicators)
+- `rules_fingerprint.py`: TAMPER-029 to 035 - CAD application fingerprinting (ODA, BricsCAD, NanoCAD)
+- `rules_structure.py`: TAMPER-036 to 040 - Deep DWG structure analysis (handle gaps, section maps)
+
+Custom rules loaded from YAML/JSON via `TamperingRuleEngine.load_rules()`.
 
 ## Code Style
 
 - Python 3.10+ with type hints required
 - Line length: 100 characters (Ruff enforced)
 - Commit format: `type(scope): description` (feat, fix, docs, test, refactor, style, chore)
+
+## File Size Limits
+
+**Maximum file size: 1,500 lines** (soft limit) / **2,000 lines** (hard limit)
+
+Files exceeding these limits should be modularized:
+- Extract logical groupings into separate modules
+- Use mixin classes for large class hierarchies
+- Create subpackages for related functionality
+
+Rationale:
+1. Maintains readability and navigability
+2. Reduces merge conflicts in collaborative development
+3. Enables better code review granularity
+4. Ensures files fit within LLM context windows for AI-assisted development
 
 ## Output Formatting
 
