@@ -270,6 +270,8 @@ class ForensicGUI:
                 "rules": "Tampering Rules",
                 "tampering": "Indicators",
                 "risk": "Risk Score",
+                "knowledge": "Knowledge Graph",
+                "llm": "LLM Narrative",
             }
             step_name = step_names.get(step, step)
 
@@ -449,8 +451,19 @@ class ForensicGUI:
         # Log start
         self._log_progress("analysis", "start", f"Starting analysis of {self.current_file.name}")
 
-        # Create analyzer with progress callback
-        analyzer = ForensicAnalyzer(progress_callback=self._log_progress)
+        # Check if LLM is enabled
+        use_llm = self.llm_enabled.get() and bool(self.llm_model.get())
+        llm_model = self.llm_model.get() if use_llm else None
+
+        if use_llm:
+            self._log_progress("llm_config", "info", f"LLM enabled: {llm_model}")
+
+        # Create analyzer with progress callback and LLM settings
+        analyzer = ForensicAnalyzer(
+            progress_callback=self._log_progress,
+            use_llm=use_llm,
+            llm_model=llm_model,
+        )
 
         # Run analysis in background thread
         def analyze():
@@ -621,6 +634,18 @@ class ForensicGUI:
             ])
             for t in analysis.tampering_indicators:
                 lines.append(f"  [{t.confidence:.0%}] {t.indicator_type.value}: {t.description}")
+
+        # LLM Narrative section (if generated)
+        if analysis.llm_narrative:
+            lines.extend([
+                "",
+                "=" * 60,
+                "AI-GENERATED EXPERT NARRATIVE",
+                f"Model: {analysis.llm_model_used or 'unknown'}",
+                "=" * 60,
+                "",
+                analysis.llm_narrative,
+            ])
 
         self.details_text.insert(tk.END, "\n".join(lines))
         self.details_text.config(state=tk.DISABLED)
