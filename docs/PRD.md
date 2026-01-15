@@ -825,9 +825,9 @@ Rule Adjustments Applied:
 
 ---
 
-## 9. Reference Documentation
+## 10. Reference Documentation
 
-### 9.1 Primary References
+### 10.1 Primary References
 
 1. **Open Design Specification for .dwg files v5.4.1**
    - https://www.opendesign.com/files/guestdownloads/OpenDesign_Specification_for_.dwg_files.pdf
@@ -845,7 +845,7 @@ Rule Adjustments Applied:
    - Section decompression algorithms
    - Handle table parsing
 
-### 9.2 Key Binary Offsets (AC1032)
+### 10.2 Key Binary Offsets (AC1032)
 
 ```
 Header:
@@ -867,9 +867,9 @@ Section Page Header:
 
 ---
 
-## 10. Testing Requirements
+## 11. Testing Requirements
 
-### 10.1 Test Files Required
+### 11.1 Test Files Required
 
 | File | Description | Purpose |
 |------|-------------|---------|
@@ -880,7 +880,7 @@ Section Page Header:
 | tampered_timestamps.dwg | Manually backdated | Tampering detection |
 | large_file.dwg | 10MB+ real file | Performance testing |
 
-### 10.2 Validation Criteria
+### 11.2 Validation Criteria
 
 | Test | Pass Criteria |
 |------|---------------|
@@ -893,7 +893,7 @@ Section Page Header:
 
 ---
 
-## 11. Glossary
+## 12. Glossary
 
 | Term | Definition |
 |------|------------|
@@ -909,7 +909,7 @@ Section Page Header:
 
 ---
 
-## 12. Document History
+## 13. Document History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
@@ -918,7 +918,7 @@ Section Page Header:
 
 ---
 
-## 13. Agent Implementation Notes
+## 14. Agent Implementation Notes
 
 **For agent crews implementing this specification:**
 

@@ -16,11 +16,23 @@ References:
 """
 
 import struct
-import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Tuple
 from enum import IntEnum
+
+from .compression import (
+    DWGDecompressor,
+    DecompressionError,
+    decompress_section,
+    PageHeader,
+)
+from .encryption import (
+    is_encrypted_header,
+    decrypt_header,
+    get_section_locator_offset,
+    prepare_file_data,
+)
 
 
 class SectionType(IntEnum):
@@ -74,6 +86,7 @@ class SectionInfo:
     page_count: int = 1
     compression_type: int = 0  # 0=none, 2=compressed
     data_offset: int = 0  # Offset to actual data within section
+    encrypted: bool = False  # Whether section data is encrypted
 
 
 @dataclass
@@ -83,6 +96,7 @@ class SectionMapResult:
     section_map_offset: int = 0
     section_count: int = 0
     file_version: str = ""
+    was_encrypted: bool = False
     parsing_errors: List[str] = field(default_factory=list)
 
     def has_section(self, section_type: SectionType) -> bool:
@@ -108,20 +122,28 @@ class SectionMapParser:
     - Detect section size anomalies
     """
 
-    # Header offset to section map address (R18+)
-    # The section locator info starts at 0x20 in R2004+
-    OFFSET_SECTION_LOCATOR = 0x20
-
-    # R2004+ (AC1018) section page type
+    # R2004+ (AC1018) section page type markers
     SECTION_PAGE_MAP = 0x41630E3B  # "System Section Page Map" marker
     SECTION_DATA_PAGE = 0x4163003B  # Data page marker
 
     # Minimum file size to have valid sections
     MIN_FILE_SIZE = 0x100
 
+    # Section locator offsets by version
+    VERSION_LOCATOR_OFFSETS = {
+        "AC1018": 0x20,  # R2004
+        "AC1021": 0x20,  # R2007 (after decryption)
+        "AC1024": 0x20,  # R2010
+        "AC1027": 0x20,  # R2013
+        "AC1032": 0x80,  # R2018+ (after decryption)
+    }
+
+    # Section map address offset within locator structure
+    SECTION_MAP_ADDR_OFFSET = 0x14  # 20 bytes into locator
+
     def __init__(self):
         """Initialize section map parser."""
-        pass
+        self._decompressor = DWGDecompressor()
 
     def parse(self, file_path: Path) -> SectionMapResult:
         """
@@ -143,22 +165,50 @@ class SectionMapParser:
             result.parsing_errors.append(f"Failed to read file: {e}")
             return result
 
+        return self.parse_from_bytes(data, result)
+
+    def parse_from_bytes(
+        self,
+        data: bytes,
+        result: Optional[SectionMapResult] = None
+    ) -> SectionMapResult:
+        """
+        Parse section map from raw bytes.
+
+        Args:
+            data: Raw file bytes
+            result: Optional existing result to populate
+
+        Returns:
+            SectionMapResult with all located sections
+        """
+        if result is None:
+            result = SectionMapResult()
+
         if len(data) < self.MIN_FILE_SIZE:
             result.parsing_errors.append("File too small for section analysis")
             return result
 
-        # Get version
+        # Get version and decrypt if needed
         try:
-            result.file_version = data[0:6].decode("ascii").rstrip("\x00")
-        except UnicodeDecodeError:
-            result.parsing_errors.append("Invalid version string")
-            return result
+            prepared_data, version, was_encrypted = prepare_file_data(data)
+            result.file_version = version
+            result.was_encrypted = was_encrypted
+        except Exception as e:
+            result.parsing_errors.append(f"Failed to prepare file data: {e}")
+            # Try to get version anyway
+            try:
+                result.file_version = data[0:6].decode("ascii").rstrip("\x00")
+            except UnicodeDecodeError:
+                result.parsing_errors.append("Invalid version string")
+                return result
+            prepared_data = data
 
         # Different parsing based on version
         if result.file_version in ["AC1024", "AC1027", "AC1032"]:
-            self._parse_r2010_sections(data, result)
+            self._parse_r2010_sections(prepared_data, data, result)
         elif result.file_version in ["AC1018", "AC1021"]:
-            self._parse_r2004_sections(data, result)
+            self._parse_r2004_sections(prepared_data, data, result)
         else:
             result.parsing_errors.append(
                 f"Section map parsing not supported for {result.file_version}"
@@ -166,153 +216,300 @@ class SectionMapParser:
 
         return result
 
-    def _parse_r2010_sections(self, data: bytes, result: SectionMapResult) -> None:
+    def _get_section_locator_offset(self, version: str) -> int:
+        """Get section locator offset for version."""
+        return self.VERSION_LOCATOR_OFFSETS.get(version, 0x20)
+
+    def _parse_r2010_sections(
+        self,
+        prepared_data: bytes,
+        original_data: bytes,
+        result: SectionMapResult
+    ) -> None:
         """
         Parse section map for R2010+ (AC1024, AC1027, AC1032).
 
-        The section locator record at offset 0x20 contains:
-        - Section page map record number (RL)
-        - Section page map size (RL)
-        - Page count (RL)
-        - Section maximum size (RL)
-        - Unknown (RL)
-        - Section page map address (RL)
+        The section locator record contains:
+        - Section page map record number (RL at +0x00)
+        - Section page map size (RL at +0x04)
+        - Page count (RL at +0x08)
+        - Section maximum size (RL at +0x0C)
+        - Unknown (RL at +0x10)
+        - Section page map address (RL at +0x14)
         """
         try:
-            # Read section locator info at 0x20
-            if len(data) < 0x40:
-                result.parsing_errors.append("File too small for section locator")
-                return
+            # Get version-specific locator offset
+            locator_base = self._get_section_locator_offset(result.file_version)
 
-            # Section locator structure (R2010+)
-            # Offset 0x20: Section page map info
-            section_record_num = struct.unpack_from("<I", data, 0x20)[0]
-            section_size_encoded = struct.unpack_from("<I", data, 0x24)[0]
-            page_count = struct.unpack_from("<I", data, 0x28)[0]
-            max_section_size = struct.unpack_from("<I", data, 0x2C)[0]
-            unknown = struct.unpack_from("<I", data, 0x30)[0]
-            section_map_addr = struct.unpack_from("<I", data, 0x34)[0]
-
-            result.section_map_offset = section_map_addr
-
-            if section_map_addr == 0 or section_map_addr >= len(data):
+            if len(prepared_data) < locator_base + 0x20:
                 result.parsing_errors.append(
-                    f"Invalid section map address: 0x{section_map_addr:X}"
+                    f"File too small for section locator at 0x{locator_base:X}"
                 )
                 return
 
-            # Parse section page map
-            self._parse_section_pages(data, section_map_addr, result)
+            # Read section locator structure
+            section_record_num = struct.unpack_from("<I", prepared_data, locator_base + 0x00)[0]
+            section_size_encoded = struct.unpack_from("<I", prepared_data, locator_base + 0x04)[0]
+            page_count = struct.unpack_from("<I", prepared_data, locator_base + 0x08)[0]
+            max_section_size = struct.unpack_from("<I", prepared_data, locator_base + 0x0C)[0]
+            unknown = struct.unpack_from("<I", prepared_data, locator_base + 0x10)[0]
+            section_map_addr = struct.unpack_from("<I", prepared_data, locator_base + 0x14)[0]
+
+            result.section_map_offset = section_map_addr
+
+            # Validate section map address
+            if section_map_addr == 0:
+                result.parsing_errors.append("Section map address is zero")
+                return
+
+            if section_map_addr >= len(original_data):
+                result.parsing_errors.append(
+                    f"Section map address 0x{section_map_addr:X} exceeds file size {len(original_data)}"
+                )
+                return
+
+            # Parse section page map from original (unencrypted for body) data
+            self._parse_section_pages(original_data, section_map_addr, result)
 
         except Exception as e:
             result.parsing_errors.append(f"Error parsing R2010 sections: {e}")
 
-    def _parse_r2004_sections(self, data: bytes, result: SectionMapResult) -> None:
+    def _parse_r2004_sections(
+        self,
+        prepared_data: bytes,
+        original_data: bytes,
+        result: SectionMapResult
+    ) -> None:
         """
         Parse section map for R2004-2009 (AC1018, AC1021).
 
-        Similar structure to R2010 but with some offset differences.
+        Similar structure to R2010 but R2007 has encrypted header.
         """
         try:
-            # R2004 has encrypted section locator - more complex
-            # For now, try similar approach to R2010
-            if len(data) < 0x40:
+            locator_base = self._get_section_locator_offset(result.file_version)
+
+            if len(prepared_data) < locator_base + 0x20:
                 result.parsing_errors.append("File too small for section locator")
                 return
 
-            # Try to locate section map via file scan
-            # R2004+ files have recognizable page markers
-            section_map_addr = struct.unpack_from("<I", data, 0x34)[0]
+            # Read section map address
+            section_map_addr = struct.unpack_from("<I", prepared_data, locator_base + 0x14)[0]
 
-            if section_map_addr > 0 and section_map_addr < len(data):
+            if section_map_addr > 0 and section_map_addr < len(original_data):
                 result.section_map_offset = section_map_addr
-                self._parse_section_pages(data, section_map_addr, result)
+                self._parse_section_pages(original_data, section_map_addr, result)
             else:
-                result.parsing_errors.append("Could not locate section map (R2004)")
+                result.parsing_errors.append(
+                    f"Invalid section map address: 0x{section_map_addr:X}"
+                )
 
         except Exception as e:
             result.parsing_errors.append(f"Error parsing R2004 sections: {e}")
 
     def _parse_section_pages(
-        self, data: bytes, map_offset: int, result: SectionMapResult
+        self,
+        data: bytes,
+        map_offset: int,
+        result: SectionMapResult
     ) -> None:
         """
         Parse section page entries from section map.
 
-        Each section in the map has:
-        - Section type (int)
-        - Data size (int)
-        - Page count (int)
-        - Max decompressed size per page (int)
-        - Compressed (bool)
-        - Section ID (int)
-        - Encrypted (bool)
-        - Name (string)
+        The section map is a compressed page containing section descriptors.
+        Each descriptor includes section type, sizes, and page locations.
         """
         try:
-            offset = map_offset
-
-            # Read number of sections
-            if offset + 4 > len(data):
+            # First, check if there's a page header at this location
+            if map_offset + 32 > len(data):
+                result.parsing_errors.append("Section map offset too close to end of file")
                 return
 
-            # Section map typically starts with page header
-            # Look for recognizable section entries
+            # Check for page header marker
+            page_marker = struct.unpack_from("<I", data, map_offset)[0]
 
-            # Scan for section entries
-            # Each section entry has a type marker and size info
-            max_scan = min(offset + 0x2000, len(data) - 20)
-
-            found_sections = 0
-            scan_pos = offset
-
-            while scan_pos < max_scan and found_sections < 20:
-                # Try to identify section type markers
-                try:
-                    marker = struct.unpack_from("<I", data, scan_pos)[0]
-
-                    # Check if this looks like a valid section type
-                    if 1 <= marker <= 15:
-                        # Potential section entry
-                        section_type = marker
-
-                        # Read section info
-                        if scan_pos + 24 <= len(data):
-                            size1 = struct.unpack_from("<I", data, scan_pos + 4)[0]
-                            size2 = struct.unpack_from("<I", data, scan_pos + 8)[0]
-                            data_offset = struct.unpack_from("<I", data, scan_pos + 12)[0]
-
-                            # Validate sizes
-                            if size1 < len(data) and size2 < len(data) * 2:
-                                section_info = SectionInfo(
-                                    section_type=section_type,
-                                    section_name=SECTION_NAMES.get(
-                                        section_type, f"Unknown_{section_type}"
-                                    ),
-                                    compressed_size=size1,
-                                    decompressed_size=size2,
-                                    offset=scan_pos,
-                                    data_offset=data_offset,
-                                )
-
-                                result.sections[section_type] = section_info
-                                found_sections += 1
-
-                    scan_pos += 4
-
-                except Exception:
-                    scan_pos += 4
-                    continue
-
-            result.section_count = len(result.sections)
-
-            if found_sections == 0:
-                result.parsing_errors.append(
-                    "No sections found - may need alternative parsing"
-                )
+            if page_marker == self.SECTION_PAGE_MAP:
+                # This is a section page map - parse the page header
+                self._parse_section_page_map(data, map_offset, result)
+            elif page_marker == self.SECTION_DATA_PAGE:
+                # Data page - might need different parsing
+                self._parse_section_page_map(data, map_offset, result)
+            else:
+                # No recognizable marker - try heuristic scanning
+                self._parse_sections_heuristic(data, map_offset, result)
 
         except Exception as e:
             result.parsing_errors.append(f"Error parsing section pages: {e}")
+
+    def _parse_section_page_map(
+        self,
+        data: bytes,
+        page_offset: int,
+        result: SectionMapResult
+    ) -> None:
+        """
+        Parse a section page map page.
+
+        Page structure:
+        - Page header (32 bytes)
+        - Section descriptors (variable)
+        """
+        try:
+            # Parse page header
+            header = PageHeader.from_bytes(data, page_offset)
+
+            # Skip page header
+            content_offset = page_offset + 32
+
+            # Get page content
+            if header.compression_type == 2:
+                # Compressed - decompress
+                compressed_data = data[content_offset:content_offset + header.compressed_size]
+                try:
+                    page_content = decompress_section(
+                        compressed_data,
+                        header.decompressed_size
+                    )
+                except DecompressionError as e:
+                    result.parsing_errors.append(f"Failed to decompress section map: {e}")
+                    # Fall back to heuristic
+                    self._parse_sections_heuristic(data, page_offset, result)
+                    return
+            else:
+                # Not compressed
+                page_content = data[content_offset:content_offset + header.decompressed_size]
+
+            # Parse section descriptors from decompressed content
+            self._parse_section_descriptors(page_content, data, result)
+
+        except DecompressionError as e:
+            result.parsing_errors.append(f"Decompression error: {e}")
+            self._parse_sections_heuristic(data, page_offset, result)
+        except Exception as e:
+            result.parsing_errors.append(f"Error parsing section page map: {e}")
+            self._parse_sections_heuristic(data, page_offset, result)
+
+    def _parse_section_descriptors(
+        self,
+        content: bytes,
+        original_data: bytes,
+        result: SectionMapResult
+    ) -> None:
+        """
+        Parse section descriptors from decompressed section map content.
+
+        Each section descriptor contains:
+        - Section type (4 bytes)
+        - Decompressed size (4 bytes)
+        - Compressed size (4 bytes)
+        - Compression type (4 bytes)
+        - Section checksum (4 bytes)
+        ... additional fields vary by section type
+        """
+        offset = 0
+        max_sections = 20  # Safety limit
+
+        while offset + 20 <= len(content) and len(result.sections) < max_sections:
+            try:
+                section_type = struct.unpack_from("<I", content, offset)[0]
+
+                # Check if this is a valid section type
+                if section_type == 0 or section_type > 0x20:
+                    # End of descriptors or invalid
+                    offset += 4
+                    continue
+
+                # Read descriptor fields
+                decompressed_size = struct.unpack_from("<I", content, offset + 4)[0]
+                compressed_size = struct.unpack_from("<I", content, offset + 8)[0]
+                compression_type = struct.unpack_from("<I", content, offset + 12)[0]
+                section_checksum = struct.unpack_from("<I", content, offset + 16)[0]
+
+                # Validate sizes
+                if decompressed_size > len(original_data) * 4:
+                    offset += 4
+                    continue
+
+                if compressed_size > len(original_data):
+                    offset += 4
+                    continue
+
+                # Create section info
+                section_info = SectionInfo(
+                    section_type=section_type,
+                    section_name=SECTION_NAMES.get(section_type, f"Unknown_{section_type}"),
+                    compressed_size=compressed_size,
+                    decompressed_size=decompressed_size,
+                    offset=offset,
+                    compression_type=compression_type,
+                    data_offset=0,  # Will be determined when reading section
+                )
+
+                result.sections[section_type] = section_info
+                offset += 20  # Move to next descriptor
+
+            except Exception:
+                offset += 4
+                continue
+
+        result.section_count = len(result.sections)
+
+    def _parse_sections_heuristic(
+        self,
+        data: bytes,
+        start_offset: int,
+        result: SectionMapResult
+    ) -> None:
+        """
+        Fallback heuristic parsing when structured parsing fails.
+
+        Scans for section type markers and attempts to identify sections.
+        """
+        max_scan = min(start_offset + 0x2000, len(data) - 20)
+        scan_pos = start_offset
+        found_sections = 0
+
+        while scan_pos < max_scan and found_sections < 20:
+            try:
+                marker = struct.unpack_from("<I", data, scan_pos)[0]
+
+                # Check if this looks like a valid section type
+                if 1 <= marker <= 15:
+                    section_type = marker
+
+                    # Read potential section info
+                    if scan_pos + 24 <= len(data):
+                        size1 = struct.unpack_from("<I", data, scan_pos + 4)[0]
+                        size2 = struct.unpack_from("<I", data, scan_pos + 8)[0]
+                        data_offset = struct.unpack_from("<I", data, scan_pos + 12)[0]
+
+                        # Validate sizes
+                        if size1 < len(data) and size2 < len(data) * 2:
+                            section_info = SectionInfo(
+                                section_type=section_type,
+                                section_name=SECTION_NAMES.get(
+                                    section_type, f"Unknown_{section_type}"
+                                ),
+                                compressed_size=size1,
+                                decompressed_size=size2,
+                                offset=scan_pos,
+                                data_offset=data_offset,
+                            )
+
+                            result.sections[section_type] = section_info
+                            found_sections += 1
+
+                scan_pos += 4
+
+            except Exception:
+                scan_pos += 4
+                continue
+
+        result.section_count = len(result.sections)
+
+        if found_sections == 0:
+            result.parsing_errors.append(
+                "No sections found via heuristic scanning"
+            )
 
     def read_section_data(
         self,
@@ -338,12 +535,57 @@ class SectionMapParser:
 
             if decompress and section_info.compression_type == 2:
                 try:
-                    data = zlib.decompress(data)
-                except zlib.error:
-                    # May not be zlib-compressed, try as-is
+                    data = decompress_section(
+                        data,
+                        section_info.decompressed_size,
+                        validate=False
+                    )
+                except DecompressionError:
+                    # Decompression failed, return raw data
                     pass
 
             return data
+
+        except Exception:
+            return None
+
+    def read_section_data_from_bytes(
+        self,
+        data: bytes,
+        section_info: SectionInfo,
+        decompress: bool = True
+    ) -> Optional[bytes]:
+        """
+        Read and optionally decompress section data from bytes.
+
+        Args:
+            data: Full file data
+            section_info: Section info from parse()
+            decompress: Whether to decompress data
+
+        Returns:
+            Section data bytes or None on error
+        """
+        try:
+            if section_info.data_offset + section_info.compressed_size > len(data):
+                return None
+
+            section_data = data[
+                section_info.data_offset:
+                section_info.data_offset + section_info.compressed_size
+            ]
+
+            if decompress and section_info.compression_type == 2:
+                try:
+                    section_data = decompress_section(
+                        section_data,
+                        section_info.decompressed_size,
+                        validate=False
+                    )
+                except DecompressionError:
+                    pass
+
+            return section_data
 
         except Exception:
             return None
@@ -353,3 +595,9 @@ def get_section_map(file_path: Path) -> SectionMapResult:
     """Convenience function to get section map from DWG file."""
     parser = SectionMapParser()
     return parser.parse(file_path)
+
+
+def get_section_map_from_bytes(data: bytes) -> SectionMapResult:
+    """Convenience function to get section map from bytes."""
+    parser = SectionMapParser()
+    return parser.parse_from_bytes(data)

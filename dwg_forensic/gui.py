@@ -38,7 +38,8 @@ class ForensicGUI:
         # State
         self.current_file: Path | None = None
         self.current_analysis = None
-        self.analyzer = ForensicAnalyzer()
+        self.progress_log = None  # Will be set after UI creation
+        self.analyzer = None  # Created per-analysis with callback
 
         # LLM State
         self.llm_enabled = tk.BooleanVar(value=False)
@@ -139,6 +140,14 @@ class ForensicGUI:
         notebook.add(json_frame, text="Raw JSON")
         self._create_json_tab(json_frame)
 
+        # Progress Log tab
+        progress_frame = ttk.Frame(notebook, padding=10)
+        notebook.add(progress_frame, text="Progress Log")
+        self._create_progress_tab(progress_frame)
+
+        # Store notebook reference for tab switching
+        self.notebook = notebook
+
     def _create_summary_tab(self, parent):
         """Create summary tab content."""
         # Risk assessment frame
@@ -194,6 +203,94 @@ class ForensicGUI:
             state=tk.DISABLED
         )
         self.json_text.pack(fill=tk.BOTH, expand=True)
+
+    def _create_progress_tab(self, parent):
+        """Create progress log tab content."""
+        # Header label
+        ttk.Label(
+            parent,
+            text="Analysis Progress Log",
+            font=("", 10, "bold")
+        ).pack(anchor=tk.W, pady=(0, 5))
+
+        # Progress log text widget
+        self.progress_log = scrolledtext.ScrolledText(
+            parent,
+            wrap=tk.WORD,
+            font=("Consolas", 9),
+            state=tk.DISABLED,
+            bg="#1e1e1e",
+            fg="#d4d4d4",
+            insertbackground="white"
+        )
+        self.progress_log.pack(fill=tk.BOTH, expand=True)
+
+        # Configure tags for colored output
+        self.progress_log.tag_config("step", foreground="#569cd6")
+        self.progress_log.tag_config("ok", foreground="#4ec9b0")
+        self.progress_log.tag_config("error", foreground="#f14c4c")
+        self.progress_log.tag_config("warn", foreground="#dcdcaa")
+        self.progress_log.tag_config("info", foreground="#9cdcfe")
+
+        # Clear button
+        ttk.Button(
+            parent,
+            text="Clear Log",
+            command=self._clear_progress_log
+        ).pack(anchor=tk.E, pady=(5, 0))
+
+    def _clear_progress_log(self):
+        """Clear the progress log."""
+        if self.progress_log:
+            self.progress_log.config(state=tk.NORMAL)
+            self.progress_log.delete(1.0, tk.END)
+            self.progress_log.config(state=tk.DISABLED)
+
+    def _log_progress(self, step: str, status: str, message: str):
+        """Log progress to the progress log widget (thread-safe)."""
+        def update():
+            if not self.progress_log:
+                return
+
+            self.progress_log.config(state=tk.NORMAL)
+
+            # Format the log entry
+            step_names = {
+                "file_info": "File Info",
+                "header": "DWG Header",
+                "crc": "CRC Validation",
+                "watermark": "TrustedDWG",
+                "fingerprint": "CAD Detection",
+                "timestamps": "Timestamps",
+                "ntfs": "NTFS Timestamps",
+                "sections": "Section Map",
+                "drawing_vars": "Drawing Vars",
+                "handles": "Handle Map",
+                "anomalies": "Anomalies",
+                "rules": "Tampering Rules",
+                "tampering": "Indicators",
+                "risk": "Risk Score",
+            }
+            step_name = step_names.get(step, step)
+
+            if status == "start":
+                self.progress_log.insert(tk.END, f"[....] {step_name}: ", "step")
+                self.progress_log.insert(tk.END, f"{message}\n", "info")
+            elif status == "complete":
+                self.progress_log.insert(tk.END, f"[ OK ] {step_name}: ", "ok")
+                self.progress_log.insert(tk.END, f"{message}\n", "info")
+            elif status == "error":
+                self.progress_log.insert(tk.END, f"[FAIL] {step_name}: ", "error")
+                self.progress_log.insert(tk.END, f"{message}\n", "error")
+            elif status == "skip":
+                self.progress_log.insert(tk.END, f"[SKIP] {step_name}: ", "warn")
+                self.progress_log.insert(tk.END, f"{message}\n", "warn")
+
+            self.progress_log.see(tk.END)
+            self.progress_log.config(state=tk.DISABLED)
+
+        # Schedule update on main thread
+        self.root.after(0, update)
 
     def _create_status_bar(self):
         """Create status bar."""
@@ -343,15 +440,28 @@ class ForensicGUI:
             return
 
         self.status_var.set("Analyzing...")
+
+        # Clear and show progress log
+        self._clear_progress_log()
+        self.notebook.select(3)  # Switch to Progress Log tab
         self.root.update()
+
+        # Log start
+        self._log_progress("analysis", "start", f"Starting analysis of {self.current_file.name}")
+
+        # Create analyzer with progress callback
+        analyzer = ForensicAnalyzer(progress_callback=self._log_progress)
 
         # Run analysis in background thread
         def analyze():
             try:
-                self.current_analysis = self.analyzer.analyze(self.current_file)
+                self.current_analysis = analyzer.analyze(self.current_file)
+                self._log_progress("analysis", "complete", "Analysis finished successfully")
                 self.root.after(0, self._display_results)
             except Exception as e:
                 error_msg = str(e)
+                # Log error to progress log
+                self._log_progress("analysis", "error", f"Analysis failed: {error_msg}")
                 self.root.after(0, lambda msg=error_msg: self._show_error(msg))
 
         thread = threading.Thread(target=analyze, daemon=True)

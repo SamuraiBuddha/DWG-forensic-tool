@@ -28,12 +28,26 @@ from dwg_forensic.parsers.ntfs import (
     NTFSTimestamps,
     get_ntfs_timestamps,
 )
+from dwg_forensic.parsers.compression import (
+    DWGDecompressor,
+    DecompressionError,
+    PageHeader,
+    decompress_section,
+    decompress_page,
+)
+from dwg_forensic.parsers.encryption import (
+    EncryptionError,
+    is_encrypted_header,
+    decrypt_header,
+    prepare_file_data,
+)
 from dwg_forensic.parsers.sections import (
     SectionType,
     SectionInfo,
     SectionMapResult,
     SectionMapParser,
     get_section_map,
+    get_section_map_from_bytes,
 )
 from dwg_forensic.parsers.drawing_vars import (
     DrawingTimestamp,
@@ -69,12 +83,24 @@ __all__ = [
     "NTFSForensicData",
     "NTFSTimestamps",
     "get_ntfs_timestamps",
+    # Compression (deep analysis)
+    "DWGDecompressor",
+    "DecompressionError",
+    "PageHeader",
+    "decompress_section",
+    "decompress_page",
+    # Encryption (deep analysis)
+    "EncryptionError",
+    "is_encrypted_header",
+    "decrypt_header",
+    "prepare_file_data",
     # Section map parsing (deep analysis)
     "SectionType",
     "SectionInfo",
     "SectionMapResult",
     "SectionMapParser",
     "get_section_map",
+    "get_section_map_from_bytes",
     # Drawing variables (deep analysis)
     "DrawingTimestamp",
     "DrawingGUID",

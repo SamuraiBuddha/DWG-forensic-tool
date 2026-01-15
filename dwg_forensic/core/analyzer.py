@@ -41,6 +41,7 @@ from dwg_forensic.parsers import (
     NTFSTimestampParser,
     NTFSForensicData,
     # Deep parsing modules for AC1018+ support
+    SectionType,
     SectionMapParser,
     SectionMapResult,
     DrawingVariablesParser,
@@ -784,10 +785,10 @@ class ForensicAnalyzer:
                 "success": not has_errors,
                 "section_count": len(sections_list),
                 "has_header_section": any(
-                    s.section_type.name == "HEADER" for s in sections_list
+                    s.section_type == SectionType.HEADER for s in sections_list
                 ),
                 "has_handles_section": any(
-                    s.section_type.name == "HANDLES" for s in sections_list
+                    s.section_type == SectionType.HANDLES for s in sections_list
                 ),
                 "error": section_map.parsing_errors[0] if section_map.parsing_errors else None,
                 "version_format": section_map.file_version,
@@ -798,13 +799,13 @@ class ForensicAnalyzer:
             context["drawing_vars"] = {
                 "tdcreate": {
                     "julian_day": drawing_vars.tdcreate.julian_day if drawing_vars.tdcreate else None,
-                    "fraction": drawing_vars.tdcreate.fraction if drawing_vars.tdcreate else None,
-                    "datetime": drawing_vars.tdcreate.datetime.isoformat() if drawing_vars.tdcreate and drawing_vars.tdcreate.datetime else None,
+                    "milliseconds": drawing_vars.tdcreate.milliseconds if drawing_vars.tdcreate else None,
+                    "datetime": drawing_vars.tdcreate.datetime_utc.isoformat() if drawing_vars.tdcreate and drawing_vars.tdcreate.datetime_utc else None,
                 } if drawing_vars.tdcreate else None,
                 "tdupdate": {
                     "julian_day": drawing_vars.tdupdate.julian_day if drawing_vars.tdupdate else None,
-                    "fraction": drawing_vars.tdupdate.fraction if drawing_vars.tdupdate else None,
-                    "datetime": drawing_vars.tdupdate.datetime.isoformat() if drawing_vars.tdupdate and drawing_vars.tdupdate.datetime else None,
+                    "milliseconds": drawing_vars.tdupdate.milliseconds if drawing_vars.tdupdate else None,
+                    "datetime": drawing_vars.tdupdate.datetime_utc.isoformat() if drawing_vars.tdupdate and drawing_vars.tdupdate.datetime_utc else None,
                 } if drawing_vars.tdupdate else None,
                 # Note: attribute names are fingerprintguid/versionguid (no underscore)
                 "fingerprint_guid": drawing_vars.fingerprintguid.guid_string if drawing_vars.fingerprintguid else None,

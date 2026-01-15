@@ -29,6 +29,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 class CADApplication(str, Enum):
     """Known CAD applications that produce DWG files."""
     AUTOCAD = "autocad"
+    AUTOCAD_CIVIL3D = "autocad_civil3d"
+    REVIT_EXPORT = "revit_export"
     LIBRECAD = "librecad"
     QCAD = "qcad"
     FREECAD = "freecad"
@@ -76,9 +78,14 @@ class CADFingerprinter:
 
     This is forensically significant because:
     1. Third-party CAD tools may not maintain Autodesk timestamp integrity
-    2. CRC = 0x00000000 indicates non-Autodesk origin (1 in 4.3 billion chance)
-    3. Missing TrustedDWG watermark (post-2007) indicates third-party origin
-    4. Application-specific artifacts reveal true authoring software
+    2. Application-specific artifacts reveal true authoring software
+    3. Header field patterns (Preview Addr, Summary Info) differ by application
+
+    IMPORTANT FINDINGS (2026-01-11):
+    - CRC = 0x00000000 is NOT a reliable indicator - genuine Autodesk products
+      (Civil 3D 2025, Revit 2024) also produce CRC=0
+    - TrustedDWG watermark is NOT present in Revit exports or Civil 3D files
+    - Embedded path strings and application markers are more reliable indicators
     """
 
     # ODA-based applications (use Open Design Alliance SDK)
@@ -109,22 +116,25 @@ class CADFingerprinter:
     def _load_signatures(self) -> None:
         """Load all known CAD application signatures."""
         # =================================================================
-        # CRC-BASED SIGNATURES (Most reliable for non-Autodesk detection)
+        # CRC-BASED SIGNATURES (LIMITED RELIABILITY - see notes)
         # =================================================================
 
-        # Zero CRC indicates non-Autodesk origin
-        # Autodesk applications ALWAYS calculate proper CRC32
+        # IMPORTANT: CRC=0 does NOT reliably indicate non-Autodesk origin!
+        # Testing with genuine Civil 3D 2025 and Revit 2024 exports shows they
+        # also produce CRC=0x00000000. This signature has been demoted to LOW
+        # confidence and should only be used in combination with other markers.
         self.signatures.append(CADSignature(
             application=CADApplication.UNKNOWN,
             pattern_type="crc",
             pattern=0x00000000,
-            description="Zero CRC32 - Non-Autodesk origin",
-            confidence=0.95,
+            description="Zero CRC32 - Inconclusive (see notes)",
+            confidence=0.20,  # LOW - not reliable alone
             forensic_note=(
-                "CRC32 = 0x00000000 is statistically improbable (1 in 4.3 billion). "
-                "This proves the file was NOT created by genuine AutoCAD, which always "
-                "calculates proper CRC checksums. Indicates LibreCAD, QCAD, or other "
-                "open-source CAD software that doesn't implement CRC calculation."
+                "NOTE: CRC32 = 0x00000000 was previously thought to indicate non-Autodesk "
+                "origin, but testing shows genuine Civil 3D 2025 and Revit 2024 exports "
+                "also have CRC=0. This marker should NOT be used alone for origin detection. "
+                "Use embedded path strings, application markers, and header field patterns "
+                "for more reliable fingerprinting."
             ),
         ))
 
@@ -373,6 +383,129 @@ class CADFingerprinter:
         ))
 
         # =================================================================
+        # LIBREDWG ANALYSIS-BASED SIGNATURES (discovered 2026-01-11)
+        # =================================================================
+        # These signatures were discovered by analyzing files with LibreDWG's
+        # dwgread tool and comparing forensic header variables.
+
+        # LibreDWG FINGERPRINTGUID contains "DEAD" - placeholder/test value
+        self.signatures.append(CADSignature(
+            application=CADApplication.LIBREDWG,
+            pattern_type="guid",
+            pattern="DEAD",  # FDEAD578 pattern in GUID
+            description="LibreDWG placeholder GUID containing 'DEAD'",
+            confidence=0.98,
+            forensic_note=(
+                "LibreDWG-created files contain 'DEAD' in the FINGERPRINTGUID "
+                "(e.g., FDEAD578-...). This is a placeholder/test value that clearly "
+                "identifies LibreDWG-created files. Genuine AutoCAD generates random GUIDs."
+            ),
+        ))
+
+        # =================================================================
+        # REVIT EXPORT SIGNATURES (discovered 2026-01-11)
+        # =================================================================
+        # Revit DWG exports have unique patterns in TDINDWG, HANDSEED, and class counts.
+
+        self.signatures.append(CADSignature(
+            application=CADApplication.REVIT_EXPORT,
+            pattern_type="tdindwg",
+            pattern="near_zero",  # TDINDWG < 2000 (< 0.03 minutes)
+            description="Near-zero TDINDWG editing time (Revit export signature)",
+            confidence=0.90,
+            forensic_note=(
+                "Revit exports have TDINDWG near-zero (~1000 = ~0.016 minutes). This indicates "
+                "the file was exported from Revit, not edited in AutoCAD. Genuine AutoCAD "
+                "files accumulate editing time during interactive use."
+            ),
+        ))
+
+        self.signatures.append(CADSignature(
+            application=CADApplication.REVIT_EXPORT,
+            pattern_type="handseed",
+            pattern=3,  # HANDSEED[1] = 3 (others use 2)
+            description="HANDSEED[1]=3 (Revit export handle allocation pattern)",
+            confidence=0.85,
+            forensic_note=(
+                "Revit exports have HANDSEED second element = 3, while other applications "
+                "(AutoCAD, Civil 3D, LibreDWG) use 2. This is a reliable Revit identifier."
+            ),
+        ))
+
+        self.signatures.append(CADSignature(
+            application=CADApplication.REVIT_EXPORT,
+            pattern_type="class_count",
+            pattern="very_low",  # <= 15 classes
+            description="Very low class count (Revit export pattern)",
+            confidence=0.80,
+            forensic_note=(
+                "Revit exports have very few classes (typically ~10), while native AutoCAD "
+                "files have 90-100+ classes and Civil 3D files have 600+ classes. This is "
+                "because Revit only exports basic DWG entities without AEC extensions."
+            ),
+        ))
+
+        # =================================================================
+        # CIVIL 3D SIGNATURES (discovered 2026-01-11)
+        # =================================================================
+
+        self.signatures.append(CADSignature(
+            application=CADApplication.AUTOCAD_CIVIL3D,
+            pattern_type="class_count",
+            pattern="very_high",  # >= 400 classes
+            description="Very high class count (Civil 3D/AEC pattern)",
+            confidence=0.85,
+            forensic_note=(
+                "Civil 3D and AEC applications have very high class counts (600+ classes) "
+                "due to specialized civil engineering object types. This indicates genuine "
+                "Autodesk AEC product origin."
+            ),
+        ))
+
+        self.signatures.append(CADSignature(
+            application=CADApplication.AUTOCAD_CIVIL3D,
+            pattern_type="string",
+            pattern="AeccDb",
+            description="Civil 3D AeccDb class prefix",
+            confidence=0.95,
+            forensic_note=(
+                "AeccDb prefix indicates Civil 3D-specific classes (AutoCAD Civil 3D Database). "
+                "Presence of these classes confirms genuine Civil 3D origin."
+            ),
+        ))
+
+        # =================================================================
+        # AUTODESK PATH SIGNATURES (Reliable for genuine Autodesk detection)
+        # =================================================================
+        # These embedded paths prove the file was created/edited by genuine
+        # Autodesk software. Found in AC1018 and earlier unencrypted files.
+
+        self.signatures.append(CADSignature(
+            application=CADApplication.AUTOCAD,
+            pattern_type="string",
+            pattern="\\Autodesk\\AutoCAD",
+            description="Embedded AutoCAD installation path",
+            confidence=0.95,
+            forensic_note=(
+                "Embedded path containing '\\Autodesk\\AutoCAD' proves the file was "
+                "created or last saved by genuine AutoCAD. This path is embedded in "
+                "plot style references and other file metadata."
+            ),
+        ))
+
+        self.signatures.append(CADSignature(
+            application=CADApplication.AUTOCAD,
+            pattern_type="string",
+            pattern="Plot Styles",
+            description="AutoCAD Plot Styles reference",
+            confidence=0.7,
+            forensic_note=(
+                "Reference to 'Plot Styles' directory indicates genuine AutoCAD. "
+                "Third-party tools typically don't reference Autodesk installation paths."
+            ),
+        ))
+
+        # =================================================================
         # ADVANCED SIGNATURES FROM RESEARCH
         # =================================================================
 
@@ -549,11 +682,18 @@ class CADFingerprinter:
         matching_signatures.extend(string_matches)
 
         # Check TrustedDWG status
+        # NOTE: Missing TrustedDWG does NOT necessarily indicate non-Autodesk origin
+        # Testing shows Revit exports and Civil 3D files also lack TrustedDWG watermarks
         if has_trusted_dwg is not None:
             evidence["has_trusted_dwg"] = has_trusted_dwg
-            if not has_trusted_dwg:
+            if has_trusted_dwg:
                 evidence["trusted_dwg_note"] = (
-                    "Missing TrustedDWG watermark indicates non-Autodesk origin"
+                    "TrustedDWG watermark present - confirms genuine AutoCAD origin"
+                )
+            else:
+                evidence["trusted_dwg_note"] = (
+                    "TrustedDWG watermark absent - this is INCONCLUSIVE. "
+                    "Genuine Revit exports and Civil 3D files also lack TrustedDWG."
                 )
 
         # Check metadata patterns
@@ -618,6 +758,117 @@ class CADFingerprinter:
                             break
 
         return matches
+
+    def detect_revit_export(self, file_path: Path) -> Dict[str, Any]:
+        """
+        Detect if file is a Revit DWG export based on header field patterns.
+
+        Revit exports have unique header signatures discovered through testing:
+        - Preview Address: 0x00000120 (others use 0x000001C0)
+        - Summary Info Address: 0x00000000 (others use 0x20000000)
+        - VBA Project Address: 0x00000000 (others use 0x00000001)
+
+        Args:
+            file_path: Path to the DWG file
+
+        Returns:
+            Dictionary with detection results
+        """
+        import struct
+
+        try:
+            with open(file_path, "rb") as f:
+                header = f.read(0x30)  # Read first 48 bytes
+        except Exception as e:
+            return {"error": str(e), "is_revit_export": False}
+
+        if len(header) < 0x26:
+            return {"error": "Header too short", "is_revit_export": False}
+
+        # Parse header fields
+        version = header[0:6].decode('ascii', errors='replace')
+        preview_addr = struct.unpack('<I', header[0x0D:0x11])[0]
+        summary_addr = struct.unpack('<I', header[0x1D:0x21])[0]
+        vba_addr = struct.unpack('<I', header[0x21:0x25])[0]
+
+        # Revit export signature
+        is_revit = (
+            preview_addr == 0x120 and
+            summary_addr == 0x00000000 and
+            vba_addr == 0x00000000
+        )
+
+        # Additional check: version should be AC1032 (Revit uses 2018+ format)
+        is_revit = is_revit and version.startswith("AC1032")
+
+        return {
+            "is_revit_export": is_revit,
+            "version": version,
+            "preview_address": f"0x{preview_addr:08X}",
+            "summary_info_address": f"0x{summary_addr:08X}",
+            "vba_project_address": f"0x{vba_addr:08X}",
+            "header_signature": {
+                "preview_is_revit_pattern": preview_addr == 0x120,
+                "summary_is_null": summary_addr == 0x00000000,
+                "vba_is_null": vba_addr == 0x00000000,
+            },
+            "forensic_note": (
+                "File has Revit DWG export header signature. Revit exports use "
+                "Preview Addr=0x120 and null Summary/VBA addresses, unlike "
+                "AutoCAD and other applications which use Preview=0x1C0."
+            ) if is_revit else None,
+        }
+
+    def detect_autocad_origin(self, file_path: Path) -> Dict[str, Any]:
+        """
+        Detect if file has genuine AutoCAD origin markers.
+
+        This method looks for embedded Autodesk installation paths which are
+        strong evidence of genuine AutoCAD origin (found in AC1018 files).
+
+        Args:
+            file_path: Path to the DWG file
+
+        Returns:
+            Dictionary with detection results
+        """
+        try:
+            with open(file_path, "rb") as f:
+                data = f.read()
+        except Exception as e:
+            return {"error": str(e), "has_autocad_markers": False}
+
+        markers = []
+
+        # Check for Autodesk path strings
+        if b"\\Autodesk\\AutoCAD" in data:
+            markers.append("Embedded AutoCAD installation path")
+
+        if b"Plot Styles" in data:
+            markers.append("AutoCAD Plot Styles reference")
+
+        if b"Autodesk" in data.lower():
+            count = data.lower().count(b"autodesk")
+            markers.append(f"'Autodesk' string appears {count} time(s)")
+
+        if b"autocad" in data.lower():
+            count = data.lower().count(b"autocad")
+            markers.append(f"'AutoCAD' string appears {count} time(s)")
+
+        has_markers = len(markers) > 0
+
+        return {
+            "has_autocad_markers": has_markers,
+            "markers_found": markers,
+            "confidence": 0.95 if "installation path" in str(markers) else (
+                0.7 if markers else 0.0
+            ),
+            "forensic_note": (
+                "File contains embedded Autodesk/AutoCAD markers which indicate "
+                "genuine Autodesk software origin. These paths are embedded in "
+                "plot style references and other file metadata."
+            ) if has_markers else None,
+        }
 
     def check_timestamp_anomalies(
         self, metadata: Dict[str, Any]
@@ -708,6 +959,150 @@ class CADFingerprinter:
             )
 
         return anomalies
+
+    def analyze_drawing_variables(
+        self, drawing_vars: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Analyze drawing variables extracted from LibreDWG for fingerprinting.
+
+        This method uses data from LibreDWG's dwgread tool to identify the
+        authoring application based on forensic header variables.
+
+        Args:
+            drawing_vars: Dictionary containing drawing header variables
+                         (FINGERPRINTGUID, TDINDWG, HANDSEED, etc.)
+
+        Returns:
+            Dictionary with fingerprinting results and forensic notes
+
+        Discovered patterns (2026-01-11):
+        - LibreDWG: FINGERPRINTGUID contains "DEAD" (e.g., FDEAD578-...)
+        - Revit: TDINDWG near-zero, HANDSEED[1]=3, very few classes
+        - Civil 3D: Very high class count (600+), AeccDb classes
+        """
+        results = {
+            "detected_signatures": [],
+            "likely_application": None,
+            "confidence": 0.0,
+            "forensic_notes": [],
+            "raw_values": {},
+        }
+
+        # =================================================================
+        # Check FINGERPRINTGUID for LibreDWG "DEAD" pattern
+        # =================================================================
+        fingerprint_guid = drawing_vars.get("FINGERPRINTGUID", "")
+        if fingerprint_guid:
+            results["raw_values"]["FINGERPRINTGUID"] = fingerprint_guid
+            if "DEAD" in fingerprint_guid.upper():
+                results["detected_signatures"].append("LIBREDWG_DEAD_GUID")
+                results["likely_application"] = CADApplication.LIBREDWG
+                results["confidence"] = 0.98
+                results["forensic_notes"].append(
+                    f"FINGERPRINTGUID '{fingerprint_guid}' contains 'DEAD' pattern - "
+                    "this is a LibreDWG placeholder value indicating the file was "
+                    "created by LibreDWG library."
+                )
+
+        # =================================================================
+        # Check TDINDWG for Revit export pattern (near-zero editing time)
+        # =================================================================
+        tdindwg = drawing_vars.get("TDINDWG")
+        if tdindwg is not None:
+            # TDINDWG is often [days, seconds] or just seconds
+            if isinstance(tdindwg, list) and len(tdindwg) >= 2:
+                edit_time = tdindwg[1]  # Seconds component
+            else:
+                edit_time = tdindwg
+
+            results["raw_values"]["TDINDWG"] = tdindwg
+
+            if isinstance(edit_time, (int, float)) and edit_time < 2000:
+                # Less than 2000 seconds (~33 minutes) is suspicious
+                # Revit exports have ~1000 (~16 seconds)
+                results["detected_signatures"].append("REVIT_NEAR_ZERO_TDINDWG")
+                if results["likely_application"] is None:
+                    results["likely_application"] = CADApplication.REVIT_EXPORT
+                    results["confidence"] = max(results["confidence"], 0.75)
+                results["forensic_notes"].append(
+                    f"TDINDWG={edit_time} (~{edit_time/60000:.3f} minutes) is extremely low. "
+                    "This suggests the file was exported/generated, not interactively edited. "
+                    "Revit exports typically have TDINDWG ~1000."
+                )
+
+        # =================================================================
+        # Check HANDSEED for Revit pattern (second element = 3)
+        # =================================================================
+        handseed = drawing_vars.get("HANDSEED")
+        if handseed is not None:
+            results["raw_values"]["HANDSEED"] = handseed
+            if isinstance(handseed, list) and len(handseed) >= 2:
+                if handseed[1] == 3:
+                    results["detected_signatures"].append("REVIT_HANDSEED_PATTERN")
+                    if results["likely_application"] is None:
+                        results["likely_application"] = CADApplication.REVIT_EXPORT
+                    results["confidence"] = max(results["confidence"], 0.85)
+                    results["forensic_notes"].append(
+                        f"HANDSEED[1]={handseed[1]} - Revit exports use 3, while AutoCAD "
+                        "and other applications typically use 2. This is a reliable Revit indicator."
+                    )
+                elif handseed[1] == 2:
+                    results["forensic_notes"].append(
+                        f"HANDSEED[1]={handseed[1]} - Standard value (AutoCAD, Civil 3D, LibreDWG)"
+                    )
+
+        # =================================================================
+        # Check class count for application fingerprinting
+        # =================================================================
+        class_count = drawing_vars.get("class_count")
+        if class_count is not None:
+            results["raw_values"]["class_count"] = class_count
+
+            if class_count <= 15:
+                results["detected_signatures"].append("REVIT_LOW_CLASS_COUNT")
+                if results["likely_application"] is None:
+                    results["likely_application"] = CADApplication.REVIT_EXPORT
+                results["confidence"] = max(results["confidence"], 0.70)
+                results["forensic_notes"].append(
+                    f"Class count={class_count} is very low. Revit exports typically have ~10 "
+                    "classes. Native AutoCAD has 90-100+, Civil 3D has 600+."
+                )
+            elif class_count >= 400:
+                results["detected_signatures"].append("CIVIL3D_HIGH_CLASS_COUNT")
+                if results["likely_application"] is None or results["likely_application"] == CADApplication.REVIT_EXPORT:
+                    results["likely_application"] = CADApplication.AUTOCAD_CIVIL3D
+                results["confidence"] = max(results["confidence"], 0.80)
+                results["forensic_notes"].append(
+                    f"Class count={class_count} indicates Civil 3D or AEC application "
+                    "with specialized civil engineering object types."
+                )
+            elif 50 <= class_count <= 200:
+                results["forensic_notes"].append(
+                    f"Class count={class_count} is typical for standard AutoCAD files."
+                )
+
+        # =================================================================
+        # Check object count to class count ratio
+        # =================================================================
+        object_count = drawing_vars.get("object_count")
+        if object_count is not None and class_count is not None and class_count > 0:
+            ratio = object_count / class_count
+            results["raw_values"]["object_count"] = object_count
+            results["raw_values"]["object_to_class_ratio"] = ratio
+
+            if ratio > 1000:
+                results["forensic_notes"].append(
+                    f"Object/class ratio={ratio:.0f} is very high. "
+                    "Revit exports have high ratios due to many objects using few classes."
+                )
+
+        # Set default if nothing detected
+        if results["likely_application"] is None:
+            results["likely_application"] = CADApplication.UNKNOWN
+            results["confidence"] = 0.3
+
+        return results
 
     def detect_oda_based(self, file_path: Path) -> Dict[str, Any]:
         """
