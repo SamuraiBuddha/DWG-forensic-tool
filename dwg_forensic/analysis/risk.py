@@ -19,7 +19,6 @@ from dwg_forensic.models import (
     RiskAssessment,
     HeaderAnalysis,
     CRCValidation,
-    TrustedDWGAnalysis,
     DWGMetadata,
     TamperingIndicator,
 )
@@ -52,7 +51,6 @@ class TamperingReport(BaseModel):
 
     # Evidence integrity
     crc_valid: Optional[bool] = None
-    watermark_valid: Optional[bool] = None
 
     # Forensic knowledge enrichment
     forensic_knowledge: Optional[Dict[str, Any]] = Field(
@@ -219,7 +217,6 @@ class RiskScorer:
         rule_failures: List[Dict[str, Any]],
         tampering_indicators: List[TamperingIndicator],
         crc_validation: Optional[CRCValidation],
-        trusted_dwg: Optional[TrustedDWGAnalysis],
     ) -> List[str]:
         """
         Generate human-readable risk factors.
@@ -229,7 +226,6 @@ class RiskScorer:
             rule_failures: List of failed tampering rules
             tampering_indicators: List of tampering indicators
             crc_validation: CRC validation results
-            trusted_dwg: TrustedDWG analysis results
 
         Returns:
             List of risk factor descriptions
@@ -242,15 +238,6 @@ class RiskScorer:
                 factors.append("[OK] Header CRC validation passed")
             else:
                 factors.append("[FAIL] Header CRC validation failed - file may be modified")
-
-        # Watermark status
-        if trusted_dwg:
-            if trusted_dwg.watermark_present and trusted_dwg.watermark_valid:
-                factors.append("[OK] Valid TrustedDWG watermark found")
-            elif trusted_dwg.watermark_present and not trusted_dwg.watermark_valid:
-                factors.append("[WARN] TrustedDWG watermark present but invalid")
-            else:
-                factors.append("[INFO] No TrustedDWG watermark found")
 
         # Anomaly summary
         if anomalies:
@@ -327,7 +314,6 @@ class RiskScorer:
         file_path: Path,
         header: HeaderAnalysis,
         crc_validation: Optional[CRCValidation],
-        trusted_dwg: Optional[TrustedDWGAnalysis],
         metadata: Optional[DWGMetadata],
         anomalies: List[Anomaly],
         rule_failures: List[Dict[str, Any]],
@@ -340,7 +326,6 @@ class RiskScorer:
             file_path: Path to the analyzed file
             header: Header analysis results
             crc_validation: CRC validation results
-            trusted_dwg: TrustedDWG analysis results
             metadata: DWG metadata
             anomalies: List of detected anomalies
             rule_failures: List of failed tampering rules
@@ -360,7 +345,7 @@ class RiskScorer:
 
         # Generate factors and recommendation
         factors = self.generate_factors(
-            anomalies, rule_failures, tampering_indicators, crc_validation, trusted_dwg
+            anomalies, rule_failures, tampering_indicators, crc_validation
         )
         recommendation = self.generate_recommendation(risk_level, score)
 
@@ -379,7 +364,4 @@ class RiskScorer:
             factors=factors,
             recommendation=recommendation,
             crc_valid=crc_validation.is_valid if crc_validation else None,
-            watermark_valid=(
-                trusted_dwg.watermark_valid if trusted_dwg and trusted_dwg.watermark_present else None
-            ),
         )

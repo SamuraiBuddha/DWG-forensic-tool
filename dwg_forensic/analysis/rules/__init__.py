@@ -7,7 +7,7 @@ All public APIs are re-exported here for convenience.
 Rule Organization:
 - models.py: Pydantic models (RuleSeverity, RuleStatus, TamperingRule, RuleResult)
 - engine.py: TamperingRuleEngine class
-- rules_basic.py: TAMPER-001 to TAMPER-012 (CRC, watermarks, basic timestamps)
+- rules_basic.py: TAMPER-001 to TAMPER-012 (CRC, basic timestamps)
 - rules_timestamp.py: TAMPER-013 to TAMPER-018 (Advanced timestamp manipulation)
 - rules_ntfs.py: TAMPER-019 to TAMPER-028 (NTFS cross-validation, SMOKING GUNS)
 - rules_fingerprint.py: TAMPER-029 to TAMPER-035 (CAD application fingerprinting)

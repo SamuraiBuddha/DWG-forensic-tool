@@ -84,7 +84,6 @@ class CADFingerprinter:
     IMPORTANT FINDINGS (2026-01-11):
     - CRC = 0x00000000 is NOT a reliable indicator - genuine Autodesk products
       (Civil 3D 2025, Revit 2024) also produce CRC=0
-    - TrustedDWG watermark is NOT present in Revit exports or Civil 3D files
     - Embedded path strings and application markers are more reliable indicators
     """
 
@@ -518,7 +517,7 @@ class CADFingerprinter:
             confidence=1.0,
             forensic_note=(
                 "BRICSYS APPID registration is definitive proof of BricsCAD origin. "
-                "BricsCAD is ODA-based and does not generate TrustedDWG watermarks."
+                "BricsCAD is ODA-based and may handle DWG metadata differently than AutoCAD."
             ),
         ))
 
@@ -628,7 +627,6 @@ class CADFingerprinter:
         self,
         file_path: Path,
         header_crc: Optional[Union[int, str]] = None,
-        has_trusted_dwg: Optional[bool] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> FingerprintResult:
         """
@@ -637,7 +635,6 @@ class CADFingerprinter:
         Args:
             file_path: Path to the DWG file
             header_crc: Pre-extracted header CRC value (int or hex string like "0x12345678")
-            has_trusted_dwg: Pre-determined TrustedDWG status
             metadata: Pre-extracted metadata dictionary
 
         Returns:
@@ -680,21 +677,6 @@ class CADFingerprinter:
         # Check string-based signatures
         string_matches = self._check_string_signatures(data)
         matching_signatures.extend(string_matches)
-
-        # Check TrustedDWG status
-        # NOTE: Missing TrustedDWG does NOT necessarily indicate non-Autodesk origin
-        # Testing shows Revit exports and Civil 3D files also lack TrustedDWG watermarks
-        if has_trusted_dwg is not None:
-            evidence["has_trusted_dwg"] = has_trusted_dwg
-            if has_trusted_dwg:
-                evidence["trusted_dwg_note"] = (
-                    "TrustedDWG watermark present - confirms genuine AutoCAD origin"
-                )
-            else:
-                evidence["trusted_dwg_note"] = (
-                    "TrustedDWG watermark absent - this is INCONCLUSIVE. "
-                    "Genuine Revit exports and Civil 3D files also lack TrustedDWG."
-                )
 
         # Check metadata patterns
         if metadata:
@@ -1170,9 +1152,8 @@ class CADFingerprinter:
             "indicators": oda_indicators,
             "detected_applications": list(set(detected_apps)),
             "forensic_significance": (
-                "ODA-based applications produce DWG files without TrustedDWG watermarks "
-                "and may not maintain Autodesk timestamp integrity. Files created by "
-                "these tools should be examined for timestamp manipulation."
+                "ODA-based applications may not maintain Autodesk timestamp integrity. "
+                "Files created by these tools should be examined for timestamp manipulation."
             ) if is_oda else None,
         }
 
@@ -1184,21 +1165,12 @@ class CADFingerprinter:
         """Determine most likely application from matching signatures."""
 
         if not signatures:
-            # No matches - could be AutoCAD or unknown
-            is_autodesk = evidence.get("has_trusted_dwg", False)
-            if is_autodesk:
-                return FingerprintResult(
-                    detected_application=CADApplication.AUTOCAD,
-                    confidence=0.9,
-                    is_autodesk=True,
-                    forensic_summary="Valid TrustedDWG watermark indicates genuine AutoCAD",
-                )
-            else:
-                return FingerprintResult(
-                    detected_application=CADApplication.UNKNOWN,
-                    confidence=0.3,
-                    forensic_summary="Unable to identify specific CAD application",
-                )
+            # No signature matches - unable to determine application
+            return FingerprintResult(
+                detected_application=CADApplication.UNKNOWN,
+                confidence=0.3,
+                forensic_summary="Unable to identify specific CAD application",
+            )
 
         # Count votes by application with confidence weighting
         votes: Dict[CADApplication, float] = {}
@@ -1291,7 +1263,6 @@ class CADFingerprinter:
 def fingerprint_dwg(
     file_path: Path,
     header_crc: Optional[int] = None,
-    has_trusted_dwg: Optional[bool] = None,
     metadata: Optional[Dict[str, Any]] = None,
 ) -> FingerprintResult:
     """
@@ -1300,7 +1271,6 @@ def fingerprint_dwg(
     Args:
         file_path: Path to the DWG file
         header_crc: Pre-extracted header CRC value
-        has_trusted_dwg: Pre-determined TrustedDWG status
         metadata: Pre-extracted metadata dictionary
 
     Returns:
@@ -1310,6 +1280,5 @@ def fingerprint_dwg(
     return fingerprinter.fingerprint(
         file_path=file_path,
         header_crc=header_crc,
-        has_trusted_dwg=has_trusted_dwg,
         metadata=metadata,
     )

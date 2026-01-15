@@ -54,8 +54,7 @@ class FingerprintRulesMixin:
                 "indicators": indicators,
                 "detected_applications": detected_apps,
                 "forensic_note": (
-                    "ODA-based applications do not generate TrustedDWG watermarks "
-                    "and may not maintain Autodesk timestamp integrity."
+                    "ODA-based applications may not maintain Autodesk timestamp integrity."
                 ),
             },
         )
@@ -99,7 +98,7 @@ class FingerprintRulesMixin:
                 "markers": bricscad_markers,
                 "forensic_note": (
                     "BricsCAD is an ODA-based CAD application by Bricsys. "
-                    "Files created by BricsCAD lack TrustedDWG watermarks."
+                    "Files created by BricsCAD may have different timestamp handling."
                 ),
             },
         )

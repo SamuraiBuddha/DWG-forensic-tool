@@ -16,7 +16,6 @@ from dwg_forensic.models import (
     RiskLevel,
     TamperingIndicator,
     TamperingIndicatorType,
-    TrustedDWGAnalysis,
 )
 
 
@@ -103,30 +102,6 @@ class TestCRCValidation:
             is_valid=False,
         )
         assert crc.is_valid is False
-
-
-class TestTrustedDWGAnalysis:
-    """Tests for TrustedDWGAnalysis model."""
-
-    def test_watermark_present(self):
-        """Test TrustedDWGAnalysis with watermark present."""
-        analysis = TrustedDWGAnalysis(
-            watermark_present=True,
-            watermark_text="Autodesk DWG...",
-            watermark_valid=True,
-            application_origin="AutoCAD 2024",
-            watermark_offset=0x200,
-        )
-        assert analysis.watermark_present is True
-        assert analysis.watermark_valid is True
-
-    def test_watermark_absent(self):
-        """Test TrustedDWGAnalysis with no watermark."""
-        analysis = TrustedDWGAnalysis(
-            watermark_present=False,
-            watermark_valid=False,
-        )
-        assert analysis.watermark_present is False
 
 
 class TestAnomaly:

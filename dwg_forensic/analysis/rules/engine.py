@@ -38,7 +38,7 @@ class TamperingRuleEngine(
 
     Implements all 40 built-in rules and supports custom YAML/JSON rules.
     Uses mixin classes for rule implementations organized by category:
-    - BasicRulesMixin: TAMPER-001 to TAMPER-012 (CRC, watermarks, basic timestamps)
+    - BasicRulesMixin: TAMPER-001 to TAMPER-012 (CRC, basic timestamps)
     - TimestampRulesMixin: TAMPER-013 to TAMPER-018 (Advanced timestamp manipulation)
     - NTFSRulesMixin: TAMPER-019 to TAMPER-028 (NTFS cross-validation)
     - FingerprintRulesMixin: TAMPER-029 to TAMPER-035 (CAD application fingerprinting)
@@ -70,22 +70,6 @@ class TamperingRuleEngine(
                 description="Section CRC checksum does not match calculated value",
                 evidence_strength=EvidenceStrength.DEFINITIVE,
                 is_smoking_gun=True,
-            ),
-            TamperingRule(
-                rule_id="TAMPER-003",
-                name="Missing TrustedDWG",
-                severity=RuleSeverity.INFO,  # Demoted from WARNING per user feedback
-                description="TrustedDWG watermark absent - NOT indicative of tampering",
-                evidence_strength=EvidenceStrength.INFORMATIONAL,
-                is_smoking_gun=False,
-            ),
-            TamperingRule(
-                rule_id="TAMPER-004",
-                name="Invalid TrustedDWG",
-                severity=RuleSeverity.WARNING,  # Demoted from CRITICAL
-                description="TrustedDWG watermark is present but malformed",
-                evidence_strength=EvidenceStrength.CIRCUMSTANTIAL,
-                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-005",
@@ -541,8 +525,6 @@ class TamperingRuleEngine(
             # Basic Rules (TAMPER-001 to TAMPER-012)
             "TAMPER-001": self._check_header_crc,
             "TAMPER-002": self._check_section_crc,
-            "TAMPER-003": self._check_missing_watermark,
-            "TAMPER-004": self._check_invalid_watermark,
             "TAMPER-005": self._check_timestamp_reversal,
             "TAMPER-006": self._check_future_timestamp,
             "TAMPER-007": self._check_edit_time,

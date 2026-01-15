@@ -18,7 +18,7 @@ from dwg_forensic.output.json_export import JSONExporter
 from dwg_forensic.output.pdf_report import generate_pdf_report
 from dwg_forensic.output.expert_witness import generate_expert_witness_document
 from dwg_forensic.output.timeline import generate_timeline
-from dwg_forensic.parsers import CRCValidator, HeaderParser, WatermarkDetector
+from dwg_forensic.parsers import CRCValidator, HeaderParser
 from dwg_forensic.utils.audit import AuditLogger, get_audit_logger
 from dwg_forensic.utils.exceptions import DWGForensicError, IntakeError, UnsupportedVersionError
 
@@ -51,7 +51,7 @@ def print_status(status: str, message: str) -> None:
 def main():
     """DWG Forensic Tool - Forensic analysis toolkit for AutoCAD DWG files.
 
-    Analyze DWG files for tampering detection, watermark verification,
+    Analyze DWG files for tampering detection, timestamp validation,
     and forensic documentation. Supports R18+ versions (AutoCAD 2010+).
     """
     pass
@@ -79,7 +79,6 @@ def _create_progress_callback(verbose: int):
         "file_info": "File Information",
         "header": "DWG Header",
         "crc": "CRC Validation",
-        "watermark": "TrustedDWG Watermark",
         "timestamps": "Embedded Timestamps",
         "ntfs": "NTFS Timestamps",
         "anomalies": "Anomaly Detection",
@@ -200,19 +199,6 @@ def _print_analysis_table(result, verbose: int) -> None:
     console.print(table)
     console.print()
 
-    # TrustedDWG
-    table = Table(title="TrustedDWG Watermark", show_header=True, header_style="bold")
-    table.add_column("Property", style="cyan")
-    table.add_column("Value")
-    wm_present = "[green][OK][/green]" if result.trusted_dwg.watermark_present else "[yellow][WARN][/yellow]"
-    wm_valid = "[green][OK][/green]" if result.trusted_dwg.watermark_valid else "[yellow][WARN][/yellow]"
-    table.add_row("Watermark Present", wm_present)
-    table.add_row("Watermark Valid", wm_valid)
-    if result.trusted_dwg.application_origin:
-        table.add_row("Application", result.trusted_dwg.application_origin)
-    console.print(table)
-    console.print()
-
     # Risk Assessment
     risk_colors = {
         "LOW": "green",
@@ -253,39 +239,6 @@ def validate_crc(filepath: str):
         console.print(f"  Calculated: {result.header_crc_calculated}")
 
         sys.exit(0 if result.is_valid else 1)
-
-    except DWGForensicError as e:
-        print_status("[ERROR]", str(e))
-        sys.exit(1)
-
-
-@main.command(name="check-watermark")
-@click.argument("filepath", type=click.Path(exists=True))
-def check_watermark(filepath: str):
-    """Check TrustedDWG watermark in a DWG file.
-
-    FILEPATH is the path to the DWG file to check.
-    """
-    file_path = Path(filepath)
-    console.print(f"[bold blue]Watermark Check:[/bold blue] {file_path.name}")
-
-    try:
-        detector = WatermarkDetector()
-        result = detector.detect(file_path)
-
-        if result.watermark_present:
-            if result.watermark_valid:
-                print_status("[OK]", "Valid TrustedDWG watermark found")
-            else:
-                print_status("[WARN]", "TrustedDWG watermark present but invalid")
-        else:
-            print_status("[WARN]", "No TrustedDWG watermark found")
-            console.print("  [dim]File may have been created or modified by third-party software[/dim]")
-
-        if result.application_origin:
-            console.print(f"  Application: {result.application_origin}")
-        if result.watermark_offset:
-            console.print(f"  Offset: 0x{result.watermark_offset:X}")
 
     except DWGForensicError as e:
         print_status("[ERROR]", str(e))
@@ -701,7 +654,7 @@ def _print_tampering_report(report, verbose: int) -> None:
     console.print(table)
     console.print()
 
-    # CRC and Watermark status
+    # CRC status
     table = Table(title="Integrity Checks", show_header=True, header_style="bold")
     table.add_column("Check", style="cyan")
     table.add_column("Status")
@@ -711,12 +664,6 @@ def _print_tampering_report(report, verbose: int) -> None:
         table.add_row("CRC Validation", crc_status)
     else:
         table.add_row("CRC Validation", "[dim]N/A[/dim]")
-
-    if report.watermark_valid is not None:
-        wm_status = "[green][OK][/green]" if report.watermark_valid else "[yellow][WARN][/yellow]"
-        table.add_row("Watermark Validation", wm_status)
-    else:
-        table.add_row("Watermark Validation", "[dim]Not present[/dim]")
 
     console.print(table)
     console.print()
@@ -953,7 +900,6 @@ def report(filepath: str, output: str, case_id: str, examiner: str,
         table.add_row("File Analyzed", result.file_info.filename)
         table.add_row("Risk Level", result.risk_assessment.overall_risk.value)
         table.add_row("CRC Valid", "[OK]" if result.crc_validation.is_valid else "[FAIL]")
-        table.add_row("Watermark", "[OK]" if result.trusted_dwg.watermark_valid else "[WARN]")
         table.add_row("Report Path", str(report_path))
         console.print(table)
 
@@ -1159,7 +1105,7 @@ def info():
         "[bold]Phase 1 - Forensic Analysis:[/bold]\n"
         "  [*] Header parsing and version detection\n"
         "  [*] CRC32 integrity validation\n"
-        "  [*] TrustedDWG watermark detection\n"
+        "  [*] CAD application fingerprinting\n"
         "  [*] Risk assessment and anomaly detection\n"
         "  [*] JSON export for reporting\n\n"
         "[bold]Phase 2 - Chain of Custody:[/bold]\n"

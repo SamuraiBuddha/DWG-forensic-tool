@@ -387,6 +387,11 @@ class ExpertWitnessGenerator:
             evidence_data = [
                 ["Evidence Item", "Value", "Status"],
                 [
+                    "Definitive Proof",
+                    "TAMPERING PROVEN" if analysis.has_definitive_proof else "No smoking guns",
+                    "[!!] PROVEN" if analysis.has_definitive_proof else "[OK] None found"
+                ],
+                [
                     "File Hash (SHA-256)",
                     analysis.file_info.sha256[:24] + "...",
                     "Calculated"
@@ -395,11 +400,6 @@ class ExpertWitnessGenerator:
                     "CRC Validation",
                     f"Stored: {analysis.crc_validation.header_crc_stored}",
                     "[OK] MATCH" if analysis.crc_validation.is_valid else "[FAIL] MISMATCH"
-                ],
-                [
-                    "TrustedDWG Watermark",
-                    analysis.trusted_dwg.application_origin or "Not detected",
-                    "[OK] Valid" if analysis.trusted_dwg.watermark_valid else "[WARN] Invalid/Absent"
                 ],
                 [
                     "DWG Version",
@@ -534,9 +534,11 @@ class ExpertWitnessGenerator:
             "<b>Version Support:</b> Full analysis is supported for DWG versions R18+ "
             "(AutoCAD 2010 and later). Earlier versions have limited analysis capabilities.",
 
-            "<b>TrustedDWG Detection:</b> TrustedDWG watermarks are only present in files "
-            "created by Autodesk applications since 2007. Absence of watermark does not "
-            "conclusively indicate non-Autodesk origin.",
+            "<b>TrustedDWG Watermark (NOT Evidence of Tampering):</b> TrustedDWG watermarks "
+            "are an Autodesk-proprietary feature. Many legitimate CAD applications (BricsCAD, "
+            "DraftSight, LibreCAD, NanoCAD, etc.) do not produce this watermark. The absence "
+            "or invalidity of this watermark is NOT evidence of tampering - it only indicates "
+            "the file was processed by non-Autodesk software, which is a normal workflow.",
 
             "<b>Timestamp Reliability:</b> Internal timestamps can be modified by "
             "applications. Timestamp analysis should be corroborated with external evidence.",
@@ -549,6 +551,10 @@ class ExpertWitnessGenerator:
 
             "<b>File Corruption:</b> Severely corrupted files may produce incomplete "
             "or inaccurate analysis results.",
+
+            "<b>Evidence Classification:</b> Only 'smoking gun' findings (mathematically "
+            "impossible conditions) constitute definitive proof of tampering. Other anomalies "
+            "are circumstantial and require expert interpretation in context.",
         ]
 
         for limitation in limitations:
@@ -574,6 +580,18 @@ class ExpertWitnessGenerator:
         # Generate opinion points based on analysis
         opinions = []
 
+        # SMOKING GUN OPINION - Most important, put first if definitive proof exists
+        if analysis.has_definitive_proof and analysis.smoking_gun_report:
+            smoking_gun_count = analysis.smoking_gun_report.get("smoking_gun_count", 0)
+            expert_summary = analysis.smoking_gun_report.get("expert_summary", "")
+            opinions.append(
+                f"<b>[!!] DEFINITIVE PROOF OF TAMPERING:</b> This analysis has identified "
+                f"{smoking_gun_count} mathematically impossible condition(s) that prove "
+                f"this file has been tampered with. These are not probabilistic assessments - "
+                f"they constitute court-admissible evidence of deliberate file manipulation. "
+                f"{expert_summary}"
+            )
+
         # CRC-based opinion
         if analysis.crc_validation.is_valid:
             opinions.append(
@@ -588,43 +606,37 @@ class ExpertWitnessGenerator:
                 "indicating tampering or corruption."
             )
 
-        # Watermark-based opinion
-        if analysis.trusted_dwg.watermark_present and analysis.trusted_dwg.watermark_valid:
+        # Risk-based opinion - Updated to reflect smoking gun vs circumstantial
+        if analysis.has_definitive_proof:
             opinions.append(
-                "<b>Application Origin:</b> A valid TrustedDWG watermark is present, "
-                "supporting the opinion that this file was created or last saved by "
-                "authorized Autodesk software."
+                "<b>Overall Assessment:</b> DEFINITIVE PROOF of tampering has been found. "
+                "The mathematically impossible conditions identified constitute conclusive "
+                "evidence that should be sufficient to challenge the authenticity of this file "
+                "in legal proceedings."
             )
-        elif not analysis.trusted_dwg.watermark_present:
-            opinions.append(
-                "<b>Application Origin:</b> No TrustedDWG watermark is present. This "
-                "indicates the file was created by non-Autodesk software or the watermark "
-                "was removed. Further investigation is warranted."
-            )
-
-        # Risk-based opinion
-        risk_opinions = {
-            RiskLevel.LOW: (
-                "<b>Overall Assessment:</b> The LOW risk score supports the opinion "
-                "that this file appears authentic and has not been tampered with."
-            ),
-            RiskLevel.MEDIUM: (
-                "<b>Overall Assessment:</b> The MEDIUM risk score indicates some anomalies "
-                "were detected. Additional verification is recommended before drawing "
-                "definitive conclusions."
-            ),
-            RiskLevel.HIGH: (
-                "<b>Overall Assessment:</b> The HIGH risk score indicates significant "
-                "integrity issues. The file may have been modified, and expert review "
-                "of the specific findings is recommended."
-            ),
-            RiskLevel.CRITICAL: (
-                "<b>Overall Assessment:</b> The CRITICAL risk score indicates severe "
-                "integrity failures. This file should not be relied upon without "
-                "extensive forensic investigation and corroborating evidence."
-            ),
-        }
-        opinions.append(risk_opinions.get(analysis.risk_assessment.overall_risk, ""))
+        else:
+            risk_opinions = {
+                RiskLevel.LOW: (
+                    "<b>Overall Assessment:</b> The LOW risk score supports the opinion "
+                    "that this file appears authentic. No definitive proof of tampering was found."
+                ),
+                RiskLevel.MEDIUM: (
+                    "<b>Overall Assessment:</b> The MEDIUM risk score indicates some anomalies "
+                    "were detected. However, no definitive proof of tampering (smoking guns) was found. "
+                    "Additional verification is recommended before drawing conclusions."
+                ),
+                RiskLevel.HIGH: (
+                    "<b>Overall Assessment:</b> The HIGH risk score indicates significant "
+                    "anomalies. Expert review of the specific findings is recommended to determine "
+                    "whether they constitute evidence of tampering in context."
+                ),
+                RiskLevel.CRITICAL: (
+                    "<b>Overall Assessment:</b> The CRITICAL risk score indicates severe "
+                    "integrity issues. However, the specific nature of each finding should be "
+                    "reviewed by an expert to distinguish definitive proof from circumstantial evidence."
+                ),
+            }
+            opinions.append(risk_opinions.get(analysis.risk_assessment.overall_risk, ""))
 
         for opinion in opinions:
             if opinion:

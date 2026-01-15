@@ -259,7 +259,6 @@ class ForensicGUI:
                 "file_info": "File Info",
                 "header": "DWG Header",
                 "crc": "CRC Validation",
-                "watermark": "TrustedDWG",
                 "fingerprint": "CAD Detection",
                 "timestamps": "Timestamps",
                 "ntfs": "NTFS Timestamps",
@@ -519,15 +518,6 @@ class ForensicGUI:
             f"Calculated: {analysis.crc_validation.header_crc_calculated}"
         ))
 
-        # Watermark
-        if analysis.trusted_dwg.watermark_present:
-            wm_status = "[OK]" if analysis.trusted_dwg.watermark_valid else "[WARN]"
-            wm_text = "Valid TrustedDWG watermark" if analysis.trusted_dwg.watermark_valid else "Invalid watermark"
-        else:
-            wm_status = "[WARN]"
-            wm_text = "No TrustedDWG watermark found"
-        self.findings_tree.insert("", tk.END, values=(wm_status, "TrustedDWG Watermark", wm_text))
-
         # Version
         self.findings_tree.insert("", tk.END, values=(
             "[OK]" if analysis.header_analysis.is_supported else "[WARN]",
@@ -594,15 +584,7 @@ class ForensicGUI:
             f"Stored CRC: {analysis.crc_validation.header_crc_stored}",
             f"Calculated CRC: {analysis.crc_validation.header_crc_calculated}",
             f"Valid: {'Yes' if analysis.crc_validation.is_valid else 'NO - POSSIBLE TAMPERING'}",
-            "",
-            "TRUSTEDDWG WATERMARK",
-            "-" * 40,
-            f"Present: {'Yes' if analysis.trusted_dwg.watermark_present else 'No'}",
-            f"Valid: {'Yes' if analysis.trusted_dwg.watermark_valid else 'No'}",
         ]
-
-        if analysis.trusted_dwg.watermark_text:
-            lines.append(f"Text: {analysis.trusted_dwg.watermark_text[:50]}...")
 
         lines.extend([
             "",

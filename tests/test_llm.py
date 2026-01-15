@@ -23,7 +23,6 @@ from dwg_forensic.models import (
     FileInfo,
     HeaderAnalysis,
     CRCValidation,
-    TrustedDWGAnalysis,
     RiskAssessment,
     RiskLevel,
     DWGMetadata,
@@ -513,12 +512,6 @@ def create_mock_analysis() -> ForensicAnalysis:
             header_crc_calculated="0x12345678",
             is_valid=True,
         ),
-        trusted_dwg=TrustedDWGAnalysis(
-            watermark_present=True,
-            watermark_valid=True,
-            watermark_text="Autodesk DWG",
-            application_origin="AutoCAD 2024",
-        ),
         risk_assessment=RiskAssessment(
             overall_risk=RiskLevel.LOW,
             factors=["File integrity verified"],
@@ -756,24 +749,6 @@ class TestForensicNarratorGenerateSectionAnalysis:
 
     @patch.object(OllamaClient, "is_available", return_value=True)
     @patch.object(OllamaClient, "generate")
-    def test_watermark_section_analysis(self, mock_generate, mock_is_available):
-        """Test watermark section analysis."""
-        mock_generate.return_value = OllamaResponse(
-            response="TrustedDWG watermark is present and valid.",
-            model="phi4",
-            success=True,
-        )
-
-        narrator = ForensicNarrator()
-        analysis = create_mock_analysis()
-
-        result = narrator.generate_section_analysis(analysis, "watermark")
-
-        assert result.success is True
-        assert "watermark" in result.narrative.lower()
-
-    @patch.object(OllamaClient, "is_available", return_value=True)
-    @patch.object(OllamaClient, "generate")
     def test_timestamps_section_analysis(self, mock_generate, mock_is_available):
         """Test timestamps section analysis."""
         mock_generate.return_value = OllamaResponse(
@@ -859,16 +834,6 @@ class TestForensicNarratorBuildPrompt:
 
         assert "0x12345678" in prompt
         assert "MATCH" in prompt
-
-    def test_prompt_contains_watermark_info(self):
-        """Test that prompt contains watermark information."""
-        narrator = ForensicNarrator()
-        analysis = create_mock_analysis()
-
-        prompt = narrator._build_full_analysis_prompt(analysis)
-
-        assert "Autodesk DWG" in prompt
-        assert "AutoCAD 2024" in prompt
 
     def test_prompt_with_metadata(self):
         """Test prompt with metadata present."""
@@ -964,7 +929,6 @@ class TestSystemPrompts:
     def test_forensic_expert_prompt_contains_dwg_knowledge(self):
         """Test that expert prompt contains DWG knowledge."""
         assert "CRC" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
-        assert "TrustedDWG" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
         assert "TDINDWG" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
         assert "TDCREATE" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
 
@@ -983,7 +947,6 @@ class TestSystemPrompts:
             "{version_string}",
             "{stored_crc}",
             "{calculated_crc}",
-            "{watermark_present}",
             "{risk_level}",
         ]
         for placeholder in placeholders:
@@ -1015,10 +978,6 @@ class TestEdgeCases:
                 header_crc_stored="0x0",
                 header_crc_calculated="0x0",
                 is_valid=True,
-            ),
-            trusted_dwg=TrustedDWGAnalysis(
-                watermark_present=False,
-                watermark_valid=False,
             ),
             risk_assessment=RiskAssessment(
                 overall_risk=RiskLevel.LOW,

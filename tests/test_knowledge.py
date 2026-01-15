@@ -77,12 +77,12 @@ class TestForensicKnowledgeModels:
             description="Modification before creation",
             severity="CRITICAL",
             forensic_significance="Impossible in normal files",
-            rule_ids=["TAMPER-003"],
+            rule_ids=["TAMPER-005"],
             techniques=["Timestamp Cross-Validation"],
         )
         assert indicator.indicator_id == "TIMESTAMP-001"
         assert indicator.severity == "CRITICAL"
-        assert "TAMPER-003" in indicator.rule_ids
+        assert "TAMPER-005" in indicator.rule_ids
 
     def test_forensic_knowledge_creation(self):
         """Test creating a ForensicKnowledge aggregate model."""
@@ -255,7 +255,7 @@ class TestKnowledgeEnricher:
         """Test enrichment uses fallback data when Neo4j unavailable."""
         enricher = KnowledgeEnricher(neo4j_client=None, use_fallback=True)
         knowledge = enricher.enrich_analysis(
-            failed_rule_ids=["TAMPER-001", "TAMPER-003"],
+            failed_rule_ids=["TAMPER-001", "TAMPER-005"],
             include_admissibility=True,
         )
         assert len(knowledge.standards) > 0
@@ -300,7 +300,7 @@ class TestKnowledgeEnricher:
         """Test enrichment with timestamp rules."""
         enricher = KnowledgeEnricher(neo4j_client=None, use_fallback=True)
         knowledge = enricher.enrich_analysis(
-            failed_rule_ids=["TAMPER-003", "TAMPER-004"],  # Timestamp rules
+            failed_rule_ids=["TAMPER-005", "TAMPER-006"],  # Timestamp rules
             include_admissibility=True,
         )
         technique_names = [t.name for t in knowledge.techniques]
@@ -386,8 +386,8 @@ class TestFallbackData:
         assert RULE_TO_INDICATOR_MAP["TAMPER-001"] == "INTEGRITY"
 
         # Check timestamp rules
-        assert "TAMPER-003" in RULE_TO_INDICATOR_MAP
-        assert RULE_TO_INDICATOR_MAP["TAMPER-003"] == "TIMESTAMP"
+        assert "TAMPER-005" in RULE_TO_INDICATOR_MAP
+        assert RULE_TO_INDICATOR_MAP["TAMPER-005"] == "TIMESTAMP"
 
         # Check NTFS rules
         assert "TAMPER-019" in RULE_TO_INDICATOR_MAP

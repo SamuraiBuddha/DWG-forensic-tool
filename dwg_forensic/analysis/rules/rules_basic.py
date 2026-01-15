@@ -1,7 +1,7 @@
 """
 DWG Forensic Tool - Basic Tampering Rules (TAMPER-001 to TAMPER-012)
 
-Core integrity checks covering CRC validation, TrustedDWG watermarks, and basic timestamp anomalies.
+Core integrity checks covering CRC validation and basic timestamp anomalies.
 """
 
 from datetime import datetime, timezone
@@ -91,90 +91,6 @@ class BasicRulesMixin:
             description=f"[FAIL] Section CRC mismatch: {names}",
             confidence=1.0,
             details={"failed_sections": failed},
-        )
-
-    def _check_missing_watermark(
-        self, rule: TamperingRule, context: Dict[str, Any]
-    ) -> RuleResult:
-        """TAMPER-003: Check for missing TrustedDWG watermark."""
-        watermark = context.get("watermark") or context.get("trusted_dwg", {})
-        header = context.get("header") or context.get("header_analysis", {})
-
-        version = header.get("version_string", "AC1032")
-        # TrustedDWG only expected for AC1021 (R2007) and later
-        requires_watermark = version >= "AC1021"
-
-        if not requires_watermark:
-            return RuleResult(
-                rule_id=rule.rule_id,
-                rule_name=rule.name,
-                status=RuleStatus.INCONCLUSIVE,
-                severity=rule.severity,
-                description=f"TrustedDWG not expected for {version}",
-                confidence=0.0,
-            )
-
-        # Support both key formats
-        is_present = watermark.get("present", watermark.get("watermark_present", False))
-
-        if is_present:
-            return RuleResult(
-                rule_id=rule.rule_id,
-                rule_name=rule.name,
-                status=RuleStatus.PASSED,
-                severity=rule.severity,
-                description="[OK] TrustedDWG watermark present",
-                confidence=1.0,
-            )
-
-        return RuleResult(
-            rule_id=rule.rule_id,
-            rule_name=rule.name,
-            status=RuleStatus.FAILED,
-            severity=rule.severity,
-            description=f"[WARN] TrustedDWG watermark missing for {version}",
-            expected="TrustedDWG watermark present",
-            found="No watermark found",
-            confidence=0.8,
-        )
-
-    def _check_invalid_watermark(
-        self, rule: TamperingRule, context: Dict[str, Any]
-    ) -> RuleResult:
-        """TAMPER-004: Check for invalid TrustedDWG watermark."""
-        watermark = context.get("watermark") or context.get("trusted_dwg", {})
-
-        is_present = watermark.get("present", watermark.get("watermark_present", False))
-        if not is_present:
-            return RuleResult(
-                rule_id=rule.rule_id,
-                rule_name=rule.name,
-                status=RuleStatus.INCONCLUSIVE,
-                severity=rule.severity,
-                description="No watermark to validate",
-                confidence=0.0,
-            )
-
-        is_valid = watermark.get("valid", watermark.get("watermark_valid", True))
-        if is_valid:
-            return RuleResult(
-                rule_id=rule.rule_id,
-                rule_name=rule.name,
-                status=RuleStatus.PASSED,
-                severity=rule.severity,
-                description="[OK] TrustedDWG watermark is valid",
-                confidence=1.0,
-            )
-
-        return RuleResult(
-            rule_id=rule.rule_id,
-            rule_name=rule.name,
-            status=RuleStatus.FAILED,
-            severity=rule.severity,
-            description="[FAIL] TrustedDWG watermark is malformed",
-            expected="Valid watermark signature",
-            found="Malformed or tampered watermark",
-            confidence=1.0,
         )
 
     def _check_timestamp_reversal(
@@ -397,34 +313,46 @@ class BasicRulesMixin:
     def _check_non_autodesk(
         self, rule: TamperingRule, context: Dict[str, Any]
     ) -> RuleResult:
-        """TAMPER-010: Check for non-Autodesk origin."""
-        watermark = context.get("watermark") or context.get("trusted_dwg", {})
-        origin = watermark.get("application_origin", "")
+        """TAMPER-010: Check for non-Autodesk origin using fingerprint data."""
+        fingerprint = context.get("application_fingerprint", {})
 
-        # Check is_autodesk flag if available
-        is_autodesk_flag = watermark.get("is_autodesk")
-        if is_autodesk_flag is not None:
-            if is_autodesk_flag:
-                return RuleResult(
-                    rule_id=rule.rule_id,
-                    rule_name=rule.name,
-                    status=RuleStatus.PASSED,
-                    severity=rule.severity,
-                    description="[OK] Autodesk application origin",
-                    confidence=1.0,
-                )
+        # Check is_autodesk flag from fingerprint
+        is_autodesk = fingerprint.get("is_autodesk", False)
+        detected_app = fingerprint.get("detected_application", "unknown")
 
-        autodesk_markers = ["AutoCAD", "Autodesk", "ACAD"]
-        is_autodesk = any(m.lower() in origin.lower() for m in autodesk_markers)
-
-        if is_autodesk or not origin:
+        if is_autodesk:
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
                 status=RuleStatus.PASSED,
                 severity=rule.severity,
                 description="[OK] Autodesk application origin",
-                confidence=1.0 if is_autodesk else 0.5,
+                confidence=1.0,
+            )
+
+        # Check for Autodesk markers in detected application name
+        autodesk_markers = ["autocad", "autodesk", "civil3d", "revit"]
+        is_autodesk_name = any(m in str(detected_app).lower() for m in autodesk_markers)
+
+        if is_autodesk_name:
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.PASSED,
+                severity=rule.severity,
+                description="[OK] Autodesk application origin",
+                confidence=0.9,
+            )
+
+        # Unknown or no fingerprint data - inconclusive
+        if detected_app == "unknown" or not fingerprint:
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.INCONCLUSIVE,
+                severity=rule.severity,
+                description="[INFO] Application origin could not be determined",
+                confidence=0.3,
             )
 
         return RuleResult(
@@ -432,9 +360,9 @@ class BasicRulesMixin:
             rule_name=rule.name,
             status=RuleStatus.FAILED,
             severity=rule.severity,
-            description=f"[INFO] Non-Autodesk origin: {origin}",
+            description=f"[INFO] Non-Autodesk origin: {detected_app}",
             expected="Autodesk application",
-            found=origin,
+            found=str(detected_app),
             confidence=0.9,
         )
 

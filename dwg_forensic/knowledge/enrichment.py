@@ -141,17 +141,6 @@ FALLBACK_TECHNIQUES: List[ForensicTechniqueInfo] = [
         peer_reviewed=True,
         standards_compliance=["NIST SP 800-86", "SWGDE Best Practices"],
     ),
-    ForensicTechniqueInfo(
-        name="TrustedDWG Watermark Analysis",
-        description=(
-            "Validates Autodesk TrustedDWG digital watermark to verify "
-            "file was created by genuine Autodesk software"
-        ),
-        reliability=ReliabilityLevel.HIGH,
-        error_rate=0.0,
-        peer_reviewed=True,
-        standards_compliance=["ISO/IEC 27037:2012"],
-    ),
 ]
 
 FALLBACK_INDICATORS: List[TamperingIndicatorInfo] = [
@@ -163,7 +152,7 @@ FALLBACK_INDICATORS: List[TamperingIndicatorInfo] = [
         forensic_significance=(
             "Impossible in normal file creation - indicates timestamp manipulation"
         ),
-        rule_ids=["TAMPER-003", "TAMPER-004"],
+        rule_ids=["TAMPER-005", "TAMPER-006"],
         techniques=["Timestamp Cross-Validation"],
         legal_cases=["Lorraine v. Markel"],
     ),
@@ -220,19 +209,6 @@ FALLBACK_INDICATORS: List[TamperingIndicatorInfo] = [
         techniques=["GUID Analysis"],
         legal_cases=[],
     ),
-    TamperingIndicatorInfo(
-        indicator_id="WATERMARK-001",
-        name="TrustedDWG Watermark Invalid",
-        description="TrustedDWG watermark present but fails validation",
-        severity="CRITICAL",
-        forensic_significance=(
-            "Watermark corruption indicates file was modified by non-Autodesk "
-            "software after creation"
-        ),
-        rule_ids=["TAMPER-005", "TAMPER-006"],
-        techniques=["TrustedDWG Watermark Analysis"],
-        legal_cases=["Daubert v. Merrell Dow"],
-    ),
 ]
 
 
@@ -241,13 +217,10 @@ RULE_TO_INDICATOR_MAP: Dict[str, str] = {
     # CRC rules
     "TAMPER-001": "INTEGRITY",
     "TAMPER-002": "INTEGRITY",
-    # Watermark rules
-    "TAMPER-005": "WATERMARK",
-    "TAMPER-006": "WATERMARK",
-    "TAMPER-007": "WATERMARK",
     # Basic timestamp rules
-    "TAMPER-003": "TIMESTAMP",
-    "TAMPER-004": "TIMESTAMP",
+    "TAMPER-005": "TIMESTAMP",
+    "TAMPER-006": "TIMESTAMP",
+    "TAMPER-007": "TIMESTAMP",
     "TAMPER-008": "TIMESTAMP",
     "TAMPER-009": "TIMESTAMP",
     "TAMPER-010": "TIMESTAMP",
@@ -475,8 +448,6 @@ class KnowledgeEnricher:
 
             if category == "INTEGRITY":
                 technique_names.add("CRC32 Validation")
-            elif category == "WATERMARK":
-                technique_names.add("TrustedDWG Watermark Analysis")
             elif category == "TIMESTAMP":
                 technique_names.add("Timestamp Cross-Validation")
             elif category.startswith("NTFS"):

@@ -128,24 +128,6 @@ class TestValidateCRCCommand:
         assert "[FAIL]" in result.output
 
 
-class TestCheckWatermarkCommand:
-    """Tests for check-watermark command."""
-
-    def test_check_watermark_present(self, runner, dwg_with_watermark):
-        """Test watermark check on file with watermark."""
-        result = runner.invoke(main, ["check-watermark", str(dwg_with_watermark)])
-        assert result.exit_code == 0
-        # Should find watermark
-        assert "[OK]" in result.output or "watermark" in result.output.lower()
-
-    def test_check_watermark_absent(self, runner, dwg_without_watermark):
-        """Test watermark check on file without watermark."""
-        result = runner.invoke(main, ["check-watermark", str(dwg_without_watermark)])
-        # Should indicate no watermark found (not an error, just a warning)
-        assert result.exit_code == 0
-        assert "[WARN]" in result.output or "No" in result.output
-
-
 class TestMetadataCommand:
     """Tests for metadata command."""
 
@@ -402,44 +384,6 @@ class TestValidateCRCExceptionHandling:
         with patch("dwg_forensic.cli.CRCValidator") as mock_validator:
             mock_validator.return_value.validate_header_crc.side_effect = InvalidDWGError("Test error")
             result = runner.invoke(main, ["validate-crc", str(test_file)])
-            assert result.exit_code == 1
-            assert "[ERROR]" in result.output
-
-
-class TestCheckWatermarkBranches:
-    """Tests for check-watermark branches."""
-
-    def test_check_watermark_present_but_invalid(self, runner, temp_dir):
-        """Test watermark present but invalid."""
-        from dwg_forensic.models import TrustedDWGAnalysis
-        from unittest.mock import patch
-
-        test_file = temp_dir / "test.dwg"
-        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
-
-        mock_result = TrustedDWGAnalysis(
-            watermark_present=True,
-            watermark_valid=False,
-            watermark_offset=0x50,
-        )
-
-        with patch("dwg_forensic.cli.WatermarkDetector") as mock_detector:
-            mock_detector.return_value.detect.return_value = mock_result
-            result = runner.invoke(main, ["check-watermark", str(test_file)])
-            assert result.exit_code == 0
-            assert "[WARN]" in result.output
-
-    def test_check_watermark_dwg_forensic_error(self, runner, temp_dir):
-        """Test DWGForensicError handling in check-watermark."""
-        from dwg_forensic.utils.exceptions import ParseError
-        from unittest.mock import patch
-
-        test_file = temp_dir / "test.dwg"
-        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
-
-        with patch("dwg_forensic.cli.WatermarkDetector") as mock_detector:
-            mock_detector.return_value.detect.side_effect = ParseError("Test error")
-            result = runner.invoke(main, ["check-watermark", str(test_file)])
             assert result.exit_code == 1
             assert "[ERROR]" in result.output
 
@@ -842,7 +786,6 @@ class TestTamperingReportPrinting:
             rule_failures=0,
             tampering_indicators=0,
             crc_valid=None,
-            watermark_valid=True,
             anomalies=[],
             failed_rules=[],
             factors=["[OK] No issues"],
@@ -853,36 +796,6 @@ class TestTamperingReportPrinting:
             result = runner.invoke(main, ["tampering", str(test_file)])
             assert result.exit_code == 0
             assert "N/A" in result.output
-
-    def test_tampering_report_watermark_none(self, runner, temp_dir):
-        """Test tampering report with watermark_valid=None."""
-        from dwg_forensic.analysis.risk import TamperingReport
-        from dwg_forensic.models import RiskLevel
-        from unittest.mock import patch
-
-        test_file = temp_dir / "tamper_wm.dwg"
-        test_file.write_bytes(b"AC1032" + b"\x00" * 200)
-
-        mock_report = TamperingReport(
-            file_path=str(test_file),
-            risk_level=RiskLevel.LOW,
-            risk_score=10,
-            confidence=0.9,
-            anomaly_count=0,
-            rule_failures=0,
-            tampering_indicators=0,
-            crc_valid=True,
-            watermark_valid=None,
-            anomalies=[],
-            failed_rules=[],
-            factors=[],
-            recommendation="File appears clean.",
-        )
-
-        with patch("dwg_forensic.cli.analyze_tampering", return_value=mock_report):
-            result = runner.invoke(main, ["tampering", str(test_file)])
-            assert result.exit_code == 0
-            assert "Not present" in result.output
 
     def test_tampering_report_with_failed_rules(self, runner, temp_dir):
         """Test tampering report with failed rules."""
@@ -902,15 +815,14 @@ class TestTamperingReportPrinting:
             rule_failures=2,
             tampering_indicators=1,
             crc_valid=False,
-            watermark_valid=False,
             anomalies=[],
             failed_rules=[
                 {"rule_id": "TAMPER-001", "severity": "CRITICAL", "message": "CRC mismatch detected"},
-                {"rule_id": "TAMPER-002", "severity": "WARNING", "message": "Watermark invalid"},
+                {"rule_id": "TAMPER-013", "severity": "WARNING", "message": "Timestamp anomaly"},
             ],
             factors=[
                 "[FAIL] CRC validation failed",
-                "[WARN] Watermark issues detected",
+                "[WARN] Timestamp issues detected",
                 "[CRITICAL] Multiple tampering indicators",
             ],
             recommendation="Evidence of modification.",
@@ -939,7 +851,6 @@ class TestTamperingReportPrinting:
             rule_failures=0,
             tampering_indicators=0,
             crc_valid=True,
-            watermark_valid=True,
             anomalies=[
                 Anomaly(
                     anomaly_type=AnomalyType.TIMESTAMP_ANOMALY,

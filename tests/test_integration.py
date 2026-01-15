@@ -442,13 +442,6 @@ class TestCLIIntegration:
         assert result.exit_code == 0
         assert "[OK]" in result.output
 
-        # Check watermark
-        result = runner.invoke(main, [
-            "check-watermark",
-            str(valid_dwg_ac1032),
-        ])
-        assert result.exit_code == 0
-
         # Generate report
         pdf_path = temp_dir / "full_report.pdf"
         result = runner.invoke(main, [

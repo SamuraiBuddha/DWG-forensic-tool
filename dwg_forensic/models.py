@@ -28,7 +28,6 @@ class AnomalyType(str, Enum):
     VERSION_MISMATCH = "VERSION_MISMATCH"
     TIMESTAMP_ANOMALY = "TIMESTAMP_ANOMALY"
     CRC_MISMATCH = "CRC_MISMATCH"
-    WATERMARK_INVALID = "WATERMARK_INVALID"
     SUSPICIOUS_EDIT_TIME = "SUSPICIOUS_EDIT_TIME"
     OTHER = "OTHER"
     # Advanced timestamp manipulation detection
@@ -47,7 +46,6 @@ class AnomalyType(str, Enum):
 class TamperingIndicatorType(str, Enum):
     """Types of tampering indicators detected in DWG files."""
     CRC_MODIFIED = "CRC_MODIFIED"
-    WATERMARK_REMOVED = "WATERMARK_REMOVED"
     TIMESTAMP_BACKDATED = "TIMESTAMP_BACKDATED"
     VERSION_INCONSISTENCY = "VERSION_INCONSISTENCY"
     SUSPICIOUS_PATTERN = "SUSPICIOUS_PATTERN"
@@ -111,21 +109,12 @@ class CRCValidation(BaseModel):
     )
 
 
-class TrustedDWGAnalysis(BaseModel):
-    """Analysis of TrustedDWG watermark and authentication."""
-    watermark_present: bool = Field(..., description="Whether a TrustedDWG watermark was found")
-    watermark_text: Optional[str] = Field(None, description="Text content of the watermark")
-    watermark_valid: bool = Field(..., description="Whether the watermark signature is valid")
-    application_origin: Optional[str] = Field(None, description="Originating application from watermark")
-    watermark_offset: Optional[int] = Field(None, description="Byte offset of watermark in file", ge=0)
-
-
 class ApplicationFingerprint(BaseModel):
     """Fingerprint of the CAD application that created/modified the DWG file.
 
-    Forensic significance: Identifying the authoring application is critical because
-    third-party CAD tools may not maintain Autodesk timestamp integrity, CRC values,
-    or TrustedDWG watermarks. This affects how tampering rules should be applied.
+    Forensic significance: Identifying the authoring application is informational only.
+    Third-party CAD tools (BricsCAD, DraftSight, LibreCAD, etc.) are legitimate and
+    commonly used. Application origin does NOT indicate tampering.
     """
     detected_application: str = Field(
         ...,
@@ -342,7 +331,6 @@ class ForensicAnalysis(BaseModel):
     """Complete forensic analysis results for a DWG file."""
     file_info: FileInfo = Field(..., description="Basic file information")
     header_analysis: HeaderAnalysis = Field(..., description="DWG header analysis results")
-    trusted_dwg: TrustedDWGAnalysis = Field(..., description="TrustedDWG watermark analysis")
     crc_validation: CRCValidation = Field(..., description="CRC validation results")
     metadata: Optional[DWGMetadata] = Field(None, description="File metadata")
     ntfs_analysis: Optional[NTFSTimestampAnalysis] = Field(
@@ -373,6 +361,20 @@ class ForensicAnalysis(BaseModel):
     llm_model_used: Optional[str] = Field(
         None,
         description="LLM model used for narrative generation (e.g., 'mistral', 'llama3')"
+    )
+    # Smoking Gun Analysis - DEFINITIVE proof filtering
+    smoking_gun_report: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Smoking gun report with ONLY definitive proof of tampering"
+    )
+    has_definitive_proof: bool = Field(
+        default=False,
+        description="True if mathematically impossible conditions prove tampering"
+    )
+    # LLM Forensic Reasoning - LLM evaluates evidence, not just generates narratives
+    llm_reasoning: Optional[Dict[str, Any]] = Field(
+        None,
+        description="LLM forensic reasoning about evidence significance (smoking guns vs red herrings)"
     )
     analysis_timestamp: datetime = Field(
         default_factory=datetime.now,

@@ -457,7 +457,6 @@ class PDFReportGenerator:
             ["Finding", "Status"],
             ["Authoring Application", cad_app_finding],
             ["File Integrity (CRC)", "[OK]" if analysis.crc_validation.is_valid else "[FAIL]"],
-            ["TrustedDWG Watermark", "[OK]" if analysis.trusted_dwg.watermark_valid else "[WARN]"],
             ["Anomalies Detected", str(len(analysis.anomalies))],
             ["Tampering Indicators", str(len(analysis.tampering_indicators))],
         ]
@@ -488,6 +487,21 @@ class PDFReportGenerator:
     def _generate_executive_summary_text(self, analysis: ForensicAnalysis) -> List[str]:
         """Generate executive summary paragraphs."""
         paragraphs = []
+
+        # CRITICAL: SMOKING GUN VERDICT FIRST (if definitive proof exists)
+        # This is the most important finding - put it at the very top
+        if analysis.has_definitive_proof:
+            smoking_gun_count = 0
+            if analysis.smoking_gun_report:
+                smoking_gun_count = analysis.smoking_gun_report.get("smoking_gun_count", 0)
+
+            paragraphs.append(
+                f"[!!] DEFINITIVE PROOF OF TAMPERING DETECTED: This forensic analysis has "
+                f"identified {smoking_gun_count} mathematically impossible condition(s) that prove "
+                f"this file has been tampered with. These findings constitute court-admissible "
+                f"evidence of deliberate file manipulation. See the Smoking Gun Findings section "
+                f"for detailed forensic reasoning."
+            )
 
         # Opening paragraph
         paragraphs.append(
@@ -530,25 +544,6 @@ class PDFReportGenerator:
                 "modified after it was originally saved, indicating tampering."
             )
         paragraphs.append(integrity_text)
-
-        # Watermark assessment
-        if analysis.trusted_dwg.watermark_present:
-            if analysis.trusted_dwg.watermark_valid:
-                watermark_text = (
-                    "The TrustedDWG watermark is present and valid, indicating the file was "
-                    "created or last saved by an authorized Autodesk application."
-                )
-            else:
-                watermark_text = (
-                    "A TrustedDWG watermark is present but is invalid or corrupted. "
-                    "This indicates the file was modified by unauthorized software."
-                )
-        else:
-            watermark_text = (
-                "No TrustedDWG watermark was found in this file. The file was "
-                "created by non-Autodesk software or the watermark was removed."
-            )
-        paragraphs.append(watermark_text)
 
         return paragraphs
 
@@ -593,26 +588,6 @@ class PDFReportGenerator:
         # CRC Narrative Explanation
         elements.append(Paragraph("What This Means:", styles['NarrativeHeader']))
         elements.extend(self._generate_crc_narrative(analysis))
-        elements.append(Spacer(1, 0.3 * inch))
-
-        # TrustedDWG Analysis
-        elements.append(Paragraph("<b>TrustedDWG Watermark</b>", styles['Heading3']))
-        watermark_data = [
-            ["Property", "Value"],
-            ["Watermark Present", "Yes" if analysis.trusted_dwg.watermark_present else "No"],
-            ["Watermark Valid", "Yes" if analysis.trusted_dwg.watermark_valid else "No"],
-            ["Watermark Text", analysis.trusted_dwg.watermark_text or "N/A"],
-            ["Application Origin", analysis.trusted_dwg.application_origin or "Unknown"],
-        ]
-
-        table = Table(watermark_data, colWidths=[2.5 * inch, 4 * inch])
-        table.setStyle(self._get_standard_table_style())
-        elements.append(table)
-        elements.append(Spacer(1, 0.15 * inch))
-
-        # TrustedDWG Narrative Explanation
-        elements.append(Paragraph("What This Means:", styles['NarrativeHeader']))
-        elements.extend(self._generate_watermark_narrative(analysis))
         elements.append(Spacer(1, 0.3 * inch))
 
         # Application Fingerprint Analysis
@@ -903,6 +878,69 @@ class PDFReportGenerator:
         elements = []
         styles = self.styles.styles
 
+        # SMOKING GUN FINDINGS - DEFINITIVE PROOF SECTION (if present)
+        # This section goes FIRST because it contains the most critical evidence
+        if analysis.has_definitive_proof and analysis.smoking_gun_report:
+            elements.append(Paragraph(
+                "[!!] SMOKING GUN FINDINGS - DEFINITIVE PROOF OF TAMPERING",
+                styles['SectionHeader']
+            ))
+            elements.append(Spacer(1, 0.2 * inch))
+
+            # Critical warning banner
+            elements.append(Paragraph(
+                "<b>CRITICAL:</b> The findings below represent MATHEMATICALLY IMPOSSIBLE conditions "
+                "that prove this file has been tampered with. These are not probabilistic assessments - "
+                "they are definitive proof suitable for legal proceedings.",
+                styles['CriticalNarrative']
+            ))
+            elements.append(Spacer(1, 0.2 * inch))
+
+            # List each smoking gun finding
+            smoking_guns = analysis.smoking_gun_report.get("smoking_guns", [])
+            for i, sg in enumerate(smoking_guns, 1):
+                elements.append(Paragraph(
+                    f"<b>Smoking Gun #{i}: {sg.get('rule_name', 'Unknown')}</b>",
+                    styles['Heading3']
+                ))
+                elements.append(Paragraph(
+                    f"<b>Finding:</b> {sg.get('description', 'N/A')}",
+                    styles['FindingExplanation']
+                ))
+                elements.append(Paragraph(
+                    f"<b>Forensic Reasoning:</b> {sg.get('forensic_reasoning', 'N/A')}",
+                    styles['CriticalNarrative']
+                ))
+                elements.append(Paragraph(
+                    f"<b>Legal Significance:</b> {sg.get('legal_significance', 'N/A')}",
+                    styles['Narrative']
+                ))
+                elements.append(Spacer(1, 0.15 * inch))
+
+            # Expert summary from smoking gun report
+            expert_summary = analysis.smoking_gun_report.get("expert_summary", "")
+            if expert_summary:
+                elements.append(Paragraph("<b>Expert Summary:</b>", styles['NarrativeHeader']))
+                elements.append(Paragraph(expert_summary, styles['CriticalNarrative']))
+                elements.append(Spacer(1, 0.15 * inch))
+
+            # Legal conclusion
+            legal_conclusion = analysis.smoking_gun_report.get("legal_conclusion", "")
+            if legal_conclusion:
+                elements.append(Paragraph("<b>Legal Conclusion:</b>", styles['NarrativeHeader']))
+                elements.append(Paragraph(legal_conclusion, styles['Narrative']))
+                elements.append(Spacer(1, 0.15 * inch))
+
+            # Recommendation
+            recommendation = analysis.smoking_gun_report.get("recommendation", "")
+            if recommendation:
+                elements.append(Paragraph("<b>Recommended Actions:</b>", styles['NarrativeHeader']))
+                elements.append(Paragraph(recommendation, styles['Narrative']))
+
+            elements.append(Spacer(1, 0.3 * inch))
+            elements.append(PageBreak())
+
+        # Standard findings section header
         elements.append(Paragraph("Anomalies and Tampering Indicators", styles['SectionHeader']))
         elements.append(Spacer(1, 0.2 * inch))
 
@@ -1266,78 +1304,6 @@ class PDFReportGenerator:
 
         return elements
 
-    def _generate_watermark_narrative(self, analysis: ForensicAnalysis) -> List:
-        """Generate plain-English explanation of TrustedDWG watermark results."""
-        elements = []
-        styles = self.styles.styles
-
-        # Use LLM narrator if available - comprehensive analysis
-        if self.narrator:
-            result = self.narrator.generate_section_analysis(analysis, "watermark")
-            if result.success:
-                # Sanitize LLM output for ReportLab compatibility
-                sanitized_narrative = sanitize_llm_output(result.narrative)
-                is_critical = analysis.trusted_dwg.watermark_present and not analysis.trusted_dwg.watermark_valid
-                style = styles['CriticalNarrative'] if is_critical else styles['Narrative']
-                elements.append(Paragraph(sanitized_narrative, style))
-                if result.generation_time_ms:
-                    elements.append(Paragraph(
-                        f"<i>[Analysis by AI Forensic Expert - Model: {result.model_used} - {result.generation_time_ms}ms]</i>",
-                        styles['Normal']
-                    ))
-                return elements
-
-        # Static fallback - Explain what TrustedDWG is - forensically accurate
-        watermark_intro = (
-            "<b>What is TrustedDWG?</b> Since 2007, Autodesk embeds a cryptographic digital "
-            "watermark in every DWG file saved by genuine AutoCAD and other Autodesk applications. "
-            "This watermark identifies which Autodesk application last saved the file. Unlike the "
-            "CRC (which any software could theoretically recalculate), the TrustedDWG watermark "
-            "uses proprietary Autodesk technology that third-party software cannot replicate."
-        )
-        elements.append(Paragraph(watermark_intro, styles['Narrative']))
-
-        # Explain what was found
-        if analysis.trusted_dwg.watermark_present and analysis.trusted_dwg.watermark_valid:
-            finding = (
-                f"<b>Finding:</b> A valid TrustedDWG watermark was found. "
-                f"Application identified: {analysis.trusted_dwg.application_origin or 'Autodesk application'}. "
-                "This confirms the file was last saved by genuine Autodesk software. However, this "
-                "only verifies the last save operation - it does not guarantee the file was never "
-                "modified by other software between saves."
-            )
-            elements.append(Paragraph(finding, styles['Narrative']))
-        elif analysis.trusted_dwg.watermark_present and not analysis.trusted_dwg.watermark_valid:
-            finding = (
-                "<b>[!] CRITICAL FINDING:</b> A TrustedDWG watermark is present but is INVALID or "
-                "corrupted. This means the file was originally saved by Autodesk software, but "
-                "something subsequently damaged the watermark. Possible causes: (1) The file was "
-                "modified by non-Autodesk software that partially overwrote the watermark region; "
-                "(2) The file was corrupted during transfer; (3) Deliberate tampering occurred. "
-                "This finding warrants further investigation."
-            )
-            elements.append(Paragraph(finding, styles['CriticalNarrative']))
-        else:
-            finding = (
-                "<b>Finding:</b> No TrustedDWG watermark was found in this file. "
-                "Possible explanations: (1) The file was created or last saved by non-Autodesk "
-                "CAD software (such as BricsCAD, DraftSight, or file converters); (2) The file "
-                "predates 2007 when TrustedDWG was introduced; (3) The watermark was deliberately "
-                "stripped to obscure the file's origin."
-            )
-            elements.append(Paragraph(finding, styles['Narrative']))
-
-            why_matters = (
-                "<b>Why This Matters:</b> The absence of a TrustedDWG watermark does not prove "
-                "tampering - many legitimate CAD applications do not produce this watermark. "
-                "However, if the file is claimed to have been created in AutoCAD 2007 or later, "
-                "the absence of this watermark contradicts that claim and warrants investigation "
-                "into the file's true origin."
-            )
-            elements.append(Paragraph(why_matters, styles['Narrative']))
-
-        return elements
-
     def _generate_fingerprint_narrative(self, analysis: ForensicAnalysis) -> List:
         """Generate plain-English explanation of application fingerprint results."""
         elements = []
@@ -1358,9 +1324,8 @@ class PDFReportGenerator:
             narrative = (
                 f"<b>Genuine Autodesk Software Detected:</b> This file was identified as being created "
                 f"or last saved by {app_name}, which is genuine Autodesk software. Detection confidence "
-                f"is {conf_pct}%. Files from Autodesk applications maintain proper TrustedDWG watermarks "
-                f"and internal timestamp structures. The tampering detection rules for Autodesk files "
-                f"apply fully to this file."
+                f"is {conf_pct}%. Files from Autodesk applications maintain proper internal timestamp "
+                f"structures. The tampering detection rules for Autodesk files apply fully to this file."
             )
             elements.append(Paragraph(narrative, styles['Narrative']))
         elif fp.is_oda_based:
@@ -1368,10 +1333,8 @@ class PDFReportGenerator:
                 f"<b>ODA SDK-Based Application Detected:</b> This file was identified as being created "
                 f"or last saved by {app_name} with {conf_pct}% confidence. This application uses the "
                 f"Open Design Alliance (ODA) SDK for DWG file handling. ODA-based applications can read "
-                f"and write DWG files, but they do NOT produce TrustedDWG watermarks (which are "
-                f"proprietary to Autodesk). Therefore, the absence of a TrustedDWG watermark is "
-                f"EXPECTED for this file and should NOT be considered evidence of tampering. Some "
-                f"internal timestamp fields may also differ from native AutoCAD behavior."
+                f"and write DWG files. Some internal timestamp fields may differ from native AutoCAD "
+                f"behavior, which is expected and not evidence of tampering."
             )
             elements.append(Paragraph(narrative, styles['Narrative']))
         else:
@@ -1379,8 +1342,8 @@ class PDFReportGenerator:
                 f"<b>Non-Autodesk Application Detected:</b> This file was identified as being created "
                 f"or last saved by {app_name} with {conf_pct}% confidence. This application is not "
                 f"genuine Autodesk software and may not maintain all DWG metadata fields in the same "
-                f"manner as AutoCAD. The absence of TrustedDWG watermarks or differences in timestamp "
-                f"handling may be expected behavior for this application rather than evidence of tampering."
+                f"manner as AutoCAD. Differences in timestamp handling may be expected behavior for "
+                f"this application rather than evidence of tampering."
             )
             elements.append(Paragraph(narrative, styles['Narrative']))
 
@@ -1408,16 +1371,13 @@ class PDFReportGenerator:
 
         # Static fallback - Build summary based on findings
         crc_status = "PASSED" if analysis.crc_validation.is_valid else "FAILED"
-        watermark_status = "VALID" if analysis.trusted_dwg.watermark_valid else (
-            "INVALID" if analysis.trusted_dwg.watermark_present else "ABSENT"
-        )
+        anomaly_count = len(analysis.anomalies)
 
-        if analysis.crc_validation.is_valid and analysis.trusted_dwg.watermark_valid:
+        if analysis.crc_validation.is_valid and anomaly_count == 0:
             summary = (
                 f"<b>Summary:</b> The technical analysis found no evidence of tampering at the "
-                f"binary level. The file's CRC checksum is valid and the TrustedDWG watermark "
-                f"confirms Autodesk origin. These two independent checks both support the "
-                f"conclusion that this file has not been tampered with."
+                f"binary level. The file's CRC checksum is valid and no anomalies were detected. "
+                f"This supports the conclusion that this file has not been tampered with."
             )
             elements.append(Paragraph(summary, styles['Narrative']))
         elif not analysis.crc_validation.is_valid:
@@ -1425,16 +1385,20 @@ class PDFReportGenerator:
                 f"<b>Summary:</b> The technical analysis found DEFINITIVE EVIDENCE OF TAMPERING. "
                 f"The CRC checksum FAILED validation, which mathematically proves the file was "
                 f"modified after it was saved. CRC validation is {crc_status}. "
-                f"TrustedDWG watermark is {watermark_status}. "
                 f"This file should not be relied upon as authentic evidence."
             )
             elements.append(Paragraph(summary, styles['CriticalNarrative']))
+        elif anomaly_count > 0:
+            summary = (
+                f"<b>Summary:</b> The technical analysis detected {anomaly_count} anomal{'y' if anomaly_count == 1 else 'ies'}. "
+                f"CRC validation is {crc_status}. While the CRC check passed, the detected anomalies "
+                f"warrant further investigation into the file's origin and chain of custody."
+            )
+            elements.append(Paragraph(summary, styles['Narrative']))
         else:
             summary = (
-                f"<b>Summary:</b> The technical analysis raised concerns about file authenticity. "
-                f"CRC validation is {crc_status}. TrustedDWG watermark is {watermark_status}. "
-                f"While the CRC check passed, the watermark status warrants further investigation "
-                f"into the file's origin and chain of custody."
+                f"<b>Summary:</b> The technical analysis completed successfully. "
+                f"CRC validation is {crc_status}. No significant findings were detected."
             )
             elements.append(Paragraph(summary, styles['Narrative']))
 
@@ -1497,15 +1461,6 @@ class PDFReportGenerator:
                 "value. The CRC in this file does NOT match the calculated value, which proves "
                 "the file was modified by something other than AutoCAD - such as a hex editor, "
                 "file corruption, or tampering software - after its last legitimate save."
-            )
-        elif "watermark" in indicator_type or "trusted" in indicator_type:
-            return (
-                "<b>Plain English:</b> Since 2007, genuine Autodesk applications embed a "
-                "cryptographic watermark in every DWG file they save. This watermark cannot be "
-                "forged by third-party software. This file either lacks the watermark entirely "
-                "(meaning it was created by non-Autodesk software) or has a corrupted watermark "
-                "(meaning it was modified after being saved by Autodesk software). The specific "
-                "watermark status should be examined to determine which scenario applies."
             )
         elif "impossible" in indicator_type or "exceed" in indicator_type:
             return (

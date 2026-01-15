@@ -66,15 +66,6 @@ class TestForensicAnalyzer:
         assert result.crc_validation is not None
         assert result.crc_validation.is_valid is True
 
-    def test_watermark_analysis_included(self, valid_dwg_ac1032):
-        """Test that watermark analysis is included."""
-        analyzer = ForensicAnalyzer()
-        result = analyzer.analyze(valid_dwg_ac1032)
-
-        assert result.trusted_dwg is not None
-        # The fixture includes a watermark
-        assert result.trusted_dwg.watermark_present is True
-
     def test_risk_assessment_included(self, valid_dwg_ac1032):
         """Test that risk assessment is included."""
         analyzer = ForensicAnalyzer()
@@ -225,33 +216,6 @@ class TestBuildMetadataFromTimestamps:
         assert metadata.modified_date is None
 
 
-class TestInvalidWatermarkAnomaly:
-    """Test detection of invalid watermark anomaly."""
-
-    def test_detect_watermark_present_but_invalid(self, temp_dir):
-        """Test anomaly detection for invalid watermark."""
-        analyzer = ForensicAnalyzer()
-
-        # Create a file with watermark marker but invalid content
-        dwg_path = temp_dir / "invalid_watermark.dwg"
-        # Build AC1032 header with partial watermark
-        header = bytearray(0x6C + 200)
-        header[0:6] = b"AC1032"
-        # Add watermark marker but with corrupted content
-        header[0x80:0x92] = b"Autodesk DWG"  # Marker only, not full valid text
-        # Add CRC at proper offset
-        import zlib
-        header_data = bytes(header[:0x68])
-        calculated_crc = zlib.crc32(header_data) & 0xFFFFFFFF
-        header[0x68:0x6C] = calculated_crc.to_bytes(4, 'little')
-        dwg_path.write_bytes(bytes(header))
-
-        result = analyzer.analyze(dwg_path)
-
-        # Should have either found or not found watermark issues
-        assert result.trusted_dwg is not None
-
-
 class TestAdvancedTamperingIndicators:
     """Test advanced tampering indicator detection."""
 
@@ -266,20 +230,16 @@ class TestAdvancedTamperingIndicators:
             tdindwg=5.0,  # 5 days editing time (impossible in 1 day)
         )
 
-        from dwg_forensic.models import CRCValidation, TrustedDWGAnalysis
+        from dwg_forensic.models import CRCValidation
 
         crc = CRCValidation(
             header_crc_stored="0x00000000",
             header_crc_calculated="0x00000000",
             is_valid=True,
         )
-        trusted = TrustedDWGAnalysis(
-            watermark_present=True,
-            watermark_valid=True,
-        )
 
         indicators = analyzer._detect_tampering(
-            crc, trusted, [], "AC1032", timestamp_data
+            crc, [], "AC1032", timestamp_data
         )
 
         # Should detect TDINDWG manipulation
@@ -299,20 +259,16 @@ class TestAdvancedTamperingIndicators:
             tducreate=59000.0 + 1.0,  # 24 hour offset (invalid)
         )
 
-        from dwg_forensic.models import CRCValidation, TrustedDWGAnalysis
+        from dwg_forensic.models import CRCValidation
 
         crc = CRCValidation(
             header_crc_stored="0x00000000",
             header_crc_calculated="0x00000000",
             is_valid=True,
         )
-        trusted = TrustedDWGAnalysis(
-            watermark_present=True,
-            watermark_valid=True,
-        )
 
         indicators = analyzer._detect_tampering(
-            crc, trusted, [], "AC1032", timestamp_data
+            crc, [], "AC1032", timestamp_data
         )
 
         # Should detect timezone manipulation
@@ -332,20 +288,16 @@ class TestAdvancedTamperingIndicators:
             educational_watermark=True,
         )
 
-        from dwg_forensic.models import CRCValidation, TrustedDWGAnalysis
+        from dwg_forensic.models import CRCValidation
 
         crc = CRCValidation(
             header_crc_stored="0x00000000",
             header_crc_calculated="0x00000000",
             is_valid=True,
         )
-        trusted = TrustedDWGAnalysis(
-            watermark_present=True,
-            watermark_valid=True,
-        )
 
         indicators = analyzer._detect_tampering(
-            crc, trusted, [], "AC1032", timestamp_data
+            crc, [], "AC1032", timestamp_data
         )
 
         # Should detect educational watermark
@@ -363,16 +315,12 @@ class TestRuleIdToIndicatorTypeMapping:
         """Test TAMPER-013 rule maps to TDINDWG_MANIPULATION."""
         analyzer = ForensicAnalyzer()
 
-        from dwg_forensic.models import CRCValidation, TrustedDWGAnalysis, RiskLevel
+        from dwg_forensic.models import CRCValidation, RiskLevel
 
         crc = CRCValidation(
             header_crc_stored="0x00000000",
             header_crc_calculated="0x00000000",
             is_valid=True,
-        )
-        trusted = TrustedDWGAnalysis(
-            watermark_present=True,
-            watermark_valid=True,
         )
 
         # Create a mock rule result for TAMPER-013
@@ -385,7 +333,7 @@ class TestRuleIdToIndicatorTypeMapping:
         mock_rule.found = None
 
         indicators = analyzer._detect_tampering(
-            crc, trusted, [mock_rule], "AC1032", None
+            crc, [mock_rule], "AC1032", None
         )
 
         tamper_indicators = [
@@ -398,16 +346,12 @@ class TestRuleIdToIndicatorTypeMapping:
         """Test TAMPER-014 rule maps to VERSION_ANACHRONISM."""
         analyzer = ForensicAnalyzer()
 
-        from dwg_forensic.models import CRCValidation, TrustedDWGAnalysis, RiskLevel
+        from dwg_forensic.models import CRCValidation, RiskLevel
 
         crc = CRCValidation(
             header_crc_stored="0x00000000",
             header_crc_calculated="0x00000000",
             is_valid=True,
-        )
-        trusted = TrustedDWGAnalysis(
-            watermark_present=True,
-            watermark_valid=True,
         )
 
         mock_rule = MagicMock()
@@ -419,7 +363,7 @@ class TestRuleIdToIndicatorTypeMapping:
         mock_rule.found = None
 
         indicators = analyzer._detect_tampering(
-            crc, trusted, [mock_rule], "AC1032", None
+            crc, [mock_rule], "AC1032", None
         )
 
         anachronism_indicators = [
@@ -432,16 +376,12 @@ class TestRuleIdToIndicatorTypeMapping:
         """Test TAMPER-015 rule maps to TIMEZONE_MANIPULATION."""
         analyzer = ForensicAnalyzer()
 
-        from dwg_forensic.models import CRCValidation, TrustedDWGAnalysis, RiskLevel
+        from dwg_forensic.models import CRCValidation, RiskLevel
 
         crc = CRCValidation(
             header_crc_stored="0x00000000",
             header_crc_calculated="0x00000000",
             is_valid=True,
-        )
-        trusted = TrustedDWGAnalysis(
-            watermark_present=True,
-            watermark_valid=True,
         )
 
         mock_rule = MagicMock()
@@ -453,7 +393,7 @@ class TestRuleIdToIndicatorTypeMapping:
         mock_rule.found = None
 
         indicators = analyzer._detect_tampering(
-            crc, trusted, [mock_rule], "AC1032", None
+            crc, [mock_rule], "AC1032", None
         )
 
         tz_indicators = [
@@ -466,16 +406,12 @@ class TestRuleIdToIndicatorTypeMapping:
         """Test TAMPER-016 rule maps to EDUCATIONAL_VERSION."""
         analyzer = ForensicAnalyzer()
 
-        from dwg_forensic.models import CRCValidation, TrustedDWGAnalysis, RiskLevel
+        from dwg_forensic.models import CRCValidation, RiskLevel
 
         crc = CRCValidation(
             header_crc_stored="0x00000000",
             header_crc_calculated="0x00000000",
             is_valid=True,
-        )
-        trusted = TrustedDWGAnalysis(
-            watermark_present=True,
-            watermark_valid=True,
         )
 
         mock_rule = MagicMock()
@@ -487,7 +423,7 @@ class TestRuleIdToIndicatorTypeMapping:
         mock_rule.found = None
 
         indicators = analyzer._detect_tampering(
-            crc, trusted, [mock_rule], "AC1032", None
+            crc, [mock_rule], "AC1032", None
         )
 
         edu_indicators = [

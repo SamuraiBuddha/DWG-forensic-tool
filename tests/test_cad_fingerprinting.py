@@ -475,18 +475,10 @@ class TestCADFingerprinterODADetection:
 class TestCADFingerprinterDetermineApplication:
     """Tests for application determination logic."""
 
-    def test_no_signatures_with_trusted_dwg(self):
-        """Test determination with valid TrustedDWG and no signatures."""
+    def test_no_signatures_returns_unknown(self):
+        """Test determination with no signatures returns UNKNOWN."""
         fp = CADFingerprinter()
-        evidence = {"has_trusted_dwg": True}
-        result = fp._determine_application([], evidence)
-        assert result.detected_application == CADApplication.AUTOCAD
-        assert result.is_autodesk is True
-
-    def test_no_signatures_without_trusted_dwg(self):
-        """Test determination without signatures or TrustedDWG."""
-        fp = CADFingerprinter()
-        evidence = {"has_trusted_dwg": False}
+        evidence = {}
         result = fp._determine_application([], evidence)
         assert result.detected_application == CADApplication.UNKNOWN
         assert result.is_autodesk is False
@@ -569,14 +561,6 @@ class TestCADFingerprinterFingerprint:
         fp = CADFingerprinter()
         result = fp.fingerprint(autocad_dwg, header_crc=0x00000000)
         assert result.raw_evidence["crc_is_zero"] is True
-
-    def test_fingerprint_with_trusted_dwg(self, autocad_dwg):
-        """Test fingerprinting with valid TrustedDWG."""
-        fp = CADFingerprinter()
-        result = fp.fingerprint(autocad_dwg, has_trusted_dwg=True)
-        # Clean file with TrustedDWG should be detected as AutoCAD
-        assert result.detected_application == CADApplication.AUTOCAD
-        assert result.is_autodesk is True
 
     def test_fingerprint_with_metadata(self, autocad_dwg):
         """Test fingerprinting with metadata."""
@@ -692,11 +676,9 @@ class TestFingerprintDWGFunction:
         result = fingerprint_dwg(
             file_path=sample_dwg,
             header_crc=0x12345678,
-            has_trusted_dwg=True,
             metadata={"author": "Test User"},
         )
         assert isinstance(result, FingerprintResult)
-        assert result.detected_application == CADApplication.AUTOCAD
 
     def test_function_with_path_object(self, sample_dwg):
         """Test function accepts Path object."""
@@ -732,7 +714,6 @@ class TestCADFingerprintingIntegration:
         result = fp.fingerprint(
             complex_dwg,
             header_crc=0x00000000,  # Zero CRC
-            has_trusted_dwg=False,
         )
 
         # Check results

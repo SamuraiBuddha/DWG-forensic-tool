@@ -460,72 +460,68 @@ class NTFSRulesMixin:
         risk of timestamp manipulation since these tools may not properly
         update or preserve timestamp integrity.
         """
-        watermark = context.get("watermark") or context.get("trusted_dwg", {})
+        fingerprint = context.get("application_fingerprint", {})
 
-        # Check for valid Autodesk watermark
-        is_present = watermark.get("present", watermark.get("watermark_present", False))
-        is_valid = watermark.get("valid", watermark.get("watermark_valid", True))
-        origin = watermark.get("application_origin", "")
+        # Check fingerprint data for application origin
+        is_autodesk = fingerprint.get("is_autodesk", False)
+        is_oda_based = fingerprint.get("is_oda_based", False)
+        detected_app = str(fingerprint.get("detected_application", "unknown"))
 
         # Known third-party applications
         third_party_markers = [
-            "BricsCAD", "DraftSight", "LibreCAD", "ZWCAD", "GstarCAD",
-            "progeCAD", "IntelliCAD", "CorelCAD", "TurboCAD", "NanoCAD",
-            "Open Design", "ODA", "LibreDWG", "DWGdirect"
+            "bricscad", "draftsight", "librecad", "zwcad", "gstarcad",
+            "progecad", "intellicad", "corelcad", "turbocad", "nanocad",
+            "oda_sdk", "libredwg", "freecad", "qcad"
         ]
 
         detected_tool = None
+        detected_app_lower = detected_app.lower()
         for marker in third_party_markers:
-            if marker.lower() in origin.lower():
-                detected_tool = marker
+            if marker in detected_app_lower:
+                detected_tool = detected_app
                 break
 
-        # If valid Autodesk watermark present, pass
-        if is_present and is_valid:
+        # If Autodesk origin confirmed, pass
+        if is_autodesk:
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
                 status=RuleStatus.PASSED,
                 severity=rule.severity,
-                description="[OK] File has valid Autodesk TrustedDWG watermark",
+                description="[OK] File created by Autodesk application",
                 confidence=1.0,
             )
 
-        if detected_tool:
+        if detected_tool or is_oda_based:
+            tool_name = detected_tool or "ODA-based application"
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
                 status=RuleStatus.FAILED,
                 severity=rule.severity,
-                description=f"[INFO] Third-party tool detected: {detected_tool}",
-                found=f"Application origin: {origin}",
+                description=f"[INFO] Third-party tool detected: {tool_name}",
+                found=f"Detected application: {detected_app}",
                 confidence=0.8,
                 details={
-                    "detected_tool": detected_tool,
+                    "detected_tool": tool_name,
+                    "is_oda_based": is_oda_based,
                     "forensic_note": (
-                        f"{detected_tool} is a third-party CAD application. "
-                        "Third-party tools do not preserve Autodesk timestamp integrity "
+                        f"{tool_name} is a third-party CAD application. "
+                        "Third-party tools may not preserve Autodesk timestamp integrity "
                         "and can be used to manipulate file metadata."
                     ),
                 },
             )
 
-        # No watermark and no detected third-party tool
-        if not is_present:
+        # Unknown origin - inconclusive
+        if detected_app == "unknown":
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
-                status=RuleStatus.FAILED,
+                status=RuleStatus.INCONCLUSIVE,
                 severity=rule.severity,
-                description="[INFO] No TrustedDWG watermark - third-party modification detected",
-                confidence=0.6,
-                details={
-                    "forensic_note": (
-                        "The absence of an Autodesk TrustedDWG watermark confirms "
-                        "this file was created or modified by non-Autodesk software, "
-                        "which significantly increases the risk of timestamp manipulation."
-                    ),
-                },
+                description="[INFO] Application origin could not be determined",
+                confidence=0.5,
             )
 
         return RuleResult(

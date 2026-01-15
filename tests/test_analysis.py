@@ -27,7 +27,6 @@ from dwg_forensic.models import (
     RiskLevel,
     HeaderAnalysis,
     CRCValidation,
-    TrustedDWGAnalysis,
     DWGMetadata,
     TamperingIndicator,
     TamperingIndicatorType,
@@ -81,30 +80,6 @@ def invalid_crc():
         header_crc_stored="0xABCD1234",
         header_crc_calculated="0xDEADBEEF",
         is_valid=False,
-    )
-
-
-@pytest.fixture
-def valid_watermark():
-    """Create a valid TrustedDWGAnalysis object."""
-    return TrustedDWGAnalysis(
-        watermark_present=True,
-        watermark_valid=True,
-        watermark_text="Autodesk DWG",
-        watermark_offset=0x100,
-        is_autodesk_generated=True,
-        application_origin="AutoCAD 2018",
-    )
-
-
-@pytest.fixture
-def missing_watermark():
-    """Create a TrustedDWGAnalysis with missing watermark."""
-    return TrustedDWGAnalysis(
-        watermark_present=False,
-        watermark_valid=False,
-        watermark_text=None,
-        is_autodesk_generated=False,
     )
 
 
@@ -193,20 +168,25 @@ class TestTamperingRuleEngine:
     """Test TamperingRuleEngine functionality."""
 
     def test_init_loads_builtin_rules(self):
-        """Test that engine loads 40 built-in rules (12 original + 6 advanced + 10 NTFS + 7 CAD fingerprinting + 5 deep parsing)."""
+        """Test that engine loads 38 built-in rules (10 basic + 6 advanced + 10 NTFS + 7 CAD fingerprinting + 5 deep parsing)."""
         engine = TamperingRuleEngine()
         rules = engine.get_builtin_rules()
-        assert len(rules) == 40
+        assert len(rules) == 38
 
     def test_builtin_rule_ids(self):
-        """Test that all 40 TAMPER rules exist."""
+        """Test that all 38 TAMPER rules exist (excludes TAMPER-003 and TAMPER-004)."""
         engine = TamperingRuleEngine()
         rules = engine.get_builtin_rules()
         rule_ids = [r.rule_id for r in rules]
 
+        # TAMPER-003 and TAMPER-004 were removed (TrustedDWG watermark rules)
+        excluded_rules = {"TAMPER-003", "TAMPER-004"}
         for i in range(1, 41):
             expected_id = f"TAMPER-{i:03d}"
-            assert expected_id in rule_ids, f"Missing rule {expected_id}"
+            if expected_id in excluded_rules:
+                assert expected_id not in rule_ids, f"Rule {expected_id} should be removed"
+            else:
+                assert expected_id in rule_ids, f"Missing rule {expected_id}"
 
     def test_evaluate_header_crc_valid(self, valid_crc):
         """Test TAMPER-001 passes with valid CRC."""
@@ -236,34 +216,11 @@ class TestTamperingRuleEngine:
         crc_result = next(r for r in results if r.rule_id == "TAMPER-001")
         assert crc_result.status == RuleStatus.FAILED
 
-    def test_evaluate_missing_watermark(self):
-        """Test TAMPER-003 fails with missing watermark."""
-        engine = TamperingRuleEngine()
-        context = {
-            "watermark": {"present": False, "valid": False},
-            "header": {"version_string": "AC1032"},
-        }
-        results = engine.evaluate_all(context)
-        wm_result = next(r for r in results if r.rule_id == "TAMPER-003")
-        assert wm_result.status == RuleStatus.FAILED
-
-    def test_evaluate_valid_watermark(self):
-        """Test TAMPER-003 passes with valid watermark."""
-        engine = TamperingRuleEngine()
-        context = {
-            "watermark": {"present": True, "valid": True},
-            "header": {"version_string": "AC1032"},
-        }
-        results = engine.evaluate_all(context)
-        wm_result = next(r for r in results if r.rule_id == "TAMPER-003")
-        assert wm_result.status == RuleStatus.PASSED
-
     def test_get_failed_rules(self):
         """Test get_failed_rules returns only failed rules."""
         engine = TamperingRuleEngine()
         context = {
             "crc": {"is_valid": False},
-            "watermark": {"present": True, "valid": True},
             "header": {"version_string": "AC1032"},
         }
         results = engine.evaluate_all(context)
@@ -289,8 +246,8 @@ rules:
         engine = TamperingRuleEngine()
         engine.load_rules(rules_file)
 
-        # Should have 41 rules now (40 built-in + 1 custom)
-        assert len(engine.rules) == 41
+        # Should have 39 rules now (38 built-in + 1 custom)
+        assert len(engine.rules) == 39
 
 
 # ============================================================================
@@ -345,7 +302,7 @@ class TestRiskScorer:
         scorer = RiskScorer()
         assert scorer.score_to_risk_level(10) == RiskLevel.CRITICAL
 
-    def test_generate_factors_with_valid_data(self, valid_crc, valid_watermark):
+    def test_generate_factors_with_valid_data(self, valid_crc):
         """Test factor generation with valid data."""
         scorer = RiskScorer()
         factors = scorer.generate_factors(
@@ -353,13 +310,12 @@ class TestRiskScorer:
             rule_failures=[],
             tampering_indicators=[],
             crc_validation=valid_crc,
-            trusted_dwg=valid_watermark,
         )
 
         # Should contain OK status markers
         assert any("[OK]" in f for f in factors)
 
-    def test_generate_factors_with_failures(self, invalid_crc, missing_watermark):
+    def test_generate_factors_with_failures(self, invalid_crc):
         """Test factor generation with failures."""
         scorer = RiskScorer()
         factors = scorer.generate_factors(
@@ -367,7 +323,6 @@ class TestRiskScorer:
             rule_failures=[{"rule_id": "TAMPER-001", "severity": "CRITICAL"}],
             tampering_indicators=[],
             crc_validation=invalid_crc,
-            trusted_dwg=missing_watermark,
         )
 
         # Should contain failure indicators
@@ -449,8 +404,8 @@ class TestRiskScorer:
                 details={},
             ),
             Anomaly(
-                anomaly_type=AnomalyType.WATERMARK_INVALID,
-                description="Watermark invalid",
+                anomaly_type=AnomalyType.TIMESTAMP_ANOMALY,
+                description="Timestamp anomaly",
                 severity=RiskLevel.CRITICAL,
                 details={},
             ),
@@ -461,7 +416,6 @@ class TestRiskScorer:
             rule_failures=[],
             tampering_indicators=[],
             crc_validation=None,
-            trusted_dwg=None,
         )
 
         # Should have CRITICAL factor
@@ -476,7 +430,6 @@ class TestRiskScorer:
             rule_failures=[],
             tampering_indicators=[],
             crc_validation=None,
-            trusted_dwg=None,
         )
 
         # Should have "[OK] No significant issues detected"
@@ -490,7 +443,7 @@ class TestRiskScorer:
 class TestPhase3Integration:
     """Integration tests for Phase 3 modules working together."""
 
-    def test_full_tampering_analysis_flow(self, valid_header, valid_crc, valid_watermark, temp_dwg_file):
+    def test_full_tampering_analysis_flow(self, valid_header, valid_crc, temp_dwg_file):
         """Test complete tampering analysis workflow."""
         # Initialize components
         detector = AnomalyDetector()
@@ -503,8 +456,6 @@ class TestPhase3Integration:
         all_anomalies = version_anomalies + structural_anomalies
 
         # Evaluate rules
-        # Derive is_autodesk from watermark validity (valid watermark = Autodesk origin)
-        is_autodesk = valid_watermark.watermark_present and valid_watermark.watermark_valid
         context = {
             "crc": {
                 "is_valid": valid_crc.is_valid,
@@ -512,9 +463,9 @@ class TestPhase3Integration:
                 "header_crc_calculated": valid_crc.header_crc_calculated,
             },
             "watermark": {
-                "present": valid_watermark.watermark_present,
-                "valid": valid_watermark.watermark_valid,
-                "is_autodesk": is_autodesk,
+                "present": True,
+                "valid": True,
+                "is_autodesk": True,
             },
             "header": {
                 "version_string": valid_header.version_string,
@@ -554,13 +505,13 @@ class TestPhase3Integration:
         # Valid file should have low risk
         assert risk_level in [RiskLevel.LOW, RiskLevel.MEDIUM]
 
-    def test_tampering_detected_workflow(self, valid_header, invalid_crc, missing_watermark, temp_dwg_file):
+    def test_tampering_detected_workflow(self, valid_header, invalid_crc, temp_dwg_file):
         """Test workflow when tampering indicators are present."""
         detector = AnomalyDetector()
         engine = TamperingRuleEngine()
         scorer = RiskScorer()
 
-        # Build context with invalid CRC and missing watermark
+        # Build context with invalid CRC
         context = {
             "crc": {
                 "is_valid": False,
@@ -1148,24 +1099,6 @@ class TestSectionCRCRule:
         assert "Objects" in section_result.description
 
 
-class TestInvalidWatermarkRule:
-    """Test TAMPER-004 invalid watermark rule."""
-
-    def test_invalid_watermark_detection(self):
-        """Test invalid watermark detection."""
-        engine = TamperingRuleEngine()
-        context = {
-            "watermark": {"present": True, "valid": False},
-            "header": {"version_string": "AC1032"},
-        }
-
-        results = engine.evaluate_all(context)
-        wm_result = next(r for r in results if r.rule_id == "TAMPER-004")
-
-        assert wm_result.status == RuleStatus.FAILED
-        assert "malformed" in wm_result.description.lower()
-
-
 class TestTimestampRules:
     """Test timestamp-related rules."""
 
@@ -1241,11 +1174,9 @@ class TestNonAutodeskRule:
         """Test non-Autodesk origin detection."""
         engine = TamperingRuleEngine()
         context = {
-            "watermark": {
-                "present": True,
-                "valid": True,
+            "application_fingerprint": {
                 "is_autodesk": False,
-                "application_origin": "LibreCAD",
+                "detected_application": "LibreCAD",
             }
         }
 
@@ -1880,13 +1811,13 @@ class TestThirdPartyToolRule:
     """Test TAMPER-026 Third-Party Tool Detection rule."""
 
     def test_third_party_tool_detected(self):
-        """Test detection of known third-party tools from watermark."""
+        """Test detection of known third-party tools from fingerprint."""
         engine = TamperingRuleEngine()
         context = {
-            "watermark": {
-                "present": False,  # No valid Autodesk watermark
-                "valid": False,
-                "application_origin": "LibreCAD",  # Known third-party tool
+            "application_fingerprint": {
+                "is_autodesk": False,
+                "is_oda_based": False,
+                "detected_application": "LibreCAD",  # Known third-party tool
             }
         }
 
@@ -1896,13 +1827,13 @@ class TestThirdPartyToolRule:
         assert result.status == RuleStatus.FAILED
 
     def test_autodesk_tool(self):
-        """Test passes with valid Autodesk software watermark."""
+        """Test passes with valid Autodesk application fingerprint."""
         engine = TamperingRuleEngine()
         context = {
-            "watermark": {
-                "present": True,
-                "valid": True,
-                "application_origin": "Autodesk AutoCAD 2024",
+            "application_fingerprint": {
+                "is_autodesk": True,
+                "is_oda_based": False,
+                "detected_application": "Autodesk AutoCAD 2024",
             }
         }
 

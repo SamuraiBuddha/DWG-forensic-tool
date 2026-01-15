@@ -38,10 +38,6 @@ def valid_dwg_ac1032(temp_dir):
     # Codepage at 0x13 (2 bytes, little-endian)
     struct.pack_into("<H", header, 0x13, 0x001E)  # ANSI_1252
 
-    # Add TrustedDWG watermark
-    watermark = b"Autodesk DWG. This file is a Trusted DWG last saved by an Autodesk application."
-    header.extend(watermark)
-
     # Pad to ensure we have enough data
     header.extend(b"\x00" * 500)
 
@@ -136,62 +132,6 @@ def corrupted_crc_dwg(temp_dir):
     struct.pack_into("<I", header, 0x68, 0xDEADBEEF)
 
     header.extend(b"\x00" * 500)
-
-    with open(file_path, "wb") as f:
-        f.write(header)
-
-    return file_path
-
-
-@pytest.fixture
-def dwg_with_watermark(temp_dir):
-    """Create a DWG file with valid TrustedDWG watermark."""
-    file_path = temp_dir / "with_watermark.dwg"
-
-    header = bytearray(108)
-    header[0:6] = b"AC1032"
-    header[6:11] = b"\x00\x00\x00\x00\x00"
-    header[11] = 0x00
-    struct.pack_into("<I", header, 0x0D, 0x1000)
-    struct.pack_into("<H", header, 0x13, 0x001E)
-
-    # Add watermark after header
-    watermark = b"Autodesk DWG. This file is a Trusted DWG last saved by an Autodesk application or Autodesk licensed application.\x00"
-    header.extend(watermark)
-
-    # Add application ID
-    header.extend(b"ACAD0001427")  # AutoCAD 2024
-
-    header.extend(b"\x00" * 400)
-
-    import zlib
-    crc = zlib.crc32(bytes(header[:0x68])) & 0xFFFFFFFF
-    struct.pack_into("<I", header, 0x68, crc)
-
-    with open(file_path, "wb") as f:
-        f.write(header)
-
-    return file_path
-
-
-@pytest.fixture
-def dwg_without_watermark(temp_dir):
-    """Create a DWG file without TrustedDWG watermark."""
-    file_path = temp_dir / "no_watermark.dwg"
-
-    header = bytearray(108)
-    header[0:6] = b"AC1032"
-    header[6:11] = b"\x00\x00\x00\x00\x00"
-    header[11] = 0x00
-    struct.pack_into("<I", header, 0x0D, 0x1000)
-    struct.pack_into("<H", header, 0x13, 0x001E)
-
-    # No watermark, just padding
-    header.extend(b"Some random data without watermark" * 20)
-
-    import zlib
-    crc = zlib.crc32(bytes(header[:0x68])) & 0xFFFFFFFF
-    struct.pack_into("<I", header, 0x68, crc)
 
     with open(file_path, "wb") as f:
         f.write(header)

@@ -6,7 +6,6 @@ supporting AutoCAD versions from AC1018 (2004) through current (AC1032+).
 Includes:
 - Header parsing with version detection
 - CRC validation
-- TrustedDWG watermark detection
 - Timestamp extraction and validation
 - Section map parsing for deep analysis
 - Drawing variables extraction (TDCREATE, TDUPDATE, GUIDs)
@@ -15,7 +14,6 @@ Includes:
 
 from dwg_forensic.parsers.header import HeaderParser
 from dwg_forensic.parsers.crc import CRCValidator
-from dwg_forensic.parsers.watermark import WatermarkDetector
 from dwg_forensic.parsers.timestamp import (
     TimestampParser,
     TimestampData,
@@ -72,7 +70,6 @@ __all__ = [
     # Header and core parsers
     "HeaderParser",
     "CRCValidator",
-    "WatermarkDetector",
     # Timestamp parsing
     "TimestampParser",
     "TimestampData",

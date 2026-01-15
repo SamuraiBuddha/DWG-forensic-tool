@@ -1,8 +1,7 @@
 """Main forensic analyzer for DWG files.
 
 This module provides the primary analysis workflow, combining header parsing,
-CRC validation, watermark detection, anomaly detection, tampering rules,
-and risk assessment.
+CRC validation, anomaly detection, tampering rules, and risk assessment.
 
 Phase 3 Integration:
 - AnomalyDetector: Timestamp, version, and structural anomaly detection
@@ -29,13 +28,11 @@ from dwg_forensic.models import (
     RiskLevel,
     TamperingIndicator,
     TamperingIndicatorType,
-    TrustedDWGAnalysis,
     DWGMetadata,
 )
 from dwg_forensic.parsers import (
     CRCValidator,
     HeaderParser,
-    WatermarkDetector,
     TimestampParser,
     TimestampData,
     NTFSTimestampParser,
@@ -68,11 +65,20 @@ from dwg_forensic.knowledge import KnowledgeEnricher, Neo4jKnowledgeClient
 
 # LLM integration (optional - gracefully degrades if unavailable)
 try:
-    from dwg_forensic.llm import ForensicNarrator
+    from dwg_forensic.llm import ForensicNarrator, ForensicReasoner
     LLM_AVAILABLE = True
 except ImportError:
     LLM_AVAILABLE = False
     ForensicNarrator = None  # type: ignore
+    ForensicReasoner = None  # type: ignore
+
+# Smoking gun synthesis for definitive proof filtering
+try:
+    from dwg_forensic.analysis import SmokingGunSynthesizer
+    SMOKING_GUN_AVAILABLE = True
+except ImportError:
+    SMOKING_GUN_AVAILABLE = False
+    SmokingGunSynthesizer = None  # type: ignore
 
 
 class ForensicAnalyzer:
@@ -117,7 +123,6 @@ class ForensicAnalyzer:
         # Phase 1 parsers
         self.header_parser = HeaderParser()
         self.crc_validator = CRCValidator()
-        self.watermark_detector = WatermarkDetector()
 
         # Timestamp parser for advanced forensic analysis
         self.timestamp_parser = TimestampParser()
@@ -166,6 +171,8 @@ class ForensicAnalyzer:
         self._llm_model = llm_model
         self._expert_name = expert_name
         self._narrator: Optional["ForensicNarrator"] = None
+        self._reasoner: Optional["ForensicReasoner"] = None
+        self._smoking_gun_synthesizer: Optional["SmokingGunSynthesizer"] = None
 
         if self._use_llm and ForensicNarrator:
             try:
@@ -180,6 +187,20 @@ class ForensicAnalyzer:
             except Exception:
                 self._narrator = None
                 self._use_llm = False
+
+        # LLM forensic reasoner - uses LLM to REASON about evidence, not just generate narratives
+        if self._use_llm and ForensicReasoner:
+            try:
+                self._reasoner = ForensicReasoner(
+                    llm_model=llm_model or "mistral",
+                    ollama_host="http://localhost:11434",
+                )
+            except Exception:
+                self._reasoner = None
+
+        # Smoking gun synthesizer - filters to ONLY definitive proof
+        if SMOKING_GUN_AVAILABLE and SmokingGunSynthesizer:
+            self._smoking_gun_synthesizer = SmokingGunSynthesizer()
 
         # Load custom rules if provided
         if custom_rules_path:
@@ -238,23 +259,14 @@ class ForensicAnalyzer:
         crc_status = "valid" if crc_validation.is_valid else "MISMATCH"
         self._report_progress("crc", "complete", f"CRC: {crc_status}")
 
-        # Detect watermark (version-aware)
-        self._report_progress("watermark", "start", "Detecting TrustedDWG watermark")
-        trusted_dwg = self.watermark_detector.detect(
-            file_path, version_string=version_string
-        )
-        wm_status = "present" if trusted_dwg.watermark_present else "not found"
-        self._report_progress("watermark", "complete", f"Watermark: {wm_status}")
-
-        # CAD Application Fingerprinting - CRITICAL: identifies authoring software
-        # This must run early as it informs all subsequent tampering analysis
+        # CAD Application Fingerprinting - informational only
+        # Note: Application origin does NOT indicate tampering
         self._report_progress("fingerprint", "start", "Identifying CAD application")
         fingerprint_result: Optional[FingerprintResult] = None
         try:
             fingerprint_result = self.fingerprinter.fingerprint(
                 file_path=file_path,
                 header_crc=crc_validation.header_crc_stored,
-                has_trusted_dwg=trusted_dwg.watermark_present and trusted_dwg.watermark_valid,
             )
             app_name = fingerprint_result.detected_application.value
             confidence = f"{fingerprint_result.confidence:.0%}"
@@ -327,7 +339,7 @@ class ForensicAnalyzer:
         # Phase 3: Anomaly detection (including advanced timestamp anomalies and NTFS cross-validation)
         self._report_progress("anomalies", "start", "Detecting anomalies")
         anomalies = self._detect_all_anomalies(
-            header_analysis, crc_validation, trusted_dwg, file_path,
+            header_analysis, crc_validation, file_path,
             timestamp_data=timestamp_data, metadata=metadata,
             ntfs_data=ntfs_data, ntfs_contradictions=ntfs_contradictions
         )
@@ -336,7 +348,7 @@ class ForensicAnalyzer:
         # Phase 3: Tampering rule evaluation (with NTFS cross-validation data + deep parsing)
         self._report_progress("rules", "start", "Evaluating tampering rules")
         rule_context = self._build_rule_context(
-            header_analysis, crc_validation, trusted_dwg, file_path,
+            header_analysis, crc_validation, file_path,
             timestamp_data=timestamp_data, anomalies=anomalies, metadata=metadata,
             ntfs_data=ntfs_data, ntfs_contradictions=ntfs_contradictions,
             section_map=section_map, drawing_vars=drawing_vars, handle_map=handle_map,
@@ -349,7 +361,7 @@ class ForensicAnalyzer:
         # Phase 3: Detect tampering indicators (version-aware, with NTFS cross-validation)
         self._report_progress("tampering", "start", "Analyzing tampering indicators")
         tampering_indicators = self._detect_tampering(
-            crc_validation, trusted_dwg, failed_rules, version_string,
+            crc_validation, failed_rules, version_string,
             timestamp_data=timestamp_data, ntfs_data=ntfs_data,
             ntfs_contradictions=ntfs_contradictions
         )
@@ -361,8 +373,7 @@ class ForensicAnalyzer:
         # Phase 3: Risk assessment with scoring
         self._report_progress("risk", "start", "Calculating risk score")
         risk_assessment = self._assess_risk_phase3(
-            anomalies, tampering_indicators, failed_rules,
-            crc_validation, trusted_dwg
+            anomalies, tampering_indicators, failed_rules, crc_validation
         )
         self._report_progress("risk", "complete", f"Risk level: {risk_assessment.overall_risk.value}")
 
@@ -396,6 +407,114 @@ class ForensicAnalyzer:
             except Exception as e:
                 self._report_progress("knowledge", "error", f"Knowledge enrichment failed: {str(e)}")
 
+        # SMOKING GUN SYNTHESIS: Filter to ONLY definitive proof
+        # Only mathematically impossible conditions should be reported as proof
+        smoking_gun_report_dict: Optional[Dict[str, Any]] = None
+        has_definitive_proof = False
+
+        if self._smoking_gun_synthesizer:
+            self._report_progress("smoking_gun", "start", "Filtering definitive proof (smoking guns)")
+            try:
+                smoking_gun_report = self._smoking_gun_synthesizer.synthesize(rule_results)
+                has_definitive_proof = smoking_gun_report.has_definitive_proof
+                smoking_gun_report_dict = {
+                    "has_definitive_proof": smoking_gun_report.has_definitive_proof,
+                    "smoking_gun_count": len(smoking_gun_report.smoking_guns),
+                    "smoking_guns": [
+                        {
+                            "rule_id": sg.rule_id,
+                            "rule_name": sg.rule_name,
+                            "description": sg.description,
+                            "forensic_reasoning": sg.forensic_reasoning,
+                            "legal_significance": sg.legal_significance,
+                            "confidence": sg.confidence,
+                        }
+                        for sg in smoking_gun_report.smoking_guns
+                    ],
+                    "expert_summary": smoking_gun_report.expert_summary,
+                    "legal_conclusion": smoking_gun_report.legal_conclusion,
+                    "recommendation": smoking_gun_report.recommendation,
+                }
+                if has_definitive_proof:
+                    self._report_progress(
+                        "smoking_gun", "complete",
+                        f"[!!] DEFINITIVE PROOF: {len(smoking_gun_report.smoking_guns)} smoking gun(s)"
+                    )
+                else:
+                    self._report_progress(
+                        "smoking_gun", "complete",
+                        "No definitive proof of tampering (red herrings filtered)"
+                    )
+            except Exception as e:
+                self._report_progress("smoking_gun", "error", f"Smoking gun synthesis failed: {str(e)}")
+
+        # LLM FORENSIC REASONING: Use LLM to actually REASON about evidence
+        # This is different from narrative generation - the LLM evaluates evidence significance,
+        # identifies true smoking guns through logical reasoning, and filters red herrings
+        llm_reasoning_dict: Optional[Dict[str, Any]] = None
+
+        if self._reasoner:
+            self._report_progress("reasoning", "start", f"LLM forensic reasoning ({self._llm_model or 'default'})")
+            try:
+                import asyncio
+                # Build analysis data for LLM reasoning
+                analysis_data = {
+                    "file": {"filename": file_info.filename, "size": file_info.file_size_bytes},
+                    "header": {"version_string": header_analysis.version_string},
+                    "metadata": {
+                        "tdcreate": metadata.tdcreate if metadata else None,
+                        "tdupdate": metadata.tdupdate if metadata else None,
+                        "tdindwg": metadata.tdindwg if metadata else None,
+                    } if metadata else {},
+                    "crc_validation": {"is_valid": crc_validation.is_valid},
+                    "ntfs_data": {
+                        "si_fn_mismatch": ntfs_data.si_fn_mismatch if ntfs_data else False,
+                        "nanoseconds_truncated": ntfs_data.nanoseconds_truncated if ntfs_data else False,
+                    } if ntfs_data else {},
+                    "anomalies": [
+                        {"anomaly_type": a.anomaly_type.value, "description": a.description}
+                        for a in anomalies[:10]  # Limit to first 10 for context
+                    ],
+                    "rule_results": [
+                        {"rule_id": r.rule_id, "status": r.status.value, "description": r.description}
+                        for r in failed_rules[:10]  # Limit to first 10
+                    ],
+                }
+
+                # Run async reasoning in sync context
+                loop = asyncio.new_event_loop()
+                try:
+                    reasoning = loop.run_until_complete(
+                        self._reasoner.reason_about_evidence(analysis_data)
+                    )
+                finally:
+                    loop.close()
+
+                llm_reasoning_dict = {
+                    "has_definitive_proof": reasoning.has_definitive_proof,
+                    "smoking_guns": reasoning.smoking_guns,
+                    "filtered_red_herrings": reasoning.filtered_red_herrings,
+                    "reasoning_chain": reasoning.reasoning_chain,
+                    "expert_conclusion": reasoning.expert_conclusion,
+                    "confidence": reasoning.confidence,
+                    "model_used": reasoning.model_used,
+                }
+
+                # Update has_definitive_proof from LLM reasoning if available
+                if reasoning.has_definitive_proof:
+                    has_definitive_proof = True
+                    self._report_progress(
+                        "reasoning", "complete",
+                        f"[!!] LLM confirms DEFINITIVE PROOF ({len(reasoning.smoking_guns)} finding(s))"
+                    )
+                else:
+                    self._report_progress(
+                        "reasoning", "complete",
+                        f"LLM: No definitive proof ({len(reasoning.filtered_red_herrings)} red herrings filtered)"
+                    )
+            except Exception as e:
+                self._report_progress("reasoning", "error", f"LLM reasoning failed: {str(e)}")
+
         # Build partial analysis for LLM narrative generation
         # (needed before final ForensicAnalysis object is created)
         llm_narrative: Optional[str] = None
@@ -408,7 +527,6 @@ class ForensicAnalyzer:
                 temp_analysis = ForensicAnalysis(
                     file_info=file_info,
                     header_analysis=header_analysis,
-                    trusted_dwg=trusted_dwg,
                     crc_validation=crc_validation,
                     metadata=metadata,
                     ntfs_analysis=ntfs_analysis,
@@ -441,7 +559,6 @@ class ForensicAnalyzer:
         return ForensicAnalysis(
             file_info=file_info,
             header_analysis=header_analysis,
-            trusted_dwg=trusted_dwg,
             crc_validation=crc_validation,
             metadata=metadata,
             ntfs_analysis=ntfs_analysis,
@@ -452,6 +569,9 @@ class ForensicAnalyzer:
             forensic_knowledge=forensic_knowledge_dict,
             llm_narrative=llm_narrative,
             llm_model_used=llm_model_used,
+            smoking_gun_report=smoking_gun_report_dict,
+            has_definitive_proof=has_definitive_proof,
+            llm_reasoning=llm_reasoning_dict,
             analysis_timestamp=datetime.now(),
             analyzer_version=__version__,
         )
@@ -479,19 +599,14 @@ class ForensicAnalyzer:
             file_path, version_string=version_string
         )
 
-        # Detect watermark (version-aware)
-        trusted_dwg = self.watermark_detector.detect(
-            file_path, version_string=version_string
-        )
-
         # Anomaly detection
         anomalies = self._detect_all_anomalies(
-            header_analysis, crc_validation, trusted_dwg, file_path
+            header_analysis, crc_validation, file_path
         )
 
         # Tampering rule evaluation
         rule_context = self._build_rule_context(
-            header_analysis, crc_validation, trusted_dwg, file_path
+            header_analysis, crc_validation, file_path
         )
         rule_results = self.rule_engine.evaluate_all(rule_context)
         failed_rules = self.rule_engine.get_failed_rules(rule_results)
@@ -516,7 +631,7 @@ class ForensicAnalyzer:
 
         # Detect tampering indicators (version-aware)
         tampering_indicators = self._detect_tampering(
-            crc_validation, trusted_dwg, failed_rules, version_string
+            crc_validation, failed_rules, version_string
         )
 
         # Knowledge enrichment for tampering analysis
@@ -537,7 +652,6 @@ class ForensicAnalyzer:
             file_path=file_path,
             header=header_analysis,
             crc_validation=crc_validation,
-            trusted_dwg=trusted_dwg,
             metadata=None,
             anomalies=anomalies,
             rule_failures=failed_rules_dicts,
@@ -632,7 +746,6 @@ class ForensicAnalyzer:
         self,
         header_analysis: HeaderAnalysis,
         crc_validation: CRCValidation,
-        trusted_dwg: TrustedDWGAnalysis,
         file_path: Path,
         timestamp_data: Optional[TimestampData] = None,
         metadata: Optional[DWGMetadata] = None,
@@ -644,7 +757,6 @@ class ForensicAnalyzer:
         Args:
             header_analysis: Header analysis results
             crc_validation: CRC validation results
-            trusted_dwg: TrustedDWG analysis results
             file_path: Path to the DWG file
             timestamp_data: Optional parsed timestamp data for advanced detection
             metadata: Optional DWG metadata
@@ -690,17 +802,6 @@ class ForensicAnalyzer:
                         "stored_crc": crc_validation.header_crc_stored,
                         "calculated_crc": crc_validation.header_crc_calculated,
                     },
-                )
-            )
-
-        # Invalid watermark anomaly
-        if trusted_dwg.watermark_present and not trusted_dwg.watermark_valid:
-            anomalies.append(
-                Anomaly(
-                    anomaly_type=AnomalyType.WATERMARK_INVALID,
-                    description="TrustedDWG watermark present but invalid",
-                    severity=RiskLevel.MEDIUM,
-                    details={"watermark_text": trusted_dwg.watermark_text},
                 )
             )
 
@@ -798,7 +899,6 @@ class ForensicAnalyzer:
         self,
         header_analysis: HeaderAnalysis,
         crc_validation: CRCValidation,
-        trusted_dwg: TrustedDWGAnalysis,
         file_path: Path,
         timestamp_data: Optional[TimestampData] = None,
         anomalies: Optional[List[Anomaly]] = None,
@@ -815,7 +915,6 @@ class ForensicAnalyzer:
         Args:
             header_analysis: Header analysis results
             crc_validation: CRC validation results
-            trusted_dwg: TrustedDWG analysis results
             file_path: Path to the DWG file
             timestamp_data: Optional parsed timestamp data
             anomalies: Optional list of detected anomalies
@@ -830,13 +929,6 @@ class ForensicAnalyzer:
         Returns:
             Context dictionary for rule evaluation
         """
-        # Derive is_autodesk from watermark validity
-        # A valid TrustedDWG watermark indicates Autodesk origin
-        is_autodesk = (
-            trusted_dwg.watermark_present and
-            trusted_dwg.watermark_valid
-        )
-
         context = {
             "header": {
                 "version_string": header_analysis.version_string,
@@ -848,12 +940,6 @@ class ForensicAnalyzer:
                 "is_valid": crc_validation.is_valid,
                 "header_crc_stored": crc_validation.header_crc_stored,
                 "header_crc_calculated": crc_validation.header_crc_calculated,
-            },
-            "watermark": {
-                "present": trusted_dwg.watermark_present,
-                "valid": trusted_dwg.watermark_valid,
-                "text": trusted_dwg.watermark_text,
-                "is_autodesk": is_autodesk,
             },
             "file": {
                 "path": str(file_path),
@@ -1002,7 +1088,6 @@ class ForensicAnalyzer:
     def _detect_tampering(
         self,
         crc_validation: CRCValidation,
-        trusted_dwg: TrustedDWGAnalysis,
         failed_rules: List[Any],
         version_string: Optional[str] = None,
         timestamp_data: Optional[TimestampData] = None,
@@ -1013,7 +1098,6 @@ class ForensicAnalyzer:
 
         Args:
             crc_validation: CRC validation results
-            trusted_dwg: TrustedDWG analysis results
             failed_rules: List of failed tampering rules
             version_string: DWG version string for version-aware detection
             timestamp_data: Optional parsed timestamp data
@@ -1035,23 +1119,6 @@ class ForensicAnalyzer:
                     confidence=0.9,
                     evidence=f"Stored CRC: {crc_validation.header_crc_stored}, "
                     f"Calculated CRC: {crc_validation.header_crc_calculated}",
-                )
-            )
-
-        # Missing watermark (only for versions that support TrustedDWG - AC1021+)
-        # Check if watermark is expected for this version
-        watermark_expected = self.watermark_detector.has_watermark_support(
-            version_string
-        ) if version_string else True
-
-        if watermark_expected and not trusted_dwg.watermark_present:
-            indicators.append(
-                TamperingIndicator(
-                    indicator_type=TamperingIndicatorType.WATERMARK_REMOVED,
-                    description="TrustedDWG watermark not found - file may have been modified by "
-                    "third-party software or watermark was removed",
-                    confidence=0.7,
-                    evidence="No Autodesk DWG watermark marker found in file",
                 )
             )
 
@@ -1240,7 +1307,6 @@ class ForensicAnalyzer:
         tampering_indicators: List[TamperingIndicator],
         failed_rules: List[Any],
         crc_validation: CRCValidation,
-        trusted_dwg: TrustedDWGAnalysis,
     ) -> RiskAssessment:
         """Assess overall risk level using Phase 3 scoring algorithm.
 
@@ -1249,7 +1315,6 @@ class ForensicAnalyzer:
             tampering_indicators: List of tampering indicators
             failed_rules: List of failed tampering rules
             crc_validation: CRC validation results
-            trusted_dwg: TrustedDWG analysis results
 
         Returns:
             RiskAssessment model with overall risk evaluation
@@ -1271,8 +1336,7 @@ class ForensicAnalyzer:
 
         # Generate factors
         factors = self.risk_scorer.generate_factors(
-            anomalies, failed_rules_dicts, tampering_indicators,
-            crc_validation, trusted_dwg
+            anomalies, failed_rules_dicts, tampering_indicators, crc_validation
         )
 
         # Generate recommendation

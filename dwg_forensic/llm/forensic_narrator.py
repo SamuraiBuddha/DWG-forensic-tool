@@ -50,20 +50,6 @@ CRITICAL FORENSIC FACT: AutoCAD recalculates and updates this CRC value EVERY ti
 
 CRC mismatch is DEFINITIVE PROOF of post-save modification - not speculation.
 
-## TrustedDWG Watermark
-
-Since AutoCAD 2007, Autodesk embeds a cryptographic digital watermark in every DWG file saved by genuine Autodesk applications. This watermark:
-- Uses proprietary Autodesk cryptography that CANNOT be forged by third-party software
-- Identifies which Autodesk application created/saved the file
-- Is checked by AutoCAD when opening files (affects "TrustedDWG" status display)
-
-Forensic interpretation:
-- VALID watermark: File was last saved by genuine Autodesk software
-- INVALID/CORRUPTED watermark: File was modified after Autodesk save (watermark region damaged)
-- ABSENT watermark: File was created by non-Autodesk software OR predates 2007 OR watermark was stripped
-
-Absence alone does NOT prove tampering - many legitimate CAD applications don't create this watermark.
-
 ## AutoCAD Internal Timestamps (DWGPROPS Variables)
 
 AutoCAD stores several timestamp variables inside DWG files:
@@ -232,12 +218,6 @@ RAW FORENSIC DATA
 - Calculated CRC (computed from bytes 0x00-0x67): {calculated_crc}
 - Match status: {crc_match}
 
-## TRUSTEDDWG WATERMARK
-- Watermark present in file: {watermark_present}
-- Watermark cryptographically valid: {watermark_valid}
-- Watermark text content: {watermark_text}
-- Identified application: {application_origin}
-
 ## AUTOCAD INTERNAL TIMESTAMPS (DWGPROPS)
 - TDCREATE (creation): {tdcreate}
 - TDUPDATE (last save): {tdupdate}
@@ -291,22 +271,17 @@ Analyze ALL the evidence above using the following structure:
    - Explain what match/mismatch definitively proves
    - If mismatched, explain what this means for file integrity
 
-3. WATERMARK ANALYSIS
-   - State the watermark status
-   - Explain what this indicates about the file's origin
-   - Note any limitations of this evidence
-
-4. TIMESTAMP CROSS-VALIDATION
+3. TIMESTAMP CROSS-VALIDATION
    - Compare TDINDWG to calendar span - is it possible?
    - Compare NTFS timestamps to DWG internal timestamps
    - Compare SI to FN timestamps if available
    - Identify any impossibilities or significant discrepancies
 
-5. INFORMATION LEAKAGE ANALYSIS
+4. INFORMATION LEAKAGE ANALYSIS
    - Note any network paths, usernames, or identifying information
    - Explain what this reveals about the file's origin
 
-6. SYNTHESIS AND CONCLUSIONS
+5. SYNTHESIS AND CONCLUSIONS
    - What does the evidence PROVE definitively?
    - What does the evidence INDICATE with high confidence?
    - What remains uncertain or requires further investigation?
@@ -548,10 +523,6 @@ class ForensicNarrator:
             stored_crc=analysis.crc_validation.header_crc_stored,
             calculated_crc=analysis.crc_validation.header_crc_calculated,
             crc_match="MATCH - Values are identical" if analysis.crc_validation.is_valid else "MISMATCH - Values differ",
-            watermark_present="Yes" if analysis.trusted_dwg.watermark_present else "No",
-            watermark_valid="Yes" if analysis.trusted_dwg.watermark_valid else "No",
-            watermark_text=analysis.trusted_dwg.watermark_text or "N/A",
-            application_origin=analysis.trusted_dwg.application_origin or "Unknown",
             tdcreate=meta.created_date.strftime("%Y-%m-%d %H:%M:%S") if meta and meta.created_date else "Not available",
             tdupdate=meta.modified_date.strftime("%Y-%m-%d %H:%M:%S") if meta and meta.modified_date else "Not available",
             tdindwg=f"{meta.tdindwg * 24:.2f} hours ({meta.tdindwg:.6f} days)" if meta and meta.tdindwg else "Not available",
@@ -589,7 +560,7 @@ class ForensicNarrator:
 
         Args:
             analysis: Complete forensic analysis
-            section: Section to analyze ("crc", "watermark", "timestamps", "summary")
+            section: Section to analyze ("crc", "timestamps", "summary")
 
         Returns:
             NarrativeResult with section-specific analysis
@@ -646,24 +617,6 @@ ANALYSIS REQUIREMENTS:
 
 Write 2-3 paragraphs suitable for a court document."""
 
-        elif section == "watermark":
-            return f"""Analyze the TrustedDWG watermark status for this DWG file.
-
-RAW EVIDENCE:
-- Watermark present in file: {"YES" if analysis.trusted_dwg.watermark_present else "NO"}
-- Watermark cryptographically valid: {"YES" if analysis.trusted_dwg.watermark_valid else "NO"}
-- Watermark text content: {analysis.trusted_dwg.watermark_text or "N/A"}
-- Identified source application: {analysis.trusted_dwg.application_origin or "Unknown"}
-
-ANALYSIS REQUIREMENTS:
-1. State the exact watermark findings
-2. Explain what the TrustedDWG watermark is and how it works
-3. Explain what the presence/absence/validity status indicates about file origin
-4. Be clear about what this evidence PROVES vs what it merely SUGGESTS
-5. Note any limitations of this evidence
-
-Write 2-3 paragraphs suitable for a court document."""
-
         elif section == "timestamps":
             calendar_span = "N/A"
             editing_hours = 0
@@ -700,7 +653,6 @@ Write 2-3 paragraphs suitable for a court document."""
 
 KEY FINDINGS:
 - CRC Validation: {"PASSED" if analysis.crc_validation.is_valid else "FAILED"} (Stored: {analysis.crc_validation.header_crc_stored}, Calculated: {analysis.crc_validation.header_crc_calculated})
-- TrustedDWG Watermark: {"Valid" if analysis.trusted_dwg.watermark_valid else "Invalid/Absent"}
 - Anomalies detected: {len(analysis.anomalies)}
 - Tampering indicators triggered: {len(analysis.tampering_indicators)}
 - Overall risk level: {analysis.risk_assessment.overall_risk.value}

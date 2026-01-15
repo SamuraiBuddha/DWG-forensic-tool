@@ -16,7 +16,6 @@ from dwg_forensic.models import (
     HeaderAnalysis,
     RiskAssessment,
     RiskLevel,
-    TrustedDWGAnalysis,
 )
 from dwg_forensic.output.json_export import (
     ForensicJSONEncoder,
@@ -43,13 +42,6 @@ def sample_analysis():
             codepage=30,
             is_supported=True,
         ),
-        trusted_dwg=TrustedDWGAnalysis(
-            watermark_present=True,
-            watermark_text="Autodesk DWG...",
-            watermark_valid=True,
-            application_origin="AutoCAD 2024",
-            watermark_offset=200,
-        ),
         crc_validation=CRCValidation(
             header_crc_stored="0x12345678",
             header_crc_calculated="0x12345678",
@@ -57,7 +49,7 @@ def sample_analysis():
         ),
         risk_assessment=RiskAssessment(
             overall_risk=RiskLevel.LOW,
-            factors=["CRC valid", "Watermark valid"],
+            factors=["CRC valid"],
             recommendation="File appears authentic",
         ),
         analyzer_version="0.1.0",
@@ -123,7 +115,6 @@ class TestJSONExporter:
         assert isinstance(result, dict)
         assert "file_info" in result
         assert "header_analysis" in result
-        assert "trusted_dwg" in result
         assert "crc_validation" in result
         assert "risk_assessment" in result
 

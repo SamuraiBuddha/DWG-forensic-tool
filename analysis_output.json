@@ -1,0 +1,317 @@
+{
+  "file_info": {
+    "filename": "LibreDWG_example_2018.dwg",
+    "sha256": "7bc7721224003062b237845842b7a976e46771c37eba6833b9ed3712e7a5a65a",
+    "file_size_bytes": 149218,
+    "intake_timestamp": "2026-01-15T12:29:29.037868"
+  },
+  "header_analysis": {
+    "version_string": "AC1032",
+    "version_name": "AutoCAD 2018+",
+    "maintenance_version": 0,
+    "preview_address": 448,
+    "codepage": 30,
+    "is_supported": true
+  },
+  "trusted_dwg": {
+    "watermark_present": false,
+    "watermark_text": null,
+    "watermark_valid": false,
+    "application_origin": null,
+    "watermark_offset": null
+  },
+  "crc_validation": {
+    "header_crc_stored": "0x00000000",
+    "header_crc_calculated": "0xC0D841ED",
+    "is_valid": false,
+    "section_results": []
+  },
+  "metadata": {
+    "title": null,
+    "author": null,
+    "last_saved_by": null,
+    "created_date": null,
+    "modified_date": null,
+    "revision_number": null,
+    "total_editing_time_hours": 6.544840170956897e-309,
+    "comments": null,
+    "keywords": null,
+    "tdcreate": null,
+    "tdupdate": null,
+    "tducreate": null,
+    "tduupdate": null,
+    "tdindwg": 2.7270167378987e-310,
+    "tdusrtimer": null,
+    "fingerprint_guid": "30314341-3233-0000-0000-000003c00100",
+    "version_guid": "00003233-0000-0000-03c0-01000021001e",
+    "login_name": null,
+    "educational_watermark": false,
+    "xref_paths": null,
+    "network_paths_detected": null
+  },
+  "ntfs_analysis": {
+    "si_created": "2026-01-11T17:39:39.909138+00:00",
+    "si_modified": "2026-01-11T17:39:39.945421+00:00",
+    "si_accessed": "2026-01-15T17:29:29.044351+00:00",
+    "si_created_nanoseconds": 909138400,
+    "si_modified_nanoseconds": 945420900,
+    "fn_created": null,
+    "fn_modified": null,
+    "timestomping_detected": false,
+    "nanosecond_truncation": false,
+    "impossible_timestamps": false,
+    "dwg_ntfs_contradiction": false,
+    "contradiction_details": null,
+    "forensic_conclusion": null
+  },
+  "application_fingerprint": {
+    "detected_application": "unknown",
+    "confidence": 0.2,
+    "is_autodesk": false,
+    "is_oda_based": false,
+    "forensic_summary": "Detected: unknown\n- Zero CRC32 - Inconclusive (see notes): NOTE: CRC32 = 0x00000000 was previously thought to indicate non-Autodesk origin, but testing shows genuine Civil 3D 2025 and Revit 2024 exports also have CRC=0. This marker should NOT be used alone for origin detection. Use embedded path strings, application markers, and header field patterns for more reliable fingerprinting.",
+    "created_by": "unknown",
+    "application_id": null,
+    "build_number": null
+  },
+  "anomalies": [
+    {
+      "anomaly_type": "CRC_MISMATCH",
+      "description": "Header CRC checksum does not match calculated value",
+      "severity": "HIGH",
+      "details": {
+        "stored_crc": "0x00000000",
+        "calculated_crc": "0xC0D841ED"
+      }
+    }
+  ],
+  "tampering_indicators": [
+    {
+      "indicator_type": "CRC_MODIFIED",
+      "description": "File header CRC does not match, indicating modification after save",
+      "confidence": 0.9,
+      "evidence": "Stored CRC: 0x00000000, Calculated CRC: 0xC0D841ED"
+    },
+    {
+      "indicator_type": "WATERMARK_REMOVED",
+      "description": "TrustedDWG watermark not found - file may have been modified by third-party software or watermark was removed",
+      "confidence": 0.7,
+      "evidence": "No Autodesk DWG watermark marker found in file"
+    },
+    {
+      "indicator_type": "SUSPICIOUS_PATTERN",
+      "description": "Tampering rule triggered: CRC Header Mismatch",
+      "confidence": 0.8,
+      "evidence": "Expected: 0x00000000; Found: 0xC0D841ED"
+    },
+    {
+      "indicator_type": "SUSPICIOUS_PATTERN",
+      "description": "Tampering rule triggered: Missing TrustedDWG",
+      "confidence": 0.6,
+      "evidence": "Expected: TrustedDWG watermark present; Found: No watermark found"
+    },
+    {
+      "indicator_type": "TDINDWG_MANIPULATION",
+      "description": "Tampering rule triggered: Zero Edit Time",
+      "confidence": 0.6,
+      "evidence": "Expected: Edit time > 1 minute for legitimate drawings; Found: TDINDWG: 0.0 minutes"
+    },
+    {
+      "indicator_type": "TDINDWG_MANIPULATION",
+      "description": "Tampering rule triggered: Implausible Edit Ratio",
+      "confidence": 0.6,
+      "evidence": "Expected: < 100 MB per hour of editing for normal CAD work; Found: 0.14 MB in 0.00h = 21743139699116878900603670159111390778917279866696545619732980360179294038191102345375525539882737087569485771631038334908912659694587529434599435537787671988728583068887037052983522850232694592157474177127195599069884014032528331197871822071432149173489778433773692318125300492646981762665248481188803248128 MB/h"
+    },
+    {
+      "indicator_type": "SUSPICIOUS_PATTERN",
+      "description": "Tampering rule triggered: Third-Party Tool Detected",
+      "confidence": 0.6,
+      "evidence": "[INFO] No TrustedDWG watermark - third-party modification detected"
+    },
+    {
+      "indicator_type": "SUSPICIOUS_PATTERN",
+      "description": "Tampering rule triggered: Missing AutoCAD Identifiers",
+      "confidence": 0.6,
+      "evidence": "[WARN] Missing AutoCAD identifiers: FINGERPRINTGUID, VERSIONGUID"
+    },
+    {
+      "indicator_type": "SUSPICIOUS_PATTERN",
+      "description": "Tampering rule triggered: Missing Header Section",
+      "confidence": 0.8,
+      "evidence": "[FAIL] AcDb:Header section missing - structural tampering detected"
+    }
+  ],
+  "risk_assessment": {
+    "overall_risk": "CRITICAL",
+    "factors": [
+      "[FAIL] Header CRC validation failed - file may be modified",
+      "[INFO] No TrustedDWG watermark found",
+      "[WARN] 1 high-severity anomaly(ies) detected",
+      "[WARN] 7 tampering rule(s) triggered",
+      "[INFO] Failed rules: TAMPER-001, TAMPER-003, TAMPER-024",
+      "[CRITICAL] 3 high-confidence tampering indicator(s)"
+    ],
+    "recommendation": "Critical integrity failures detected (score: 33). File should not be used as evidence without extensive forensic investigation and expert testimony."
+  },
+  "forensic_knowledge": {
+    "standards": [
+      {
+        "name": "ISO/IEC 27037:2012",
+        "organization": "ISO/IEC",
+        "description": "Guidelines for identification, collection, acquisition and preservation of digital evidence",
+        "version": "2012",
+        "url": null,
+        "relevance": 1.0
+      },
+      {
+        "name": "NIST SP 800-86",
+        "organization": "NIST",
+        "description": "Guide to Integrating Forensic Techniques into Incident Response",
+        "version": "2006",
+        "url": null,
+        "relevance": 1.0
+      },
+      {
+        "name": "SWGDE Best Practices",
+        "organization": "SWGDE",
+        "description": "Scientific Working Group on Digital Evidence best practices for computer forensics",
+        "version": null,
+        "url": null,
+        "relevance": 1.0
+      },
+      {
+        "name": "ACPO Guidelines v5",
+        "organization": "ACPO",
+        "description": "Good Practice Guide for Digital Evidence",
+        "version": "v5",
+        "url": null,
+        "relevance": 1.0
+      }
+    ],
+    "legal_cases": [
+      {
+        "name": "Daubert v. Merrell Dow Pharmaceuticals",
+        "citation": "509 U.S. 579",
+        "year": 1993,
+        "jurisdiction": "US Supreme Court",
+        "holding": "Scientific evidence must be based on sufficient facts, reliable principles and methods, and reliably applied to the facts of the case",
+        "relevance": "Establishes standard for admissibility of scientific/technical expert testimony"
+      },
+      {
+        "name": "Lorraine v. Markel American Insurance Co.",
+        "citation": "241 F.R.D. 534",
+        "year": 2007,
+        "jurisdiction": "D. Maryland",
+        "holding": "ESI must satisfy authentication requirements under FRE 901(b)(4) and the best evidence rule under FRE 1001-1008",
+        "relevance": "Comprehensive framework for authentication of electronic evidence"
+      }
+    ],
+    "techniques": [
+      {
+        "name": "CRC32 Validation",
+        "description": "Validates file integrity by comparing stored CRC32 checksum against calculated value from file content",
+        "reliability": "High",
+        "error_rate": 0.0,
+        "peer_reviewed": true,
+        "standards_compliance": [
+          "ISO/IEC 27037:2012",
+          "NIST SP 800-86"
+        ]
+      },
+      {
+        "name": "Timestamp Cross-Validation",
+        "description": "Compares timestamps from multiple sources (DWG internal, NTFS $MFT, $STANDARD_INFORMATION, $FILE_NAME) to detect manipulation",
+        "reliability": "High",
+        "error_rate": 0.01,
+        "peer_reviewed": true,
+        "standards_compliance": [
+          "SWGDE Best Practices"
+        ]
+      },
+      {
+        "name": "GUID Analysis",
+        "description": "Analyzes FINGERPRINTGUID and VERSIONGUID to determine file origin and detect unauthorized modifications",
+        "reliability": "High",
+        "error_rate": 0.0,
+        "peer_reviewed": true,
+        "standards_compliance": [
+          "ISO/IEC 27037:2012"
+        ]
+      },
+      {
+        "name": "NTFS $MFT Analysis",
+        "description": "Examines NTFS Master File Table timestamps including $STANDARD_INFORMATION and $FILE_NAME attributes",
+        "reliability": "High",
+        "error_rate": 0.0,
+        "peer_reviewed": true,
+        "standards_compliance": [
+          "NIST SP 800-86",
+          "SWGDE Best Practices"
+        ]
+      }
+    ],
+    "tampering_indicators": [
+      {
+        "indicator_id": "TIMESTAMP-001",
+        "name": "TDUPDATE Before TDCREATE",
+        "description": "DWG modification timestamp precedes creation timestamp",
+        "severity": "CRITICAL",
+        "forensic_significance": "Impossible in normal file creation - indicates timestamp manipulation",
+        "rule_ids": [
+          "TAMPER-003"
+        ],
+        "techniques": [
+          "Timestamp Cross-Validation"
+        ],
+        "legal_cases": [
+          "Lorraine v. Markel"
+        ]
+      },
+      {
+        "indicator_id": "INTEGRITY-001",
+        "name": "CRC Mismatch",
+        "description": "Stored CRC32 does not match calculated file checksum",
+        "severity": "CRITICAL",
+        "forensic_significance": "File content was modified after original save without proper update",
+        "rule_ids": [
+          "TAMPER-001"
+        ],
+        "techniques": [
+          "CRC32 Validation"
+        ],
+        "legal_cases": [
+          "Daubert v. Merrell Dow"
+        ]
+      },
+      {
+        "indicator_id": "FINGERPRINT-001",
+        "name": "Missing AutoCAD Identifiers",
+        "description": "FINGERPRINTGUID or VERSIONGUID missing or null",
+        "severity": "MEDIUM",
+        "forensic_significance": "AutoCAD always generates these GUIDs - absence indicates third-party CAD tool or file manipulation",
+        "rule_ids": [
+          "TAMPER-035"
+        ],
+        "techniques": [
+          "GUID Analysis"
+        ],
+        "legal_cases": []
+      }
+    ],
+    "expert_context": {
+      "rules_evaluated": 7,
+      "indicators_matched": 3,
+      "critical_findings": [
+        "TDUPDATE Before TDCREATE",
+        "CRC Mismatch"
+      ],
+      "tampering_likelihood": "High",
+      "methodology_statement": "Analysis conducted using peer-reviewed forensic techniques in accordance with ISO/IEC 27037:2012 and NIST SP 800-86 guidelines. Findings are based on objective examination of file metadata, timestamp correlation, and integrity verification."
+    },
+    "retrieval_timestamp": "2026-01-15T17:29:29.086204"
+  },
+  "llm_narrative": "**1. EVIDENCE SUMMARY**  \n| Category | Key Evidence | Value |\n|----------|--------------|-------|\n| File Identification | Filename | *LibreDWG_example_2018.dwg* |\n| | File size | 149\u202f218\u202fbytes |\n| | SHA\u2011256 | 7bc7721224003062b237845842b7a976e46771c37eba6833b9ed3712e7a5a65a |\n| | Analysis timestamp | 2026\u201101\u201115\u202f12:29:29\u202fUTC |\n| DWG Header | Version string | AC1032 (AutoCAD\u202f2018+) |\n| | Maintenance version | 0 |\n| | Codepage | 30 |\n| CRC | Stored CRC (offset\u202f0x68) | 0x00000000 |\n| | Calculated CRC (bytes\u202f0x00\u20110x67) | 0xC0D841ED |\n| | Match status | **MISMATCH** |\n| TrustedDWG Watermark | Present | **No** |\n| | Cryptographic validity | **No** |\n| AutoCAD Internal Timestamps | TDCREATE | *Not available* |\n| | TDUPDATE | *Not available* |\n| | TDINDWG | 0.00\u202fh (0.000000\u202fdays) |\n| | TDUSRTIMER | *Not available* |\n| NTFS File System | $SI Creation time | 2026\u201101\u201111\u202f17:39:39\u202fUTC (nanoseconds\u202f909\u202f138\u202f400) |\n| | $SI Modification time | 2026\u201101\u201111\u202f17:39:39\u202fUTC (nanoseconds\u202f945\u202f420\u202f900) |\n| | $FILE_NAME creation time | *Not available* |\n| Metadata | Author | *Not specified* |\n| | Last saved by | *Not specified* |\n| | Title | *Not specified* |\n| | FINGERPRINTGUID | 30314341\u20113233\u20110000\u20110000\u2011000003c00100 |\n| | VERSIONGUID | 00003233\u20110000\u20110000\u201103c0\u201101000021001e |\n| Network Paths | Detected | **None** |\n| Anomalies | CRC mismatch | **High** |\n| | Watermark missing | **High** |\n| | TDINDWG zero | **High** |\n| | Header section missing | **High** |\n\n---\n\n**2. CRC INTEGRITY ANALYSIS**  \n\n- **Stored CRC**: 0x00000000  \n- **Calculated CRC**: 0xC0D841ED  \n- **Result**: **Mismatch**\n\nA CRC mismatch is *definitive proof* that the file header was altered after the last legitimate AutoCAD (or compatible) save. AutoCAD recomputes and writes the CRC every time a file is saved; therefore, a mismatch can only arise if the file was modified by a tool that did **not** update the CRC. This indicates post\u2011save tampering or corruption.\n\n---\n\n**3. WATERMARK ANALYSIS**  \n\n- **Status**: No TrustedDWG watermark present; cryptographic validity = No.  \n- **Interpretation**: The absence of a TrustedDWG watermark means the file was **not** saved by a genuine Autodesk application, or the watermark was deliberately removed. Because the watermark is a proprietary cryptographic signature that cannot be forged, its absence is a strong indicator that the file did not originate from a compliant Autodesk save.  \n- **Limitations**: Some third\u2011party CAD programs can create DWG files without embedding a TrustedDWG watermark. Therefore, the lack of a watermark alone does **not** prove tampering; it only indicates non\u2011Autodesk origin or watermark removal.\n\n---\n\n**4. TIMESTAMP CROSS\u2011VALIDATION**  \n\n| Source | Timestamp | Value | Notes |\n|--------|-----------|-------|-------|\n| DWG (TDINDWG) | Cumulative editing time | 0.00\u202fh | No editing time recorded. |\n| DWG (TDCREATE / TDUPDATE) | Creation / last update | *Not available* | Cannot compute calendar span. |\n| NTFS $SI | Creation | 2026\u201101\u201111\u202f17:39:39\u202fUTC (909\u202f138\u202f400\u202fns) | |\n| NTFS $SI | Modification | 2026\u201101\u201111\u202f17:39:39\u202fUTC (945\u202f420\u202f900\u202fns) | |\n| NTFS $FILE_NAME | Creation | *Not available* | |\n\n- **TDINDWG vs. Calendar Span**: Because TDCREATE and TDUPDATE are missing, the calendar span cannot be calculated. Therefore, we cannot determine whether the zero editing time is impossible.  \n- **NTFS vs. DWG Timestamps**: No DWG timestamps are present; thus no comparison is possible.  \n- **$SI vs. $FN**: $FN creation time is unavailable; no comparison.  \n\n**Conclusion**: No timestamp contradictions or impossibilities can be established from the available data. The NTFS timestamps are internally consistent (creation equals modification) and exhibit normal nanosecond precision, indicating no evidence of timestomping in the NTFS metadata.\n\n---\n\n**5. INFORMATION LEAKAGE ANALYSIS**  \n\n- **Network Paths**: None detected.  \n- **Usernames / Author Fields**: Not specified.  \n- **FINGERPRINTGUID**: 30314341\u20113233\u20110000\u20110000\u2011000003c00100 \u2013 persists across saves and copies; identifies the original drawing.  \n- **VERSIONGUID**: 00003233\u20110000\u20110000\u201103c0\u201101000021001e \u2013 changes with each save; indicates the file has been saved at least once.  \n\nThe presence of a FINGERPRINTGUID confirms that the file was created by a CAD application that preserves this identifier (e.g., AutoCAD, LibreDWG). However, the absence of author or last\u2011saved\u2011by information and the lack of network paths provide no additional provenance data.\n\n---\n\n**6. SYNTHESIS AND CONCLUSIONS**\n\n| Evidence | What it **PROVES** | What it **INDICATES** | What remains **UNCERTAIN** |\n|----------|-------------------|-----------------------|---------------------------|\n| CRC mismatch | The file header was modified after the last legitimate AutoCAD (or compatible) save. | The file has been altered by a tool that did not recompute the CRC. | The nature of the alteration (intent, content changes) is unknown. |\n| Watermark absence | The file was **not** saved by a genuine Autodesk application, or the watermark was removed. | The file likely originates from a third\u2011party CAD program or has been tampered with to remove the watermark. | Whether the watermark was removed or never present cannot be determined without examining the file\u2019s internal structure. |\n| TDINDWG = 0.00\u202fh | No cumulative editing time recorded. | The file may have been created without any editing, or the TDINDWG variable was cleared or never set. | Without TDCREATE/TDUPDATE, we cannot assess whether the zero editing time is inconsistent with the file\u2019s age. |\n| NTFS timestamps | Creation and modification times are identical and internally consistent. | No evidence of NTFS timestomping. | The NTFS timestamps cannot be cross\u2011validated against DWG internal timestamps due to missing data. |\n| FINGERPRINTGUID & VERSIONGUID | The file contains standard CAD identifiers, indicating it was produced by a CAD application that preserves these GUIDs. | The file has undergone at least one legitimate save operation. | The specific application that created the file cannot be identified solely from these GUIDs. |\n\n**Overall Assessment**  \nThe forensic evidence **definitively proves** that the file header was altered after the last legitimate AutoCAD (or compatible) save, as evidenced by the CRC mismatch. It also **indicates with high confidence** that the file was not saved by a genuine Autodesk application (or that the watermark was removed), and that the cumulative editing time recorded is zero. No timestamp contradictions or NTFS timestomping are evident.\n\nHowever, the evidence **does not conclusively establish** the exact nature of the tampering, the content changes made, or the original authoring environment. Further investigation\u2014such as retrieving $FILE_NAME timestamps, examining the file\u2019s internal structure for watermark remnants, and analyzing the file\u2019s content for signs of modification\u2014would be required to fully ascertain the file\u2019s authenticity and provenance.",
+  "llm_model_used": "gpt-oss:20b",
+  "analysis_timestamp": "2026-01-15T12:29:54.101978",
+  "analyzer_version": "0.1.0"
+}
