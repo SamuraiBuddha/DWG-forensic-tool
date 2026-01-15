@@ -15,7 +15,7 @@ from dwg_forensic.llm.ollama_client import OllamaClient, OllamaResponse
 from dwg_forensic.llm.forensic_narrator import (
     ForensicNarrator,
     NarrativeResult,
-    FORENSIC_EXPERT_SYSTEM_PROMPT,
+    FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE,
     FULL_ANALYSIS_PROMPT,
 )
 from dwg_forensic.models import (
@@ -583,6 +583,23 @@ class TestForensicNarratorInit:
         narrator = ForensicNarrator(model="llama3.2")
         assert narrator.client.model == "llama3.2"
 
+    def test_custom_expert_name(self):
+        """Test ForensicNarrator with custom expert name."""
+        narrator = ForensicNarrator(expert_name="Jordan P Ehrig, Sr.")
+        assert narrator.expert_name == "Jordan P Ehrig, Sr."
+
+    def test_default_expert_name(self):
+        """Test ForensicNarrator uses default expert name."""
+        narrator = ForensicNarrator()
+        assert narrator.expert_name == "Digital Forensics Expert"
+
+    def test_get_system_prompt_uses_expert_name(self):
+        """Test _get_system_prompt includes the expert name."""
+        narrator = ForensicNarrator(expert_name="Jordan P Ehrig, Sr.")
+        system_prompt = narrator._get_system_prompt()
+        assert "Jordan P Ehrig, Sr." in system_prompt
+        assert "{expert_name}" not in system_prompt
+
 
 class TestForensicNarratorIsAvailable:
     """Tests for ForensicNarrator.is_available method."""
@@ -920,35 +937,42 @@ class TestForensicNarratorBuildPrompt:
 class TestSystemPrompts:
     """Tests for system prompts and constants."""
 
-    def test_forensic_expert_prompt_contains_credentials(self):
-        """Test that expert prompt contains credentials."""
-        assert "Dr. Sarah Chen" in FORENSIC_EXPERT_SYSTEM_PROMPT
-        assert "Digital Forensics Expert" in FORENSIC_EXPERT_SYSTEM_PROMPT
-        assert "Ph.D." in FORENSIC_EXPERT_SYSTEM_PROMPT
+    def test_forensic_expert_prompt_template_has_placeholder(self):
+        """Test that expert prompt template has expert_name placeholder."""
+        assert "{expert_name}" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
+        assert "Digital Forensics Expert" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
+
+    def test_forensic_expert_prompt_template_can_be_formatted(self):
+        """Test that expert prompt template can be formatted with a name."""
+        formatted = FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE.format(
+            expert_name="Jordan P Ehrig, Sr."
+        )
+        assert "Jordan P Ehrig, Sr." in formatted
+        assert "{expert_name}" not in formatted
 
     def test_forensic_expert_prompt_contains_methodology(self):
         """Test that expert prompt contains methodology."""
-        assert "CROSS-VALIDATION" in FORENSIC_EXPERT_SYSTEM_PROMPT
-        assert "EVIDENCE INVENTORY" in FORENSIC_EXPERT_SYSTEM_PROMPT
-        assert "REASONING CHAIN" in FORENSIC_EXPERT_SYSTEM_PROMPT
+        assert "CROSS-VALIDATION" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
+        assert "EVIDENCE INVENTORY" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
+        assert "REASONING CHAIN" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
 
     def test_forensic_expert_prompt_contains_rules(self):
         """Test that expert prompt contains rules."""
-        assert "ABSOLUTE RULES" in FORENSIC_EXPERT_SYSTEM_PROMPT
-        assert "SHOW YOUR WORK" in FORENSIC_EXPERT_SYSTEM_PROMPT
+        assert "ABSOLUTE RULES" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
+        assert "SHOW YOUR WORK" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
 
     def test_forensic_expert_prompt_contains_dwg_knowledge(self):
         """Test that expert prompt contains DWG knowledge."""
-        assert "CRC" in FORENSIC_EXPERT_SYSTEM_PROMPT
-        assert "TrustedDWG" in FORENSIC_EXPERT_SYSTEM_PROMPT
-        assert "TDINDWG" in FORENSIC_EXPERT_SYSTEM_PROMPT
-        assert "TDCREATE" in FORENSIC_EXPERT_SYSTEM_PROMPT
+        assert "CRC" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
+        assert "TrustedDWG" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
+        assert "TDINDWG" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
+        assert "TDCREATE" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
 
     def test_forensic_expert_prompt_contains_ntfs_knowledge(self):
         """Test that expert prompt contains NTFS knowledge."""
-        assert "$STANDARD_INFORMATION" in FORENSIC_EXPERT_SYSTEM_PROMPT
-        assert "$FILE_NAME" in FORENSIC_EXPERT_SYSTEM_PROMPT
-        assert "timestomping" in FORENSIC_EXPERT_SYSTEM_PROMPT.lower()
+        assert "$STANDARD_INFORMATION" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
+        assert "$FILE_NAME" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE
+        assert "timestomping" in FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE.lower()
 
     def test_full_analysis_prompt_contains_placeholders(self):
         """Test that analysis prompt has all placeholders."""

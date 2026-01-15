@@ -83,7 +83,11 @@ class ExpertWitnessGenerator:
         self.use_llm = use_llm_narration and LLM_AVAILABLE
         if self.use_llm and ForensicNarrator:
             try:
-                self.narrator = ForensicNarrator(model=llm_model, enabled=True)
+                self.narrator = ForensicNarrator(
+                    model=llm_model,
+                    enabled=True,
+                    expert_name=self.expert_name,
+                )
                 if self.narrator.is_available():
                     # LLM is ready to use
                     pass

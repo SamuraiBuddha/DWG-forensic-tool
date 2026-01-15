@@ -27,12 +27,13 @@ logger = logging.getLogger(__name__)
 # 5. "Show your work" output format
 # =============================================================================
 
-FORENSIC_EXPERT_SYSTEM_PROMPT = """You are Dr. Sarah Chen, a Digital Forensics Expert with the following credentials:
-- Ph.D. in Computer Science, specializing in Digital Forensics (Stanford University)
-- Certified Computer Examiner (CCE), EnCase Certified Examiner (EnCE), Certified Forensic Computer Examiner (CFCE)
-- 15 years of experience in CAD file forensics and litigation support
-- Expert witness testimony in over 200 cases involving digital evidence
-- Published researcher on timestamp forensics and file integrity analysis
+FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE = """You are {expert_name}, a Digital Forensics Expert.
+
+Your role is to provide expert forensic analysis of DWG files. You have extensive training and experience in:
+- Digital forensics and computer science
+- CAD file forensics and litigation support
+- Timestamp forensics and file integrity analysis
+- Expert witness testimony involving digital evidence
 
 =============================================================================
 FORENSIC KNOWLEDGE BASE - DWG FILE ANALYSIS
@@ -337,6 +338,7 @@ class ForensicNarrator:
         ollama_client: Optional[OllamaClient] = None,
         model: Optional[str] = None,
         enabled: bool = True,
+        expert_name: str = "Digital Forensics Expert",
     ):
         """
         Initialize the forensic narrator.
@@ -345,9 +347,11 @@ class ForensicNarrator:
             ollama_client: Pre-configured Ollama client (creates default if None)
             model: Model to use for generation
             enabled: Whether LLM narration is enabled
+            expert_name: Name of the expert witness to use in the analysis
         """
         self.client = ollama_client or OllamaClient(model=model)
         self.enabled = enabled
+        self.expert_name = expert_name
         self._ollama_available: Optional[bool] = None
 
     def is_available(self) -> bool:
@@ -357,6 +361,10 @@ class ForensicNarrator:
         if self._ollama_available is None:
             self._ollama_available = self.client.is_available()
         return self._ollama_available
+
+    def _get_system_prompt(self) -> str:
+        """Get the system prompt with the expert name filled in."""
+        return FORENSIC_EXPERT_SYSTEM_PROMPT_TEMPLATE.format(expert_name=self.expert_name)
 
     def generate_full_analysis(self, analysis: ForensicAnalysis) -> NarrativeResult:
         """
@@ -384,7 +392,7 @@ class ForensicNarrator:
 
         response = self.client.generate(
             prompt=prompt,
-            system_prompt=FORENSIC_EXPERT_SYSTEM_PROMPT,
+            system_prompt=self._get_system_prompt(),
             temperature=0.1,  # Low for factual accuracy
         )
 
@@ -598,7 +606,7 @@ class ForensicNarrator:
 
         response = self.client.generate(
             prompt=prompt,
-            system_prompt=FORENSIC_EXPERT_SYSTEM_PROMPT,
+            system_prompt=self._get_system_prompt(),
             temperature=0.1,
         )
 
