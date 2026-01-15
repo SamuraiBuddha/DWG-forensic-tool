@@ -55,6 +55,11 @@ Documentation = "https://github.com/SamuraiBuddha/DWG-forensic-tool#readme"
 Repository = "https://github.com/SamuraiBuddha/DWG-forensic-tool.git"
 Issues = "https://github.com/SamuraiBuddha/DWG-forensic-tool/issues"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dwg_forensic*"]
+exclude = ["tests*", "exampleCAD*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
