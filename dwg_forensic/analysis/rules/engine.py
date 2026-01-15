@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 import yaml
 
 from dwg_forensic.analysis.rules.models import (
+    EvidenceStrength,
     RuleCondition,
     RuleResult,
     RuleSeverity,
@@ -59,72 +60,96 @@ class TamperingRuleEngine(
                 name="CRC Header Mismatch",
                 severity=RuleSeverity.CRITICAL,
                 description="Header CRC32 checksum does not match calculated value",
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-002",
                 name="CRC Section Mismatch",
                 severity=RuleSeverity.CRITICAL,
                 description="Section CRC checksum does not match calculated value",
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-003",
                 name="Missing TrustedDWG",
-                severity=RuleSeverity.WARNING,
-                description="TrustedDWG watermark is absent (expected in R2007+)",
+                severity=RuleSeverity.INFO,  # Demoted from WARNING per user feedback
+                description="TrustedDWG watermark absent - NOT indicative of tampering",
+                evidence_strength=EvidenceStrength.INFORMATIONAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-004",
                 name="Invalid TrustedDWG",
-                severity=RuleSeverity.CRITICAL,
+                severity=RuleSeverity.WARNING,  # Demoted from CRITICAL
                 description="TrustedDWG watermark is present but malformed",
+                evidence_strength=EvidenceStrength.CIRCUMSTANTIAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-005",
                 name="Timestamp Reversal",
                 severity=RuleSeverity.CRITICAL,
-                description="Created timestamp is after modified timestamp",
+                description="Created timestamp is after modified timestamp - IMPOSSIBLE",
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-006",
                 name="Future Timestamp",
                 severity=RuleSeverity.CRITICAL,
-                description="Modified timestamp is in the future",
+                description="Modified timestamp is in the future - IMPOSSIBLE without tampering",
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-007",
                 name="Edit Time Mismatch",
                 severity=RuleSeverity.WARNING,
                 description="Editing time inconsistent with creation/modification dates",
+                evidence_strength=EvidenceStrength.CIRCUMSTANTIAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-008",
                 name="Version Downgrade",
                 severity=RuleSeverity.WARNING,
                 description="File contains objects from newer version than header",
+                evidence_strength=EvidenceStrength.CIRCUMSTANTIAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-009",
                 name="Version Mismatch",
                 severity=RuleSeverity.WARNING,
                 description="Header version does not match internal object versions",
+                evidence_strength=EvidenceStrength.CIRCUMSTANTIAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-010",
                 name="Non-Autodesk Origin",
                 severity=RuleSeverity.INFO,
                 description="File created or modified by non-Autodesk application",
+                evidence_strength=EvidenceStrength.INFORMATIONAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-011",
                 name="Orphaned Objects",
                 severity=RuleSeverity.WARNING,
                 description="Objects with invalid or dangling handle references found",
+                evidence_strength=EvidenceStrength.STRONG,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-012",
                 name="Unusual Slack Space",
                 severity=RuleSeverity.INFO,
                 description="Unexpected data found in padding/slack space areas",
+                evidence_strength=EvidenceStrength.INFORMATIONAL,
+                is_smoking_gun=False,
             ),
             # Advanced Timestamp Rules (TAMPER-013 to TAMPER-018)
             TamperingRule(
@@ -133,8 +158,10 @@ class TamperingRuleEngine(
                 severity=RuleSeverity.CRITICAL,
                 description=(
                     "Cumulative editing time (TDINDWG) exceeds calendar span - "
-                    "proves timestamp manipulation"
+                    "MATHEMATICALLY IMPOSSIBLE - proves timestamp manipulation"
                 ),
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-014",
@@ -142,8 +169,10 @@ class TamperingRuleEngine(
                 severity=RuleSeverity.CRITICAL,
                 description=(
                     "File claims creation date before DWG version existed - "
-                    "proves timestamp backdating"
+                    "IMPOSSIBLE - proves timestamp backdating"
                 ),
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-015",
@@ -153,6 +182,8 @@ class TamperingRuleEngine(
                     "UTC/local timestamp offset is invalid or inconsistent - "
                     "indicates timestamp manipulation"
                 ),
+                evidence_strength=EvidenceStrength.CIRCUMSTANTIAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-016",
@@ -162,6 +193,8 @@ class TamperingRuleEngine(
                     "Educational Version watermark present - "
                     "file created with student license"
                 ),
+                evidence_strength=EvidenceStrength.INFORMATIONAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-017",
@@ -171,6 +204,8 @@ class TamperingRuleEngine(
                     "User timer significantly less than TDINDWG - "
                     "timer was deliberately reset to hide editing history"
                 ),
+                evidence_strength=EvidenceStrength.CIRCUMSTANTIAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-018",
@@ -180,8 +215,10 @@ class TamperingRuleEngine(
                     "File contains network paths (UNC or URLs) that may reveal "
                     "original file origin and network topology"
                 ),
+                evidence_strength=EvidenceStrength.INFORMATIONAL,
+                is_smoking_gun=False,
             ),
-            # NTFS Cross-Validation Rules (TAMPER-019 to TAMPER-028)
+            # NTFS Cross-Validation Rules (TAMPER-019 to TAMPER-028) - THE SMOKING GUNS
             TamperingRule(
                 rule_id="TAMPER-019",
                 name="NTFS Timestomping Detected",
@@ -190,6 +227,8 @@ class TamperingRuleEngine(
                     "DEFINITIVE PROOF: $STANDARD_INFORMATION timestamps are earlier than "
                     "$FILE_NAME timestamps - this is IMPOSSIBLE without timestomping tools"
                 ),
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-020",
@@ -199,6 +238,8 @@ class TamperingRuleEngine(
                     "TOOL SIGNATURE: Timestamps have zero nanoseconds - with 10 million "
                     "possible values, this indicates manipulation by forensic/timestomping tools"
                 ),
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-021",
@@ -208,6 +249,8 @@ class TamperingRuleEngine(
                     "IMPOSSIBLE CONDITION: File creation timestamp is after modification "
                     "timestamp - this cannot occur naturally on any filesystem"
                 ),
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-022",
@@ -217,6 +260,8 @@ class TamperingRuleEngine(
                     "PROVEN BACKDATING: DWG internal creation date is before the file "
                     "existed on the filesystem - conclusive evidence of timestamp manipulation"
                 ),
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-023",
@@ -226,6 +271,8 @@ class TamperingRuleEngine(
                     "PROVEN MANIPULATION: DWG internal modification date is before the file "
                     "was created - this file is a copy with backdated timestamps"
                 ),
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-024",
@@ -235,6 +282,8 @@ class TamperingRuleEngine(
                     "File shows zero or near-zero editing time - file was "
                     "programmatically generated or timestamps were manipulated"
                 ),
+                evidence_strength=EvidenceStrength.STRONG,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-025",
@@ -244,6 +293,8 @@ class TamperingRuleEngine(
                     "Edit time to file complexity ratio is implausible - "
                     "file was copied from another source or timestamps were manipulated"
                 ),
+                evidence_strength=EvidenceStrength.CIRCUMSTANTIAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-026",
@@ -253,6 +304,8 @@ class TamperingRuleEngine(
                     "File was modified by third-party (non-Autodesk) software - "
                     "increases risk of timestamp manipulation"
                 ),
+                evidence_strength=EvidenceStrength.INFORMATIONAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-027",
@@ -262,6 +315,8 @@ class TamperingRuleEngine(
                     "COMPOUND EVIDENCE: Multiple independent timestamp anomalies detected - "
                     "the probability of all occurring naturally is statistically negligible"
                 ),
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-028",
@@ -271,8 +326,11 @@ class TamperingRuleEngine(
                     "DEFINITIVE CONCLUSION: Combination of forensic indicators proves "
                     "timestamp manipulation beyond reasonable doubt"
                 ),
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             # CAD Application Fingerprinting Rules (TAMPER-029 to TAMPER-035)
+            # These are informational - NOT smoking guns per user feedback
             TamperingRule(
                 rule_id="TAMPER-029",
                 name="ODA SDK Artifact Detection",
@@ -281,6 +339,8 @@ class TamperingRuleEngine(
                     "Open Design Alliance SDK artifacts detected - file created by "
                     "non-Autodesk application (BricsCAD, NanoCAD, DraftSight, etc.)"
                 ),
+                evidence_strength=EvidenceStrength.INFORMATIONAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-030",
@@ -290,6 +350,8 @@ class TamperingRuleEngine(
                     "BricsCAD-specific signatures detected (BRICSYS APPID, "
                     "ACAD_BRICSCAD_INFO dictionary) - file created by BricsCAD"
                 ),
+                evidence_strength=EvidenceStrength.INFORMATIONAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-031",
@@ -299,6 +361,8 @@ class TamperingRuleEngine(
                     "NanoCAD-specific signatures detected (NANOCAD APPID, "
                     "CP1251 codepage) - file created by Russian NanoCAD"
                 ),
+                evidence_strength=EvidenceStrength.INFORMATIONAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-032",
@@ -308,15 +372,19 @@ class TamperingRuleEngine(
                     "DraftSight-specific signatures detected (DRAFTSIGHT APPID, "
                     "DS_LICENSE_TYPE) - file created by Dassault Systemes DraftSight"
                 ),
+                evidence_strength=EvidenceStrength.INFORMATIONAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-033",
                 name="Open Source CAD Conversion",
-                severity=RuleSeverity.WARNING,
+                severity=RuleSeverity.INFO,  # Demoted from WARNING
                 description=(
                     "LibreCAD/QCAD/FreeCAD conversion artifacts detected - file was "
                     "converted from DXF or created by open-source CAD software"
                 ),
+                evidence_strength=EvidenceStrength.INFORMATIONAL,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-034",
@@ -326,17 +394,21 @@ class TamperingRuleEngine(
                     "TDCREATE and TDUPDATE are both zero or identical with zero TDINDWG - "
                     "strong indicator of LibreCAD, QCAD, or programmatic file generation"
                 ),
+                evidence_strength=EvidenceStrength.STRONG,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-035",
                 name="Missing AutoCAD Identifiers",
-                severity=RuleSeverity.WARNING,
+                severity=RuleSeverity.INFO,  # Demoted from WARNING
                 description=(
                     "Missing FINGERPRINTGUID and/or VERSIONGUID - AutoCAD always generates "
                     "these identifiers. Absence indicates third-party CAD tool origin."
                 ),
+                evidence_strength=EvidenceStrength.INFORMATIONAL,
+                is_smoking_gun=False,
             ),
-            # Deep DWG Parsing Rules (TAMPER-036 to TAMPER-040)
+            # Deep DWG Parsing Rules (TAMPER-036 to TAMPER-040) - STRUCTURAL SMOKING GUNS
             TamperingRule(
                 rule_id="TAMPER-036",
                 name="Critical Handle Gap Detection",
@@ -345,6 +417,8 @@ class TamperingRuleEngine(
                     "EVIDENCE OF DELETION: Large gaps detected in object handle sequence - "
                     "indicates mass deletion of objects, potentially to hide evidence"
                 ),
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-037",
@@ -354,6 +428,8 @@ class TamperingRuleEngine(
                     "STRUCTURAL ANOMALY: AcDb:Header section missing or corrupted - "
                     "file has been structurally tampered with"
                 ),
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-038",
@@ -363,6 +439,8 @@ class TamperingRuleEngine(
                     "PROVEN MANIPULATION: TDCREATE/TDUPDATE from DWG header contradicts "
                     "filesystem timestamps beyond normal variance"
                 ),
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
             TamperingRule(
                 rule_id="TAMPER-039",
@@ -372,6 +450,8 @@ class TamperingRuleEngine(
                     "STATISTICAL ANOMALY: Handle gap ratio exceeds threshold - "
                     "unusual amount of deleted objects suggests targeted removal"
                 ),
+                evidence_strength=EvidenceStrength.STRONG,
+                is_smoking_gun=False,
             ),
             TamperingRule(
                 rule_id="TAMPER-040",
@@ -381,6 +461,8 @@ class TamperingRuleEngine(
                     "STRUCTURAL CORRUPTION: Section map parsing failed or returned "
                     "invalid data - file structure has been corrupted or manipulated"
                 ),
+                evidence_strength=EvidenceStrength.DEFINITIVE,
+                is_smoking_gun=True,
             ),
         ]
         self.rules.extend(builtin)
@@ -577,6 +659,46 @@ class TamperingRuleEngine(
         """
         target = results if results is not None else self.results
         return [r for r in target if r.status == RuleStatus.FAILED]
+
+    def get_smoking_guns(
+        self, results: Optional[List[RuleResult]] = None
+    ) -> List[RuleResult]:
+        """Get only smoking gun (definitive proof) findings.
+
+        Smoking guns are findings that prove tampering with MATHEMATICAL CERTAINTY.
+        These are the only findings that should be presented in court as
+        conclusive evidence.
+
+        Args:
+            results: Optional list of results to filter. If None, uses self.results.
+
+        Returns:
+            List of RuleResults that are smoking guns AND failed
+        """
+        target = results if results is not None else self.results
+        return [
+            r for r in target
+            if r.status == RuleStatus.FAILED and r.is_smoking_gun
+        ]
+
+    def get_smoking_gun_rules(self) -> List[TamperingRule]:
+        """Get all rules that can produce smoking gun evidence.
+
+        Returns:
+            List of TamperingRule instances marked as smoking guns
+        """
+        return [r for r in self.rules if r.is_smoking_gun]
+
+    def has_definitive_proof(self, results: Optional[List[RuleResult]] = None) -> bool:
+        """Check if any definitive proof of tampering exists.
+
+        Args:
+            results: Optional list of results to check. If None, uses self.results.
+
+        Returns:
+            True if at least one smoking gun finding exists
+        """
+        return len(self.get_smoking_guns(results)) > 0
 
     def get_tampering_score(self) -> float:
         """Calculate tampering likelihood score (0.0-1.0)."""

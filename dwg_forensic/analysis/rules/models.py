@@ -34,6 +34,14 @@ class RuleCondition(BaseModel):
     value: Optional[Any] = None
 
 
+class EvidenceStrength(str, Enum):
+    """Evidence strength classification for legal admissibility."""
+    DEFINITIVE = "definitive"  # Mathematical impossibility - smoking gun
+    STRONG = "strong"  # Very high confidence, multiple corroborating factors
+    CIRCUMSTANTIAL = "circumstantial"  # Suggestive but not conclusive
+    INFORMATIONAL = "informational"  # Contextual only, not evidence
+
+
 class TamperingRule(BaseModel):
     """Tampering detection rule specification."""
     model_config = ConfigDict(populate_by_name=True)
@@ -43,6 +51,14 @@ class TamperingRule(BaseModel):
     severity: RuleSeverity = Field(..., description="Rule severity level")
     description: str = Field(..., description="Detailed description")
     enabled: bool = Field(default=True, description="Whether rule is active")
+    evidence_strength: EvidenceStrength = Field(
+        default=EvidenceStrength.CIRCUMSTANTIAL,
+        description="Legal evidence strength classification"
+    )
+    is_smoking_gun: bool = Field(
+        default=False,
+        description="True if this rule proves tampering with mathematical certainty"
+    )
     condition: Optional[RuleCondition] = Field(
         default=None, description="Condition for custom rules"
     )
@@ -64,3 +80,15 @@ class RuleResult(BaseModel):
     hex_dump: Optional[str] = None
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     details: Optional[Dict[str, Any]] = None
+    evidence_strength: EvidenceStrength = Field(
+        default=EvidenceStrength.CIRCUMSTANTIAL,
+        description="Legal evidence strength classification"
+    )
+    is_smoking_gun: bool = Field(
+        default=False,
+        description="True if this finding proves tampering with mathematical certainty"
+    )
+    forensic_reasoning: Optional[str] = Field(
+        default=None,
+        description="Expert-level explanation of why this proves tampering"
+    )
