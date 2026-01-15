@@ -64,6 +64,7 @@ from dwg_forensic.analysis import (
     TamperingReport,
 )
 from dwg_forensic.analysis.version_dates import get_version_release_date
+from dwg_forensic.knowledge import KnowledgeEnricher, Neo4jKnowledgeClient
 
 
 class ForensicAnalyzer:
@@ -77,6 +78,10 @@ class ForensicAnalyzer:
         self,
         custom_rules_path: Optional[Path] = None,
         progress_callback: Optional[callable] = None,
+        neo4j_uri: Optional[str] = None,
+        neo4j_user: Optional[str] = None,
+        neo4j_password: Optional[str] = None,
+        enable_knowledge_enrichment: bool = True,
     ):
         """Initialize the forensic analyzer with all required parsers.
 
@@ -87,6 +92,10 @@ class ForensicAnalyzer:
                 step: Current analysis step name
                 status: "start", "complete", "skip", "error"
                 message: Human-readable description
+            neo4j_uri: Optional Neo4j connection URI (defaults to NEO4J_URI env var)
+            neo4j_user: Optional Neo4j username (defaults to NEO4J_USER env var)
+            neo4j_password: Optional Neo4j password (defaults to NEO4J_PASSWORD env var)
+            enable_knowledge_enrichment: Whether to enrich analysis with forensic knowledge
         """
         # Progress callback for terminal display
         self._progress_callback = progress_callback
@@ -114,6 +123,29 @@ class ForensicAnalyzer:
         self.anomaly_detector = AnomalyDetector()
         self.rule_engine = TamperingRuleEngine()
         self.risk_scorer = RiskScorer()
+
+        # Knowledge graph enrichment
+        self._enable_knowledge_enrichment = enable_knowledge_enrichment
+        self._knowledge_client: Optional[Neo4jKnowledgeClient] = None
+        self._knowledge_enricher: Optional[KnowledgeEnricher] = None
+
+        if enable_knowledge_enrichment:
+            # Initialize Neo4j client (will connect on first use)
+            if neo4j_uri or neo4j_user or neo4j_password:
+                self._knowledge_client = Neo4jKnowledgeClient(
+                    uri=neo4j_uri,
+                    user=neo4j_user,
+                    password=neo4j_password,
+                )
+            else:
+                # Try to connect with environment variables
+                self._knowledge_client = Neo4jKnowledgeClient()
+
+            # Initialize enricher with fallback support
+            self._knowledge_enricher = KnowledgeEnricher(
+                neo4j_client=self._knowledge_client,
+                use_fallback=True,  # Always use fallback when Neo4j unavailable
+            )
 
         # Load custom rules if provided
         if custom_rules_path:
@@ -312,6 +344,24 @@ class ForensicAnalyzer:
                 created_by=fingerprint_result.detected_application.value,
             )
 
+        # Knowledge enrichment: retrieve forensic standards, legal citations, techniques
+        forensic_knowledge_dict: Optional[Dict[str, Any]] = None
+        if self._enable_knowledge_enrichment and self._knowledge_enricher:
+            self._report_progress("knowledge", "start", "Enriching with forensic knowledge")
+            try:
+                # Get failed rule IDs for knowledge enrichment
+                failed_rule_ids = [r.rule_id for r in failed_rules]
+                knowledge = self._knowledge_enricher.enrich_analysis(
+                    failed_rule_ids=failed_rule_ids,
+                    include_admissibility=True,
+                )
+                # Convert to dict for JSON serialization
+                forensic_knowledge_dict = knowledge.model_dump()
+                source = "Neo4j" if (self._knowledge_client and self._knowledge_client.is_connected) else "fallback"
+                self._report_progress("knowledge", "complete", f"Knowledge enriched ({source})")
+            except Exception as e:
+                self._report_progress("knowledge", "error", f"Knowledge enrichment failed: {str(e)}")
+
         return ForensicAnalysis(
             file_info=file_info,
             header_analysis=header_analysis,
@@ -323,6 +373,7 @@ class ForensicAnalyzer:
             anomalies=anomalies,
             tampering_indicators=tampering_indicators,
             risk_assessment=risk_assessment,
+            forensic_knowledge=forensic_knowledge_dict,
             analysis_timestamp=datetime.now(),
             analyzer_version=__version__,
         )
@@ -390,8 +441,21 @@ class ForensicAnalyzer:
             crc_validation, trusted_dwg, failed_rules, version_string
         )
 
+        # Knowledge enrichment for tampering analysis
+        forensic_knowledge_dict: Optional[Dict[str, Any]] = None
+        if self._enable_knowledge_enrichment and self._knowledge_enricher:
+            try:
+                failed_rule_ids = [r.rule_id for r in failed_rules]
+                knowledge = self._knowledge_enricher.enrich_analysis(
+                    failed_rule_ids=failed_rule_ids,
+                    include_admissibility=True,
+                )
+                forensic_knowledge_dict = knowledge.model_dump()
+            except Exception:
+                pass  # Continue without knowledge on error
+
         # Generate comprehensive report
-        return self.risk_scorer.generate_report(
+        report = self.risk_scorer.generate_report(
             file_path=file_path,
             header=header_analysis,
             crc_validation=crc_validation,
@@ -401,6 +465,12 @@ class ForensicAnalyzer:
             rule_failures=failed_rules_dicts,
             tampering_indicators=tampering_indicators,
         )
+
+        # Add forensic knowledge to report
+        if forensic_knowledge_dict:
+            report.forensic_knowledge = forensic_knowledge_dict
+
+        return report
 
     def _collect_file_info(self, file_path: Path) -> FileInfo:
         """Collect basic file information including SHA-256 hash.

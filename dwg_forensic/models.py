@@ -7,9 +7,12 @@ for forensic purposes. Supports R18+ versions only (AC1024, AC1027, AC1032).
 
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
+
+if TYPE_CHECKING:
+    from dwg_forensic.knowledge.models import ForensicKnowledge
 
 
 class RiskLevel(str, Enum):
@@ -359,6 +362,10 @@ class ForensicAnalysis(BaseModel):
         description="List of tampering indicators"
     )
     risk_assessment: RiskAssessment = Field(..., description="Overall risk assessment")
+    forensic_knowledge: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Forensic knowledge from graph database (standards, cases, techniques)"
+    )
     analysis_timestamp: datetime = Field(
         default_factory=datetime.now,
         description="Timestamp when analysis was completed"

@@ -54,6 +54,12 @@ class TamperingReport(BaseModel):
     crc_valid: Optional[bool] = None
     watermark_valid: Optional[bool] = None
 
+    # Forensic knowledge enrichment
+    forensic_knowledge: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Forensic knowledge from graph database (standards, cases, techniques)"
+    )
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
