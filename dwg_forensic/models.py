@@ -366,6 +366,14 @@ class ForensicAnalysis(BaseModel):
         None,
         description="Forensic knowledge from graph database (standards, cases, techniques)"
     )
+    llm_narrative: Optional[str] = Field(
+        None,
+        description="LLM-generated expert narrative analysis of the forensic findings"
+    )
+    llm_model_used: Optional[str] = Field(
+        None,
+        description="LLM model used for narrative generation (e.g., 'mistral', 'llama3')"
+    )
     analysis_timestamp: datetime = Field(
         default_factory=datetime.now,
         description="Timestamp when analysis was completed"
