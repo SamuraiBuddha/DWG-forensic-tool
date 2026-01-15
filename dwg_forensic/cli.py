@@ -118,7 +118,9 @@ def _create_progress_callback(verbose: int):
 @click.option("-o", "--output", help="Output file path for JSON report")
 @click.option("-f", "--format", "output_format", type=click.Choice(["json", "table"]), default="table")
 @click.option("-v", "--verbose", count=True, help="Verbosity level")
-def analyze(filepath: str, output: str, output_format: str, verbose: int):
+@click.option("--llm", is_flag=True, help="Enable LLM expert narrative generation")
+@click.option("--llm-model", default="mistral", help="Ollama model for LLM narration")
+def analyze(filepath: str, output: str, output_format: str, verbose: int, llm: bool, llm_model: str):
     """Perform full forensic analysis on a DWG file.
 
     FILEPATH is the path to the DWG file to analyze.
@@ -129,7 +131,11 @@ def analyze(filepath: str, output: str, output_format: str, verbose: int):
     try:
         # Create progress callback for terminal display
         progress_callback = _create_progress_callback(verbose)
-        analyzer = ForensicAnalyzer(progress_callback=progress_callback)
+        analyzer = ForensicAnalyzer(
+            progress_callback=progress_callback,
+            use_llm=llm,
+            llm_model=llm_model if llm else None,
+        )
         result = analyzer.analyze(file_path)
 
         if output_format == "json" or output:
@@ -899,12 +905,17 @@ def report(filepath: str, output: str, case_id: str, examiner: str,
     ))
 
     try:
-        # Run analysis
+        # Run analysis with progress callback
         print_status("[INFO]", "Running forensic analysis...")
-        analyzer = ForensicAnalyzer()
+        progress_callback = _create_progress_callback(verbose)
+        analyzer = ForensicAnalyzer(
+            progress_callback=progress_callback,
+            use_llm=llm,
+            llm_model=llm_model if llm else None,
+        )
         result = analyzer.analyze(file_path)
 
-        # Check LLM availability if requested
+        # Check LLM availability if requested (for PDF report generation)
         if llm:
             print_status("[INFO]", f"LLM narration enabled (model: {llm_model})")
             try:
@@ -994,12 +1005,18 @@ def expert_witness(filepath: str, output: str, case_id: str, expert_name: str,
     ))
 
     try:
-        # Run analysis
+        # Run analysis with progress callback
         print_status("[INFO]", "Running forensic analysis...")
-        analyzer = ForensicAnalyzer()
+        progress_callback = _create_progress_callback(verbose)
+        analyzer = ForensicAnalyzer(
+            progress_callback=progress_callback,
+            use_llm=llm,
+            llm_model=llm_model if llm else None,
+            expert_name=expert_name,
+        )
         result = analyzer.analyze(file_path)
 
-        # Check LLM availability if requested
+        # Check LLM availability if requested (for expert witness doc generation)
         if llm:
             print_status("[INFO]", f"LLM analysis enabled (model: {llm_model})")
             try:
