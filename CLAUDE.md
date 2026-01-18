@@ -21,6 +21,9 @@ pytest tests/ -v
 # Run specific test file
 pytest tests/test_analyzer.py -v
 
+# Run single test function
+pytest tests/test_analyzer.py::test_function_name -v
+
 # Lint and format
 ruff check dwg_forensic/
 ruff format dwg_forensic/
@@ -42,17 +45,31 @@ dwg-forensic intake /path/to/file.dwg --case-id "ID" --examiner "Name"
 dwg-forensic gui                                  # Tkinter GUI
 ```
 
+### LLM-Enhanced Analysis (Ollama)
+
+```bash
+# Run with LLM reasoning (requires Ollama running locally)
+dwg-forensic analyze /path/to/file.dwg --use-llm --llm-model llama3.2
+
+# With knowledge graph enrichment (requires Neo4j)
+dwg-forensic analyze /path/to/file.dwg --neo4j-uri bolt://localhost:7687
+```
+
 ## Architecture
 
 The codebase is organized by functional layers:
 
 - **dwg_forensic/core/** - Core forensic operations: `analyzer.py` (main orchestrator), `intake.py` (file intake with SHA-256), `custody.py` (chain of custody), `database.py` (SQLite audit DB), `file_guard.py` (write protection)
 
-- **dwg_forensic/parsers/** - Binary DWG parsing: `header.py` (R18+ header parsing at specific offsets), `crc.py` (CRC32 validation), `watermark.py` (TrustedDWG detection)
+- **dwg_forensic/parsers/** - Binary DWG parsing: `header.py` (R18+ header parsing at specific offsets), `crc.py` (CRC32 validation), `sections.py` (section map parsing), `handles.py` (handle gap detection), `drawing_vars.py` (drawing variables extraction), `ntfs.py` (NTFS timestamp extraction), `timestamp.py` (DWG internal timestamps)
 
-- **dwg_forensic/analysis/** - Tampering detection: `anomaly.py` (timestamp/version anomalies), `rules.py` (12 built-in rules + custom YAML/JSON), `risk.py` (risk scoring)
+- **dwg_forensic/analysis/** - Tampering detection: `anomaly.py` (timestamp/version anomalies), `rules/` (40 modular rules), `risk.py` (risk scoring), `cad_fingerprinting.py` (application identification), `smoking_gun.py` (definitive proof synthesis)
 
 - **dwg_forensic/output/** - Report generation: `pdf_report.py` (ReportLab), `expert_witness.py`, `timeline.py` (SVG), `json_export.py`, `hex_dump.py`
+
+- **dwg_forensic/knowledge/** - Neo4j knowledge graph integration: `client.py` (Neo4j connection), `enrichment.py` (legal citations, forensic standards)
+
+- **dwg_forensic/llm/** - LLM integration (Ollama): `forensic_reasoner.py` (evidence reasoning), `forensic_narrator.py` (report narratives), `ollama_client.py` (API client)
 
 - **dwg_forensic/models.py** - Pydantic models: `ForensicAnalysis` (root output), `RiskLevel` enum, `AnomalyType` enum
 
@@ -71,14 +88,19 @@ The codebase is organized by functional layers:
 - AC1027: AutoCAD 2013-2017 (R21)
 - AC1032: AutoCAD 2018+ (R24)
 
-**Tampering Rules** (analysis/rules/): 40 built-in rules (TAMPER-001 through TAMPER-040) organized into modular mixin classes:
+**Tampering Rules** (analysis/rules/): 40 built-in rules organized into modular mixin classes:
 - `rules_basic.py`: TAMPER-001 to 012 - CRC, watermarks, basic timestamps
 - `rules_timestamp.py`: TAMPER-013 to 018 - Advanced timestamp manipulation (TDINDWG, version anachronism)
 - `rules_ntfs.py`: TAMPER-019 to 028 - NTFS cross-validation ("smoking gun" indicators)
 - `rules_fingerprint.py`: TAMPER-029 to 035 - CAD application fingerprinting (ODA, BricsCAD, NanoCAD)
 - `rules_structure.py`: TAMPER-036 to 040 - Deep DWG structure analysis (handle gaps, section maps)
 
-Custom rules loaded from YAML/JSON via `TamperingRuleEngine.load_rules()`.
+The `TamperingRuleEngine` composes all mixin classes and supports custom rules via `load_rules()` from YAML/JSON.
+
+**LLM Integration** (llm/):
+- `ForensicReasoner`: Uses LLM to evaluate evidence, filter red herrings (e.g., TrustedDWG absence), and identify true smoking guns through logical reasoning
+- `ForensicNarrator`: Generates expert-level narrative explanations for reports
+- Falls back gracefully when Ollama is unavailable
 
 ## Code Style
 
@@ -92,14 +114,8 @@ Custom rules loaded from YAML/JSON via `TamperingRuleEngine.load_rules()`.
 
 Files exceeding these limits should be modularized:
 - Extract logical groupings into separate modules
-- Use mixin classes for large class hierarchies
+- Use mixin classes for large class hierarchies (see analysis/rules/ for example)
 - Create subpackages for related functionality
-
-Rationale:
-1. Maintains readability and navigability
-2. Reduces merge conflicts in collaborative development
-3. Enables better code review granularity
-4. Ensures files fit within LLM context windows for AI-assisted development
 
 ## Output Formatting
 
@@ -110,3 +126,7 @@ Rationale:
 - `[->]` or `-->` instead of arrows
 
 This ensures compatibility with PowerShell and Windows terminals where UTF-8 emoji may not render correctly.
+
+## External Tools
+
+**tools/libredwg/**: Contains LibreDWG integration for supplementary DWG parsing. Used to generate comparison JSON files in exampleCAD/ for validation.
