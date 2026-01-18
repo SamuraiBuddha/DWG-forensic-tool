@@ -34,6 +34,12 @@ from .encryption import (
     prepare_file_data,
 )
 
+try:
+    from .revit_detection import detect_revit_export, RevitDetectionResult
+    REVIT_DETECTION_AVAILABLE = True
+except ImportError:
+    REVIT_DETECTION_AVAILABLE = False
+
 
 class SectionType(IntEnum):
     """DWG Section Types (R18+)."""
@@ -99,6 +105,15 @@ class SectionMapResult:
     was_encrypted: bool = False
     parsing_errors: List[str] = field(default_factory=list)
 
+    # Diagnostic tracking for parse failures
+    tried_offsets: List[int] = field(default_factory=list)  # Which section locator offsets were tried
+    successful_offset: Optional[int] = None  # Which one worked
+
+    # Revit-specific tracking
+    is_revit_export: bool = False
+    revit_fallback_used: bool = False
+    revit_detection_result: Optional['RevitDetectionResult'] = None
+
     def has_section(self, section_type: SectionType) -> bool:
         """Check if a section exists."""
         return section_type in self.sections
@@ -141,9 +156,16 @@ class SectionMapParser:
     # Section map address offset within locator structure
     SECTION_MAP_ADDR_OFFSET = 0x14  # 20 bytes into locator
 
-    def __init__(self):
-        """Initialize section map parser."""
+    def __init__(self, enable_revit_fallback: bool = True):
+        """
+        Initialize section map parser.
+
+        Args:
+            enable_revit_fallback: Whether to use Revit-specific fallback parsing
+                                  when standard parsing fails. Default True.
+        """
         self._decompressor = DWGDecompressor()
+        self._enable_revit_fallback = enable_revit_fallback
 
     def parse(self, file_path: Path) -> SectionMapResult:
         """
@@ -204,6 +226,25 @@ class SectionMapParser:
                 return result
             prepared_data = data
 
+        # Check for Revit export before parsing
+        if self._enable_revit_fallback and REVIT_DETECTION_AVAILABLE:
+            try:
+                revit_result = detect_revit_export(Path(""), data)
+                result.is_revit_export = revit_result.is_revit_export
+                result.revit_detection_result = revit_result
+
+                if revit_result.is_revit_export:
+                    result.parsing_errors.append(
+                        f"FORENSIC NOTE: Revit export detected "
+                        f"(confidence: {revit_result.confidence_score*100:.1f}%). "
+                        f"Export type: {revit_result.export_type.value}. "
+                        f"Section parsing may use Revit-specific fallbacks."
+                    )
+            except Exception as e:
+                result.parsing_errors.append(
+                    f"Revit detection failed: {e}"
+                )
+
         # Different parsing based on version
         if result.file_version in ["AC1024", "AC1027", "AC1032"]:
             self._parse_r2010_sections(prepared_data, data, result)
@@ -213,6 +254,12 @@ class SectionMapParser:
             result.parsing_errors.append(
                 f"Section map parsing not supported for {result.file_version}"
             )
+
+        # Apply Revit fallback if parsing failed and Revit was detected
+        if (len(result.sections) == 0 and
+            result.is_revit_export and
+            self._enable_revit_fallback):
+            self._apply_revit_fallback(data, result)
 
         return result
 
@@ -604,6 +651,170 @@ class SectionMapParser:
 
         except Exception:
             return None
+
+    def _apply_revit_fallback(
+        self,
+        data: bytes,
+        result: SectionMapResult
+    ) -> None:
+        """
+        Apply Revit-specific fallback parsing when standard parsing fails.
+
+        Revit exports may have non-standard section layouts that don't match
+        the OpenDesign specification exactly. This fallback uses heuristic
+        scanning specifically tuned for Revit export patterns.
+
+        Args:
+            data: Full file bytes
+            result: SectionMapResult to populate
+        """
+        result.revit_fallback_used = True
+        result.parsing_errors.append(
+            "FORENSIC NOTE: Standard section parsing failed. "
+            "Applying Revit-specific fallback parsing. "
+            "This is expected for some Revit exports."
+        )
+
+        # Revit exports often have sections at predictable offsets
+        # Use aggressive heuristic scanning
+        self._revit_heuristic_scan(data, result)
+
+    def _revit_heuristic_scan(
+        self,
+        data: bytes,
+        result: SectionMapResult
+    ) -> None:
+        """
+        Perform aggressive heuristic scanning for Revit DWG sections.
+
+        Revit exports may have:
+        - Non-standard section locator offsets
+        - Missing or corrupted section page maps
+        - Sections at unusual file offsets
+
+        This scanner uses pattern matching to locate sections without
+        relying on the section map structure.
+
+        Args:
+            data: Full file bytes
+            result: SectionMapResult to populate
+        """
+        # Scan larger region for Revit files
+        max_scan = min(len(data), 0x10000)  # First 64KB
+        scan_pos = 0x100  # Skip header
+
+        sections_found = 0
+        max_sections = 20
+
+        while scan_pos < max_scan and sections_found < max_sections:
+            try:
+                # Look for section markers
+                if scan_pos + 32 <= len(data):
+                    # Check for page header markers
+                    marker = struct.unpack_from("<I", data, scan_pos)[0]
+
+                    if marker in [self.SECTION_PAGE_MAP, self.SECTION_DATA_PAGE]:
+                        # Found a page header - try to parse it
+                        try:
+                            header = PageHeader.from_bytes(data, scan_pos)
+
+                            # Validate header
+                            if (0 < header.decompressed_size < len(data) * 2 and
+                                0 < header.compressed_size < len(data)):
+
+                                # Try to identify section type from context
+                                section_type = self._identify_revit_section_type(
+                                    data,
+                                    scan_pos,
+                                    header
+                                )
+
+                                if section_type is not None:
+                                    section_info = SectionInfo(
+                                        section_type=section_type,
+                                        section_name=SECTION_NAMES.get(
+                                            section_type,
+                                            f"Revit_Section_{section_type}"
+                                        ),
+                                        compressed_size=header.compressed_size,
+                                        decompressed_size=header.decompressed_size,
+                                        offset=scan_pos,
+                                        compression_type=header.compression_type,
+                                        data_offset=scan_pos + 32,
+                                    )
+
+                                    result.sections[section_type] = section_info
+                                    sections_found += 1
+
+                                    # Skip past this section
+                                    scan_pos += 32 + header.compressed_size
+                                    continue
+
+                        except Exception:
+                            pass
+
+                scan_pos += 4
+
+            except Exception:
+                scan_pos += 4
+
+        result.section_count = len(result.sections)
+
+        if sections_found > 0:
+            result.parsing_errors.append(
+                f"Revit fallback scan found {sections_found} sections"
+            )
+        else:
+            result.parsing_errors.append(
+                "Revit fallback scan found no sections - file may be corrupt"
+            )
+
+    def _identify_revit_section_type(
+        self,
+        data: bytes,
+        offset: int,
+        header: PageHeader
+    ) -> Optional[int]:
+        """
+        Identify section type from Revit export context.
+
+        Uses heuristics based on data patterns and file location.
+
+        Args:
+            data: Full file bytes
+            offset: Offset of potential section
+            header: Parsed page header
+
+        Returns:
+            Section type enum value or None
+        """
+        # Check data following header for identifying patterns
+        content_start = offset + 32
+        content_sample = data[content_start:content_start + 256]
+
+        # Look for known section patterns
+        if b"HEADER" in content_sample or b"Header" in content_sample:
+            return SectionType.HEADER
+
+        if b"Classes" in content_sample or b"CLASS" in content_sample:
+            return SectionType.CLASSES
+
+        if b"HANDLE" in content_sample:
+            return SectionType.HANDLES
+
+        if b"AppInfo" in content_sample or b"Revit" in content_sample:
+            return SectionType.APPINFO
+
+        # Use file position as hint
+        if offset < 0x1000:
+            # Early sections are usually header or classes
+            if header.decompressed_size < 1024:
+                return SectionType.HEADER
+            else:
+                return SectionType.CLASSES
+
+        # Default to unknown
+        return None
 
 
 def get_section_map(file_path: Path) -> SectionMapResult:

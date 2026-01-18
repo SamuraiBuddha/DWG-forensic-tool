@@ -341,6 +341,10 @@ class ForensicAnalysis(BaseModel):
         None,
         description="Application fingerprint"
     )
+    revit_detection: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Revit export detection results (for interpreting CRC and timestamp behavior)"
+    )
     anomalies: list[Anomaly] = Field(
         default_factory=list,
         description="List of detected anomalies"

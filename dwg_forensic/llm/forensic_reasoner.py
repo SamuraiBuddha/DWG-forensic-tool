@@ -140,6 +140,49 @@ class ForensicReasoner:
             crc = analysis_data["crc_validation"]
             evidence_parts.append(f"CRC VALID: {crc.get('is_valid', 'unknown')}")
 
+        # Parse diagnostics (if available)
+        if "parse_diagnostics" in analysis_data:
+            evidence_parts.append("")
+            evidence_parts.append("PARSE DIAGNOSTICS:")
+            diag = analysis_data["parse_diagnostics"]
+
+            method = diag.get("timestamp_extraction_method", "unknown")
+            evidence_parts.append(f"- Timestamp extraction method: {method}")
+
+            sections_found = diag.get("sections_found", [])
+            if sections_found:
+                evidence_parts.append(f"- Sections found: {', '.join(sections_found)}")
+
+            sections_missing = diag.get("sections_missing", [])
+            if sections_missing:
+                evidence_parts.append(f"- Sections missing: {', '.join(sections_missing)}")
+
+            compression_errors = diag.get("compression_errors", [])
+            if compression_errors:
+                evidence_parts.append(f"- Compression errors: {', '.join(compression_errors[:3])}")
+
+            revit_detected = diag.get("revit_detected", False)
+            evidence_parts.append(f"- Revit detected: {'yes' if revit_detected else 'no'}")
+
+        # Revit detection context (if available)
+        if "revit_detection" in analysis_data:
+            revit = analysis_data["revit_detection"]
+            if revit.get("is_revit_export", False):
+                evidence_parts.append("")
+                evidence_parts.append("REVIT EXPORT CONTEXT:")
+                evidence_parts.append("This file was exported from Autodesk Revit. Key implications:")
+                evidence_parts.append("- CRC value of 0x00000000 is expected (Revit doesn't compute CRC)")
+                evidence_parts.append("- Internal timestamps may reflect export time, not original design creation")
+                evidence_parts.append("- Section structure may differ from native AutoCAD files")
+                evidence_parts.append("Do NOT flag these Revit-specific behaviors as tampering evidence.")
+
+                version = revit.get("revit_version")
+                if version:
+                    evidence_parts.append(f"- Detected Revit version: {version}")
+
+                confidence = revit.get("confidence_score", 0.0)
+                evidence_parts.append(f"- Detection confidence: {confidence*100:.1f}%")
+
         # NTFS data
         if "ntfs_data" in analysis_data:
             ntfs = analysis_data["ntfs_data"]

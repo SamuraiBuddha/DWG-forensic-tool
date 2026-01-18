@@ -26,6 +26,7 @@ import re
 
 from .sections import SectionMapParser, SectionType, SectionMapResult, SectionInfo
 from .compression import decompress_section, DecompressionError
+from dwg_forensic.utils.diagnostics import ParseDiagnostics
 
 
 class DWGVariableType(Enum):
@@ -116,6 +117,9 @@ class DrawingVariablesResult:
     header_size: int = 0
     parsing_errors: List[str] = field(default_factory=list)
 
+    # Diagnostic information
+    diagnostics: Optional[ParseDiagnostics] = None
+
     def has_timestamps(self) -> bool:
         """Check if any timestamps were extracted."""
         return any([
@@ -159,6 +163,7 @@ class DrawingVariablesResult:
             "header_offset": self.header_offset,
             "header_size": self.header_size,
             "parsing_errors": self.parsing_errors,
+            "diagnostics": self.diagnostics.to_dict() if self.diagnostics else None,
         }
 
 
@@ -229,6 +234,14 @@ class DrawingVariablesParser:
             result.parsing_errors.append("Invalid version string")
             return result
 
+        # Initialize diagnostics
+        diagnostics = ParseDiagnostics(
+            version=result.file_version,
+            file_size=len(data),
+            raw_header_hex=data[0:256].hex()
+        )
+        result.diagnostics = diagnostics
+
         # Try section-based extraction first (more accurate)
         try:
             # Use provided section_map if available, otherwise parse it
@@ -236,19 +249,41 @@ class DrawingVariablesParser:
                 section_parser = SectionMapParser()
                 section_map = section_parser.parse_from_bytes(data)
 
-            if section_map.has_section(SectionType.HEADER):
+            # Track section map detection
+            if section_map:
+                diagnostics.section_map_address = section_map.section_map_offset
+                diagnostics.section_map_found = section_map.section_count > 0
+                diagnostics.decryption_applied = section_map.was_encrypted
+
+                # Track which sections were found
+                for section_type, section_info in section_map.sections.items():
+                    from .sections import SECTION_NAMES
+                    section_name = SECTION_NAMES.get(section_type, f"Unknown_{section_type}")
+                    diagnostics.mark_section_found(section_name)
+
+            if section_map and section_map.has_section(SectionType.HEADER):
+                diagnostics.timestamp_extraction_method = "section"
                 return self.extract_from_section(data, section_map)
+            else:
+                if section_map:
+                    diagnostics.mark_section_missing("AcDb:Header")
         except Exception as e:
             result.parsing_errors.append(
                 f"Section-based extraction failed, using fallback: {e}"
             )
+            diagnostics.timestamp_extraction_method = "heuristic"
 
         # Fall back to legacy heuristic scanning
         if result.file_version in ["AC1032", "AC1027", "AC1024"]:
+            diagnostics.timestamp_extraction_method = "heuristic"
+            diagnostics.add_scan_region(0, len(data))
             self._parse_r2010_variables(data, result)
         elif result.file_version in ["AC1021", "AC1018"]:
+            diagnostics.timestamp_extraction_method = "heuristic"
+            diagnostics.add_scan_region(0, len(data))
             self._parse_r2004_variables(data, result)
         else:
+            diagnostics.timestamp_extraction_method = "failed"
             result.parsing_errors.append(
                 f"Drawing variables parsing not supported for {result.file_version}"
             )
@@ -277,8 +312,29 @@ class DrawingVariablesParser:
         result = DrawingVariablesResult()
         result.file_version = section_map.file_version
 
+        # Initialize diagnostics
+        diagnostics = ParseDiagnostics(
+            version=section_map.file_version,
+            file_size=len(data),
+            raw_header_hex=data[0:256].hex()
+        )
+        result.diagnostics = diagnostics
+
+        # Track section map detection
+        diagnostics.section_map_address = section_map.section_map_offset
+        diagnostics.section_map_found = section_map.section_count > 0
+        diagnostics.decryption_applied = section_map.was_encrypted
+
+        # Track sections found
+        for section_type, section_info in section_map.sections.items():
+            from .sections import SECTION_NAMES
+            section_name = SECTION_NAMES.get(section_type, f"Unknown_{section_type}")
+            diagnostics.mark_section_found(section_name)
+
         # Step 1: Get Header section
         if not section_map.has_section(SectionType.HEADER):
+            diagnostics.mark_section_missing("AcDb:Header")
+            diagnostics.timestamp_extraction_method = "failed"
             result.parsing_errors.append("AcDb:Header section not found in section map")
             return result
 
@@ -288,15 +344,26 @@ class DrawingVariablesParser:
 
         # Step 2: Read and decompress section
         section_parser = SectionMapParser()
-        header_data = section_parser.read_section_data_from_bytes(
-            data, header_section, decompress=True
-        )
+        try:
+            header_data = section_parser.read_section_data_from_bytes(
+                data, header_section, decompress=True
+            )
+        except DecompressionError as e:
+            diagnostics.add_compression_error(str(e))
+            diagnostics.timestamp_extraction_method = "failed"
+            result.parsing_errors.append(f"Decompression failed: {e}")
+            return result
 
         if not header_data:
+            diagnostics.add_compression_error("Decompression returned empty data")
+            diagnostics.timestamp_extraction_method = "failed"
             result.parsing_errors.append("Failed to read/decompress AcDb:Header section")
             return result
 
         # Step 3: Parse variables from decompressed data (MUCH more accurate)
+        diagnostics.timestamp_extraction_method = "section"
+        diagnostics.add_scan_region(0, len(header_data))
+
         self._extract_timestamps_from_section(header_data, result)
         self._extract_guids_from_section(header_data, result)
 
@@ -435,14 +502,61 @@ class DrawingVariablesParser:
                 is_valid=True,
             )
 
+    def _extract_timestamps_uncompressed_header(
+        self, uncompressed_header: bytes
+    ) -> Dict[int, datetime]:
+        """
+        Extract timestamps directly from uncompressed header at known offsets.
+
+        This is Layer 2 extraction for TDINDWG==0 cases where variables
+        section may be corrupted but header timestamps remain intact.
+
+        Args:
+            uncompressed_header: Decompressed AcDb:Header section data
+
+        Returns:
+            Dict mapping offset to datetime for valid timestamps found
+        """
+        # Known timestamp offset table for R2010+ header region
+        # These offsets are typical locations for creation/modification timestamps
+        TIMESTAMP_OFFSETS = [0x120, 0x128, 0x130, 0x138, 0x140, 0x148, 0x150]
+
+        found_timestamps = {}
+
+        for offset in TIMESTAMP_OFFSETS:
+            if offset + 8 > len(uncompressed_header):
+                continue
+
+            try:
+                # Extract 8-byte Julian date value
+                julian_value = struct.unpack_from("<d", uncompressed_header, offset)[0]
+
+                # Validate timestamp is in reasonable range (1980-2050)
+                # Julian day 2444240 = January 1, 1980
+                # Julian day 2469808 = January 1, 2050
+                if 2444240 < julian_value < 2469808:
+                    dt = self._julian_to_datetime(julian_value)
+                    if dt and 1980 <= dt.year <= 2050:
+                        found_timestamps[offset] = dt
+
+            except (struct.error, ValueError, OverflowError):
+                continue
+
+        return found_timestamps
+
     def _parse_r2010_variables(self, data: bytes, result: DrawingVariablesResult) -> None:
         """
         Parse drawing variables for R2010+ (AC1024, AC1027, AC1032).
 
-        These versions store variables in a more structured format.
+        Implements multi-layer extraction approach:
+        - Layer 1: Parse TDCREATE/TDUPDATE from variables section
+        - Layer 2: If TDINDWG==0, extract from uncompressed header offsets
+        - Layer 3: Fallback to full file heuristic scanning
+
+        This ensures timestamp recovery even when variables are corrupted.
         """
         try:
-            # Extract timestamps using pattern scanning
+            # Layer 1: Extract timestamps using standard pattern scanning
             self._scan_for_timestamps(data, result)
 
             # Extract GUIDs
@@ -450,6 +564,60 @@ class DrawingVariablesParser:
 
             # Extract additional variables from known offsets
             self._extract_header_info(data, result)
+
+            # Layer 2: If TDINDWG is 0, try header extraction
+            if result.tdindwg and result.tdindwg.julian_day == 0.0:
+                # TDINDWG=0 suggests corruption or manipulation
+                # Try to extract timestamps from header section
+                try:
+                    # Parse section map to get header data
+                    from .sections import SectionMapParser, SectionType
+
+                    section_parser = SectionMapParser()
+                    section_map = section_parser.parse_from_bytes(data)
+
+                    if section_map and section_map.has_section(SectionType.HEADER):
+                        header_section = section_map.get_section(SectionType.HEADER)
+                        header_data = section_parser.read_section_data_from_bytes(
+                            data, header_section, decompress=True
+                        )
+
+                        if header_data:
+                            # Extract timestamps from header offsets
+                            header_timestamps = self._extract_timestamps_uncompressed_header(
+                                header_data
+                            )
+
+                            # Merge with existing results (prefer header if variables missing)
+                            if header_timestamps and not result.tdcreate:
+                                # Use first found timestamp as TDCREATE
+                                timestamps_sorted = sorted(header_timestamps.items())
+                                if timestamps_sorted:
+                                    offset, dt = timestamps_sorted[0]
+                                    result.tdcreate = DrawingTimestamp(
+                                        variable_name="TDCREATE",
+                                        julian_day=self._datetime_to_julian(dt),
+                                        datetime_utc=dt,
+                                        raw_bytes=header_data[offset:offset + 8],
+                                        is_valid=True
+                                    )
+
+                            if len(header_timestamps) >= 2 and not result.tdupdate:
+                                # Use second found timestamp as TDUPDATE
+                                timestamps_sorted = sorted(header_timestamps.items())
+                                offset, dt = timestamps_sorted[1]
+                                result.tdupdate = DrawingTimestamp(
+                                    variable_name="TDUPDATE",
+                                    julian_day=self._datetime_to_julian(dt),
+                                    datetime_utc=dt,
+                                    raw_bytes=header_data[offset:offset + 8],
+                                    is_valid=True
+                                )
+
+                except Exception as e:
+                    result.parsing_errors.append(
+                        f"Layer 2 header extraction failed: {e}"
+                    )
 
         except Exception as e:
             result.parsing_errors.append(f"Error parsing R2010 variables: {e}")
@@ -680,6 +848,32 @@ class DrawingVariablesParser:
 
         except (ValueError, OverflowError, OSError):
             return None
+
+    def _datetime_to_julian(self, dt: datetime) -> float:
+        """
+        Convert datetime to Julian day number.
+
+        Args:
+            dt: datetime object (timezone-aware or naive, treated as UTC if naive)
+
+        Returns:
+            Julian day number as float
+        """
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+
+        # Convert to UTC
+        dt_utc = dt.astimezone(timezone.utc)
+
+        # Julian day 2440587.5 = January 1, 1970 (Unix epoch)
+        unix_epoch_julian = 2440587.5
+
+        # Calculate days since Unix epoch
+        delta = dt_utc - datetime(1970, 1, 1, tzinfo=timezone.utc)
+        days_since_unix = delta.total_seconds() / 86400.0
+
+        # Add to Unix epoch Julian day
+        return unix_epoch_julian + days_since_unix
 
     def _bytes_to_guid_string(self, guid_bytes: bytes) -> str:
         """

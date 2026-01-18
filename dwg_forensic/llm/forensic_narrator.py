@@ -257,6 +257,11 @@ RAW FORENSIC DATA
 - Overall risk level: {risk_level}
 - Risk factors identified: {risk_factors}
 
+## REVIT EXPORT DETECTION
+{revit_context}
+
+{revit_disclaimer}
+
 =============================================================================
 YOUR ANALYSIS TASK
 =============================================================================
@@ -433,6 +438,46 @@ class ForensicNarrator:
         # Format risk factors
         risk_factors_text = "\n".join([f"- {f}" for f in analysis.risk_assessment.factors]) if analysis.risk_assessment.factors else "None identified"
 
+        # Revit detection context (if available)
+        revit_context_text = "Not detected"
+        revit_disclaimer = ""
+        if hasattr(analysis, 'revit_detection') and analysis.revit_detection:
+            revit = analysis.revit_detection
+            if revit.get("is_revit_export", False):
+                confidence = revit.get("confidence_score", 0.0)
+                version = revit.get("revit_version", "unknown")
+                export_type = revit.get("export_type", "unknown")
+
+                revit_context_text = f"YES - Revit {version} ({export_type}, confidence: {confidence*100:.1f}%)"
+
+                # Add critical Revit disclaimer for LLM
+                revit_disclaimer = """
+## REVIT EXPORT CONTEXT (CRITICAL)
+
+This file was exported from Autodesk Revit. The following behaviors are NORMAL for Revit exports
+and should NOT be flagged as tampering evidence:
+
+1. CRC Value of 0x00000000:
+   - Revit does not compute CRC checksums during DWG export
+   - A zero CRC is EXPECTED and NORMAL for Revit files
+   - DO NOT flag this as evidence of tampering
+
+2. Timestamp Characteristics:
+   - Internal timestamps may reflect export time, not original design creation
+   - TDCREATE may be the date of export, not the date the Revit model was created
+   - This is a limitation of the Revit-to-DWG export process
+
+3. Section Structure:
+   - Section organization may differ from native AutoCAD files
+   - Missing sections that AutoCAD normally includes are EXPECTED
+   - This is due to Revit's different internal data model
+
+FORENSIC ANALYSIS GUIDANCE:
+- Focus on NTFS timestamp contradictions and impossible conditions
+- Do not cite Revit-specific export artifacts as tampering evidence
+- If CRC is 0x00000000 AND file is Revit export, this is NORMAL (not evidence)
+"""
+
         # NTFS data from analysis (critical for cross-validation)
         ntfs = analysis.ntfs_analysis
         ntfs_created = "Not available"
@@ -546,6 +591,8 @@ class ForensicNarrator:
             tampering_indicators=indicators_text,
             risk_level=analysis.risk_assessment.overall_risk.value,
             risk_factors=risk_factors_text,
+            revit_context=revit_context_text,
+            revit_disclaimer=revit_disclaimer,
         )
 
         return prompt

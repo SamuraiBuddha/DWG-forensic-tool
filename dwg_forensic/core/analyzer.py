@@ -51,6 +51,7 @@ from dwg_forensic.analysis.cad_fingerprinting import (
     FingerprintResult,
     CADApplication,
 )
+from dwg_forensic.parsers.revit_detection import RevitDetector, RevitDetectionResult
 from dwg_forensic.utils.exceptions import DWGForensicError
 
 # Phase 3 imports
@@ -137,6 +138,9 @@ class ForensicAnalyzer:
 
         # CAD application fingerprinting (identifies authoring software)
         self.fingerprinter = CADFingerprinter()
+
+        # Revit detection for export-specific behavior identification
+        self.revit_detector = RevitDetector()
 
         # Phase 3 analyzers
         self.anomaly_detector = AnomalyDetector()
@@ -276,6 +280,22 @@ class ForensicAnalyzer:
             )
         except Exception as e:
             self._report_progress("fingerprint", "error", f"Fingerprinting failed: {e}")
+
+        # Revit Export Detection - critical for interpreting CRC and timestamp behavior
+        self._report_progress("revit", "start", "Detecting Revit export characteristics")
+        revit_detection: Optional[RevitDetectionResult] = None
+        try:
+            revit_detection = self.revit_detector.detect(file_path)
+            if revit_detection.is_revit_export:
+                version_info = f" ({revit_detection.revit_version})" if revit_detection.revit_version else ""
+                self._report_progress(
+                    "revit", "complete",
+                    f"Revit export detected{version_info} - confidence {revit_detection.confidence_score:.0%}"
+                )
+            else:
+                self._report_progress("revit", "complete", "Not a Revit export")
+        except Exception as e:
+            self._report_progress("revit", "error", f"Revit detection failed: {e}")
 
         # Parse timestamps for advanced forensic analysis
         self._report_progress("timestamps", "start", "Extracting embedded timestamps")
@@ -481,6 +501,20 @@ class ForensicAnalyzer:
                     ],
                 }
 
+                # Add parsing diagnostics if available (critical for LLM reasoning about parse failures)
+                if drawing_vars and drawing_vars.diagnostics:
+                    analysis_data["parse_diagnostics"] = drawing_vars.diagnostics.to_dict()
+
+                # Add Revit detection results if available (critical for interpreting CRC and timestamps)
+                if revit_detection:
+                    analysis_data["revit_detection"] = {
+                        "is_revit_export": revit_detection.is_revit_export,
+                        "export_type": revit_detection.export_type.value,
+                        "confidence_score": revit_detection.confidence_score,
+                        "revit_version": revit_detection.revit_version,
+                        "forensic_notes": revit_detection.forensic_notes,
+                    }
+
                 # Run async reasoning in sync context
                 loop = asyncio.new_event_loop()
                 try:
@@ -523,6 +557,27 @@ class ForensicAnalyzer:
         if self._use_llm and self._narrator:
             self._report_progress("llm", "start", f"Generating expert narrative ({self._llm_model or 'default model'})")
             try:
+                # Build Revit detection dict for analysis object
+                revit_detection_dict = None
+                if revit_detection:
+                    revit_detection_dict = {
+                        "is_revit_export": revit_detection.is_revit_export,
+                        "export_type": revit_detection.export_type.value,
+                        "confidence_score": revit_detection.confidence_score,
+                        "revit_version": revit_detection.revit_version,
+                        "export_timestamp": revit_detection.export_timestamp,
+                        "forensic_notes": revit_detection.forensic_notes,
+                        "signatures": [
+                            {
+                                "signature_type": sig.signature_type,
+                                "location": sig.location,
+                                "confidence": sig.confidence,
+                                "details": sig.details,
+                            }
+                            for sig in revit_detection.signatures
+                        ],
+                    }
+
                 # Create temporary analysis object for LLM
                 temp_analysis = ForensicAnalysis(
                     file_info=file_info,
@@ -538,6 +593,8 @@ class ForensicAnalyzer:
                     analysis_timestamp=datetime.now(),
                     analyzer_version=__version__,
                 )
+                # Add Revit detection as attribute for LLM narrator access
+                temp_analysis.revit_detection = revit_detection_dict
 
                 # Generate LLM narrative
                 narrative_result = self._narrator.generate_full_analysis(temp_analysis)
@@ -556,6 +613,28 @@ class ForensicAnalyzer:
             except Exception as e:
                 self._report_progress("llm", "error", f"LLM narrative failed: {str(e)}")
 
+        # Build Revit detection dict for final analysis (if not already created for LLM)
+        if 'revit_detection_dict' not in locals() and revit_detection:
+            revit_detection_dict = {
+                "is_revit_export": revit_detection.is_revit_export,
+                "export_type": revit_detection.export_type.value,
+                "confidence_score": revit_detection.confidence_score,
+                "revit_version": revit_detection.revit_version,
+                "export_timestamp": revit_detection.export_timestamp,
+                "forensic_notes": revit_detection.forensic_notes,
+                "signatures": [
+                    {
+                        "signature_type": sig.signature_type,
+                        "location": sig.location,
+                        "confidence": sig.confidence,
+                        "details": sig.details,
+                    }
+                    for sig in revit_detection.signatures
+                ],
+            }
+        elif 'revit_detection_dict' not in locals():
+            revit_detection_dict = None
+
         return ForensicAnalysis(
             file_info=file_info,
             header_analysis=header_analysis,
@@ -563,6 +642,7 @@ class ForensicAnalyzer:
             metadata=metadata,
             ntfs_analysis=ntfs_analysis,
             application_fingerprint=app_fingerprint,
+            revit_detection=revit_detection_dict,
             anomalies=anomalies,
             tampering_indicators=tampering_indicators,
             risk_assessment=risk_assessment,
