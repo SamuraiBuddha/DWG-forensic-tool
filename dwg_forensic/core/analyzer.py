@@ -52,6 +52,11 @@ from dwg_forensic.analysis.cad_fingerprinting import (
     CADApplication,
 )
 from dwg_forensic.parsers.revit_detection import RevitDetector, RevitDetectionResult
+from dwg_forensic.parsers.structure_analysis import (
+    DWGStructureAnalyzer,
+    StructureAnalysisResult,
+    DWGStructureType,
+)
 from dwg_forensic.utils.exceptions import DWGForensicError
 
 # Phase 3 imports
@@ -141,6 +146,9 @@ class ForensicAnalyzer:
 
         # Revit detection for export-specific behavior identification
         self.revit_detector = RevitDetector()
+
+        # DWG structure analyzer for non-standard file detection
+        self.structure_analyzer = DWGStructureAnalyzer()
 
         # Phase 3 analyzers
         self.anomaly_detector = AnomalyDetector()
@@ -297,6 +305,35 @@ class ForensicAnalyzer:
         except Exception as e:
             self._report_progress("revit", "error", f"Revit detection failed: {e}")
 
+        # DWG Structure Analysis - detect non-standard or stripped DWG files
+        self._report_progress("structure", "start", "Analyzing DWG internal structure")
+        structure_analysis: Optional[StructureAnalysisResult] = None
+        try:
+            with open(file_path, "rb") as f:
+                file_data = f.read()
+            structure_analysis = self.structure_analyzer.analyze(file_data, version_string)
+
+            if structure_analysis.structure_type == DWGStructureType.STANDARD:
+                self._report_progress("structure", "complete", "Standard DWG structure")
+            elif structure_analysis.structure_type == DWGStructureType.NON_AUTOCAD:
+                tool = structure_analysis.detected_tool or "unknown tool"
+                self._report_progress(
+                    "structure", "complete",
+                    f"NON-STANDARD: Created by {tool} - missing AcDb sections"
+                )
+            elif structure_analysis.structure_type == DWGStructureType.STRIPPED:
+                self._report_progress(
+                    "structure", "complete",
+                    "STRIPPED: Standard DWG sections missing - possible metadata removal"
+                )
+            else:
+                self._report_progress(
+                    "structure", "complete",
+                    f"Structure type: {structure_analysis.structure_type.value}"
+                )
+        except Exception as e:
+            self._report_progress("structure", "error", f"Structure analysis failed: {e}")
+
         # Parse timestamps for advanced forensic analysis
         self._report_progress("timestamps", "start", "Extracting embedded timestamps")
         timestamp_data = self.timestamp_parser.parse(file_path, version_string)
@@ -334,11 +371,40 @@ class ForensicAnalyzer:
         drawing_vars: Optional[DrawingVariablesResult] = None
         try:
             drawing_vars = self.drawing_vars_parser.parse(file_path, section_map=section_map)
+
+            # If structure analysis detected non-standard DWG and no timestamps found,
+            # try raw header extraction as a fallback
+            if (structure_analysis and
+                structure_analysis.structure_type in [
+                    DWGStructureType.NON_AUTOCAD,
+                    DWGStructureType.STRIPPED,
+                    DWGStructureType.UNKNOWN
+                ] and
+                not drawing_vars.has_timestamps()):
+
+                self._report_progress(
+                    "drawing_vars", "start",
+                    "Standard extraction failed, trying raw header scan"
+                )
+                # Use raw header scan for non-standard files
+                drawing_vars = self.drawing_vars_parser.extract_from_raw_header(
+                    file_data, drawing_vars
+                )
+
             ts_count = sum([
                 1 if drawing_vars.tdcreate else 0,
                 1 if drawing_vars.tdupdate else 0,
             ])
-            self._report_progress("drawing_vars", "complete", f"Timestamps found: {ts_count}")
+            if ts_count > 0:
+                self._report_progress("drawing_vars", "complete", f"Timestamps found: {ts_count}")
+            else:
+                method = "section"
+                if drawing_vars.diagnostics:
+                    method = drawing_vars.diagnostics.timestamp_extraction_method
+                self._report_progress(
+                    "drawing_vars", "complete",
+                    f"No timestamps found (method: {method})"
+                )
         except Exception as e:
             self._report_progress("drawing_vars", "error", f"Drawing vars extraction failed: {e}")
 
@@ -635,6 +701,11 @@ class ForensicAnalyzer:
         elif 'revit_detection_dict' not in locals():
             revit_detection_dict = None
 
+        # Build structure analysis dict
+        structure_analysis_dict = None
+        if structure_analysis:
+            structure_analysis_dict = structure_analysis.to_dict()
+
         return ForensicAnalysis(
             file_info=file_info,
             header_analysis=header_analysis,
@@ -643,6 +714,7 @@ class ForensicAnalyzer:
             ntfs_analysis=ntfs_analysis,
             application_fingerprint=app_fingerprint,
             revit_detection=revit_detection_dict,
+            structure_analysis=structure_analysis_dict,
             anomalies=anomalies,
             tampering_indicators=tampering_indicators,
             risk_assessment=risk_assessment,

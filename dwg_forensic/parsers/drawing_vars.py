@@ -424,28 +424,53 @@ class DrawingVariablesParser:
                 is_valid=True
             )
 
-        # TDINDWG is typically a small value (editing days, not Julian date)
+        # TDINDWG is total editing time in DAYS (not Julian date)
+        # Typical values:
+        #   - 1 minute editing = 0.000694 days
+        #   - 1 hour editing = 0.0417 days
+        #   - 8 hours editing = 0.333 days
+        #   - 1 day editing = 1.0 days
+        # Valid range: 0.00001 (less than 1 second) to 36500 (100 years)
+
+        tdindwg_candidates = []
+
         for offset in range(0, len(header_data) - 8, 8):
             try:
                 value = struct.unpack_from("<d", header_data, offset)[0]
-                # TDINDWG range: 0 to ~10000 days of editing
-                if 0 < value < 100000:
+
+                # TDINDWG range: tiny fractions up to ~100 years
+                # Must be positive and not a Julian date
+                if 0.00001 <= value < 36500 and not (2400000 < value < 2500000):
                     # Check this isn't one of the Julian dates we already found
                     is_duplicate = any(
                         abs(value - ts.get('julian_day', 0)) < 0.001
                         for ts in found_timestamps
                     )
-                    if not is_duplicate and result.tdindwg is None:
-                        result.tdindwg = DrawingTimestamp(
-                            variable_name="TDINDWG",
-                            julian_day=value,
-                            datetime_utc=None,  # Not a date, it's a duration
-                            raw_bytes=header_data[offset:offset + 8],
-                            is_valid=True
-                        )
-                        break
+                    if not is_duplicate:
+                        tdindwg_candidates.append({
+                            'offset': offset,
+                            'value': value,
+                            'hours': value * 24  # Convert to hours for logging
+                        })
             except struct.error:
                 continue
+
+        # Select the most likely TDINDWG (prefer smaller values as they're more realistic)
+        if tdindwg_candidates:
+            # Sort by value - smallest positive value is usually TDINDWG
+            tdindwg_candidates.sort(key=lambda x: x['value'])
+
+            # Take the smallest non-trivial value
+            for candidate in tdindwg_candidates:
+                if candidate['value'] >= 0.00001:  # At least 1 second
+                    result.tdindwg = DrawingTimestamp(
+                        variable_name="TDINDWG",
+                        julian_day=candidate['value'],
+                        datetime_utc=None,  # Not a date, it's a duration
+                        raw_bytes=header_data[candidate['offset']:candidate['offset'] + 8],
+                        is_valid=True
+                    )
+                    break
 
     def _extract_guids_from_section(
         self, header_data: bytes, result: DrawingVariablesResult
@@ -543,6 +568,142 @@ class DrawingVariablesParser:
                 continue
 
         return found_timestamps
+
+    def extract_from_raw_header(
+        self, data: bytes, result: Optional[DrawingVariablesResult] = None
+    ) -> DrawingVariablesResult:
+        """
+        Extract timestamps from RAW file header for non-standard DWG files.
+
+        This is the LAST RESORT extraction for files that:
+        - Have no AcDb:Header section (non-standard structure)
+        - Were created by ODA SDK or third-party tools
+        - Appear to have metadata stripped
+
+        This method scans the raw file header region (typically 0x80-0x1000)
+        for Julian date patterns without requiring section decompression.
+
+        Args:
+            data: Complete raw file data
+            result: Optional existing result to update (creates new if None)
+
+        Returns:
+            DrawingVariablesResult with extracted variables (may be partial)
+        """
+        if result is None:
+            result = DrawingVariablesResult()
+            try:
+                result.file_version = data[0:6].decode("ascii").rstrip("\x00")
+            except UnicodeDecodeError:
+                result.file_version = "Unknown"
+
+        # Initialize diagnostics if not present
+        if result.diagnostics is None:
+            from dwg_forensic.utils.diagnostics import ParseDiagnostics
+            result.diagnostics = ParseDiagnostics(
+                version=result.file_version,
+                file_size=len(data),
+                raw_header_hex=data[0:256].hex()
+            )
+
+        result.diagnostics.timestamp_extraction_method = "raw_header_scan"
+
+        # Scan header region for Julian dates
+        # For non-standard DWG files, timestamps may be in the header region
+        # rather than in a proper AcDb:Header section
+
+        # Define scan regions (prioritize header areas)
+        scan_regions = [
+            (0x80, 0x200),    # Encrypted header region (AC1032)
+            (0x200, 0x500),   # Extended header area
+            (0x500, 0x1000),  # Early data region
+        ]
+
+        found_timestamps = []
+        found_tdindwg_candidates = []
+
+        for start, end in scan_regions:
+            if end > len(data):
+                end = len(data)
+
+            result.diagnostics.add_scan_region(start, end)
+
+            for offset in range(start, end - 16, 8):
+                try:
+                    value = struct.unpack_from("<d", data, offset)[0]
+
+                    # Check for Julian date (valid timestamps 1990-2040)
+                    # Julian day 2447893 = January 1, 1990
+                    # Julian day 2466155 = January 1, 2040
+                    if 2447893 < value < 2466155:
+                        dt = self._julian_to_datetime(value)
+                        if dt and 1990 <= dt.year <= 2040:
+                            found_timestamps.append({
+                                'offset': offset,
+                                'julian_day': value,
+                                'datetime': dt,
+                                'raw': data[offset:offset + 8]
+                            })
+
+                    # Check for TDINDWG (editing time in days - very small values)
+                    # Range: 0.00001 days (~1 second) to 365 days (~1 year)
+                    elif 0.00001 <= value < 365 and not (2400000 < value < 2500000):
+                        found_tdindwg_candidates.append({
+                            'offset': offset,
+                            'value': value,
+                            'hours': value * 24
+                        })
+
+                except struct.error:
+                    continue
+
+        # Assign found timestamps
+        # Sort by datetime to determine creation vs modification
+        found_timestamps.sort(key=lambda x: x['datetime'])
+
+        if len(found_timestamps) >= 1:
+            ts = found_timestamps[0]  # Earliest = TDCREATE
+            result.tdcreate = DrawingTimestamp(
+                variable_name="TDCREATE",
+                julian_day=ts['julian_day'],
+                datetime_utc=ts['datetime'],
+                raw_bytes=ts['raw'],
+                is_valid=True
+            )
+
+        if len(found_timestamps) >= 2:
+            ts = found_timestamps[-1]  # Latest = TDUPDATE
+            result.tdupdate = DrawingTimestamp(
+                variable_name="TDUPDATE",
+                julian_day=ts['julian_day'],
+                datetime_utc=ts['datetime'],
+                raw_bytes=ts['raw'],
+                is_valid=True
+            )
+
+        # Select TDINDWG (prefer smallest realistic value)
+        if found_tdindwg_candidates:
+            found_tdindwg_candidates.sort(key=lambda x: x['value'])
+            for candidate in found_tdindwg_candidates:
+                # Skip values that might be other data
+                if candidate['value'] >= 0.00001:  # At least 1 second
+                    result.tdindwg = DrawingTimestamp(
+                        variable_name="TDINDWG",
+                        julian_day=candidate['value'],
+                        datetime_utc=None,  # Duration, not date
+                        raw_bytes=data[candidate['offset']:candidate['offset'] + 8],
+                        is_valid=True
+                    )
+                    break
+
+        # If still no timestamps found, note it in parsing errors
+        if not result.tdcreate and not result.tdupdate:
+            result.parsing_errors.append(
+                "No timestamps found in raw header scan - file may have non-standard structure"
+            )
+            result.diagnostics.timestamp_extraction_method = "failed"
+
+        return result
 
     def _parse_r2010_variables(self, data: bytes, result: DrawingVariablesResult) -> None:
         """
@@ -714,30 +875,52 @@ class DrawingVariablesParser:
                     is_valid=True,
                 )
 
-        # Scan for TDINDWG (total editing time - small value in days)
+        # Scan for TDINDWG (total editing time in DAYS)
+        # TDINDWG is typically a very small fractional value:
+        #   - 1 minute = 0.000694 days
+        #   - 1 hour = 0.0417 days
+        #   - 8 hours = 0.333 days
+        # Valid range: 0.00001 to 36500 (100 years max)
+
+        tdindwg_candidates = []
+
         for offset in range(0, len(data) - 8, 4):
             try:
                 value = struct.unpack_from("<d", data, offset)[0]
-                # TDINDWG is typically small (0-1000 days of editing)
-                if 0 < value < 10000 and value != int(value):
+                # TDINDWG range: tiny fractions up to ~100 years
+                # Exclude Julian dates and very large values
+                if 0.00001 <= value < 36500 and not (2400000 < value < 2500000):
                     # Check if this isn't already assigned as a timestamp
                     already_assigned = False
-                    if result.tdcreate and result.tdcreate.julian_day == value:
+                    if result.tdcreate and abs(result.tdcreate.julian_day - value) < 0.001:
                         already_assigned = True
-                    if result.tdupdate and result.tdupdate.julian_day == value:
+                    if result.tdupdate and abs(result.tdupdate.julian_day - value) < 0.001:
                         already_assigned = True
 
-                    if not already_assigned and result.tdindwg is None:
-                        result.tdindwg = DrawingTimestamp(
-                            variable_name="TDINDWG",
-                            julian_day=value,
-                            datetime_utc=None,  # Not a date, it's a duration
-                            raw_bytes=data[offset:offset + 8],
-                            is_valid=True,
-                        )
-                        break
+                    if not already_assigned:
+                        tdindwg_candidates.append({
+                            'offset': offset,
+                            'value': value,
+                        })
             except struct.error:
                 continue
+
+        # Select the most likely TDINDWG from candidates
+        if tdindwg_candidates and result.tdindwg is None:
+            # Sort by value - prefer smaller values as realistic editing times
+            tdindwg_candidates.sort(key=lambda x: x['value'])
+
+            # Take first candidate with reasonable value
+            for candidate in tdindwg_candidates:
+                if candidate['value'] >= 0.00001:  # At least 1 second
+                    result.tdindwg = DrawingTimestamp(
+                        variable_name="TDINDWG",
+                        julian_day=candidate['value'],
+                        datetime_utc=None,  # Not a date, it's a duration
+                        raw_bytes=data[candidate['offset']:candidate['offset'] + 8],
+                        is_valid=True,
+                    )
+                    break
 
     def _scan_for_guids(self, data: bytes, result: DrawingVariablesResult) -> None:
         """

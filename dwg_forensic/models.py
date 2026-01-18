@@ -345,6 +345,10 @@ class ForensicAnalysis(BaseModel):
         None,
         description="Revit export detection results (for interpreting CRC and timestamp behavior)"
     )
+    structure_analysis: Optional[Dict[str, Any]] = Field(
+        None,
+        description="DWG structure analysis - detects non-standard or stripped files"
+    )
     anomalies: list[Anomaly] = Field(
         default_factory=list,
         description="List of detected anomalies"
