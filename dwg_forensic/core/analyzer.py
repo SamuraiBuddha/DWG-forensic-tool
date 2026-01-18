@@ -313,7 +313,7 @@ class ForensicAnalyzer:
         self._report_progress("drawing_vars", "start", "Extracting drawing variables (TDCREATE/TDUPDATE)")
         drawing_vars: Optional[DrawingVariablesResult] = None
         try:
-            drawing_vars = self.drawing_vars_parser.parse(file_path)
+            drawing_vars = self.drawing_vars_parser.parse(file_path, section_map=section_map)
             ts_count = sum([
                 1 if drawing_vars.tdcreate else 0,
                 1 if drawing_vars.tdupdate else 0,
@@ -326,7 +326,7 @@ class ForensicAnalyzer:
         self._report_progress("handles", "start", "Analyzing handle map for deleted objects")
         handle_map: Optional[HandleMapResult] = None
         try:
-            handle_map = self.handle_parser.parse(file_path)
+            handle_map = self.handle_parser.parse(file_path, section_map=section_map)
             gap_count = len(handle_map.gaps) if handle_map.gaps else 0
             critical_gaps = sum(1 for g in (handle_map.gaps or []) if g.severity == "critical")
             if critical_gaps > 0:

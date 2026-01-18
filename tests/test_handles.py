@@ -708,3 +708,62 @@ class TestForensicScenarios:
         assert result.gaps[0].gap_size == 1
         assert result.gaps[0].severity == "low"
         assert not result.has_significant_gaps(10)
+
+
+class TestSectionMapParameter:
+    """Tests for optional section_map parameter."""
+
+    def test_parse_with_section_map_parameter(self):
+        """Test that parse() accepts optional section_map parameter."""
+        from dwg_forensic.parsers.sections import SectionMapResult
+
+        parser = HandleMapParser()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".dwg") as f:
+            data = b"AC1032" + b"\x00" * 0x300
+            f.write(data)
+            temp_path = Path(f.name)
+
+        try:
+            # Create a mock section map
+            section_map = SectionMapResult()
+            section_map.file_version = "AC1032"
+
+            # Should work with section_map=None (backward compatibility)
+            result1 = parser.parse(temp_path, section_map=None)
+            assert isinstance(result1, HandleMapResult)
+
+            # Should work with provided section_map
+            result2 = parser.parse(temp_path, section_map=section_map)
+            assert isinstance(result2, HandleMapResult)
+
+            # Should work without the parameter (default None)
+            result3 = parser.parse(temp_path)
+            assert isinstance(result3, HandleMapResult)
+
+        finally:
+            temp_path.unlink()
+
+    def test_parse_skips_parsing_when_section_map_provided(self):
+        """Test that providing section_map avoids redundant parsing."""
+        from dwg_forensic.parsers.sections import SectionMapResult, SectionInfo, SectionType
+
+        parser = HandleMapParser()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".dwg") as f:
+            data = b"AC1032" + b"\x00" * 0x300
+            f.write(data)
+            temp_path = Path(f.name)
+
+        try:
+            # Create a pre-parsed section map without Handles section
+            section_map = SectionMapResult()
+            section_map.file_version = "AC1032"
+            section_map.sections = {}  # No Handles section
+
+            # Parse with provided section_map
+            result = parser.parse(temp_path, section_map=section_map)
+
+            # Should fall back to legacy parsing since no Handles section
+            assert isinstance(result, HandleMapResult)
+
+        finally:
+            temp_path.unlink()

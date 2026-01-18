@@ -191,13 +191,19 @@ class DrawingVariablesParser:
         """Initialize the drawing variables parser."""
         pass
 
-    def parse(self, file_path: Path, header_data: Optional[bytes] = None) -> DrawingVariablesResult:
+    def parse(
+        self,
+        file_path: Path,
+        header_data: Optional[bytes] = None,
+        section_map: Optional[SectionMapResult] = None
+    ) -> DrawingVariablesResult:
         """
         Parse drawing variables from a DWG file or header section data.
 
         Args:
             file_path: Path to DWG file
             header_data: Optional pre-extracted header section data (DEPRECATED)
+            section_map: Optional pre-parsed section map to avoid redundant parsing
 
         Returns:
             DrawingVariablesResult with extracted variables
@@ -225,8 +231,10 @@ class DrawingVariablesParser:
 
         # Try section-based extraction first (more accurate)
         try:
-            section_parser = SectionMapParser()
-            section_map = section_parser.parse_from_bytes(data)
+            # Use provided section_map if available, otherwise parse it
+            if section_map is None:
+                section_parser = SectionMapParser()
+                section_map = section_parser.parse_from_bytes(data)
 
             if section_map.has_section(SectionType.HEADER):
                 return self.extract_from_section(data, section_map)

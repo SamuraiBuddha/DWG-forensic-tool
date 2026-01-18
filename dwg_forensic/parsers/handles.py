@@ -191,12 +191,17 @@ class HandleMapParser:
         """Initialize the handle map parser."""
         pass
 
-    def parse(self, file_path: Path) -> HandleMapResult:
+    def parse(
+        self,
+        file_path: Path,
+        section_map: Optional[SectionMapResult] = None
+    ) -> HandleMapResult:
         """
         Parse handle map from DWG file.
 
         Args:
             file_path: Path to DWG file
+            section_map: Optional pre-parsed section map to avoid redundant parsing
 
         Returns:
             HandleMapResult with handle analysis
@@ -224,8 +229,10 @@ class HandleMapParser:
 
         # Try section-based extraction first (more accurate)
         try:
-            section_parser = SectionMapParser()
-            section_map = section_parser.parse_from_bytes(data)
+            # Use provided section_map if available, otherwise parse it
+            if section_map is None:
+                section_parser = SectionMapParser()
+                section_map = section_parser.parse_from_bytes(data)
 
             if section_map.has_section(SectionType.HANDLES):
                 return self.extract_from_section(data, section_map)
