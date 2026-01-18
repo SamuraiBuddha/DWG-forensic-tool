@@ -79,3 +79,4 @@ reports/
 *.db
 *.sqlite
 *.sqlite3
+nul
