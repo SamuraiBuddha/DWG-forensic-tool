@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 from dwg_forensic.models import HeaderAnalysis
-from dwg_forensic.utils.exceptions import InvalidDWGError, UnsupportedVersionError
+from dwg_forensic.utils.exceptions import InvalidDWGError, UnsupportedVersionError, ParseError
 
 
 class HeaderParser:
@@ -244,21 +244,33 @@ class HeaderParser:
 
     def _read_byte(self, data: bytes, offset: int) -> int:
         """Read unsigned byte from data at offset."""
-        if offset < len(data):
-            return struct.unpack_from("B", data, offset)[0]
-        return 0
+        if offset >= len(data):
+            raise ParseError(
+                f"Cannot read byte at offset 0x{offset:X}: insufficient data "
+                f"(file size: {len(data)} bytes)",
+                offset=offset
+            )
+        return struct.unpack_from("B", data, offset)[0]
 
     def _read_uint16(self, data: bytes, offset: int) -> int:
         """Read little-endian unsigned 16-bit integer from data at offset."""
-        if offset + 2 <= len(data):
-            return struct.unpack_from("<H", data, offset)[0]
-        return 0
+        if offset + 2 > len(data):
+            raise ParseError(
+                f"Cannot read uint16 at offset 0x{offset:X}: insufficient data "
+                f"(file size: {len(data)} bytes, need {offset + 2} bytes)",
+                offset=offset
+            )
+        return struct.unpack_from("<H", data, offset)[0]
 
     def _read_uint32(self, data: bytes, offset: int) -> int:
         """Read little-endian unsigned 32-bit integer from data at offset."""
-        if offset + 4 <= len(data):
-            return struct.unpack_from("<I", data, offset)[0]
-        return 0
+        if offset + 4 > len(data):
+            raise ParseError(
+                f"Cannot read uint32 at offset 0x{offset:X}: insufficient data "
+                f"(file size: {len(data)} bytes, need {offset + 4} bytes)",
+                offset=offset
+            )
+        return struct.unpack_from("<I", data, offset)[0]
 
     def _read_version_string(self, data: bytes) -> str:
         """Read version string from header.

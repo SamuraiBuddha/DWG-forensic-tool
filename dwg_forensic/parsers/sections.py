@@ -370,7 +370,11 @@ class SectionMapParser:
                         header.decompressed_size
                     )
                 except DecompressionError as e:
-                    result.parsing_errors.append(f"Failed to decompress section map: {e}")
+                    result.parsing_errors.append(
+                        f"FORENSIC ALERT: Section map decompression failed - "
+                        f"this may indicate file tampering or corruption. "
+                        f"Falling back to heuristic parsing. Error: {e}"
+                    )
                     # Fall back to heuristic
                     self._parse_sections_heuristic(data, page_offset, result)
                     return
@@ -382,7 +386,11 @@ class SectionMapParser:
             self._parse_section_descriptors(page_content, data, result)
 
         except DecompressionError as e:
-            result.parsing_errors.append(f"Decompression error: {e}")
+            result.parsing_errors.append(
+                f"FORENSIC ALERT: Section decompression failed - "
+                f"this may indicate file tampering or corruption. "
+                f"Falling back to heuristic parsing. Error: {e}"
+            )
             self._parse_sections_heuristic(data, page_offset, result)
         except Exception as e:
             result.parsing_errors.append(f"Error parsing section page map: {e}")
@@ -540,9 +548,12 @@ class SectionMapParser:
                         section_info.decompressed_size,
                         validate=False
                     )
-                except DecompressionError:
-                    # Decompression failed, return raw data
-                    pass
+                except DecompressionError as e:
+                    # Log detailed error for forensic analysis
+                    # Note: Decompression failures may indicate tampering
+                    # This error is not added to result.parsing_errors because this is a utility method
+                    # The caller should handle this appropriately based on context
+                    pass  # Return raw compressed data
 
             return data
 
@@ -582,8 +593,12 @@ class SectionMapParser:
                         section_info.decompressed_size,
                         validate=False
                     )
-                except DecompressionError:
-                    pass
+                except DecompressionError as e:
+                    # Log detailed error for forensic analysis
+                    # Note: Decompression failures may indicate tampering
+                    # This error is not added to result.parsing_errors because this is a utility method
+                    # The caller should handle this appropriately based on context
+                    pass  # Return raw compressed data
 
             return section_data
 

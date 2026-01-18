@@ -4,7 +4,7 @@ import pytest
 
 from dwg_forensic.models import HeaderAnalysis
 from dwg_forensic.parsers.header import HeaderParser
-from dwg_forensic.utils.exceptions import InvalidDWGError, UnsupportedVersionError
+from dwg_forensic.utils.exceptions import InvalidDWGError, UnsupportedVersionError, ParseError
 
 
 class TestHeaderParser:
@@ -306,29 +306,51 @@ class TestHeaderParser:
         assert "too small" in str(exc_info.value).lower()
 
     def test_read_byte_out_of_bounds(self):
-        """Test _read_byte returns 0 when offset is out of bounds."""
+        """Test _read_byte raises ParseError when offset is out of bounds."""
         parser = HeaderParser()
 
         data = b"\x01\x02\x03"
-        assert parser._read_byte(data, 10) == 0
+        with pytest.raises(ParseError) as exc_info:
+            parser._read_byte(data, 10)
+
+        assert "Cannot read byte" in str(exc_info.value)
+        assert exc_info.value.offset == 10
 
     def test_read_uint16_out_of_bounds(self):
-        """Test _read_uint16 returns 0 when offset is out of bounds."""
+        """Test _read_uint16 raises ParseError when offset is out of bounds."""
         parser = HeaderParser()
 
         data = b"\x01\x02"
-        assert parser._read_uint16(data, 10) == 0
+        with pytest.raises(ParseError) as exc_info:
+            parser._read_uint16(data, 10)
+
+        assert "Cannot read uint16" in str(exc_info.value)
+        assert exc_info.value.offset == 10
+
         # Also test partial bounds (offset+2 > len)
-        assert parser._read_uint16(data, 1) == 0
+        with pytest.raises(ParseError) as exc_info:
+            parser._read_uint16(data, 1)
+
+        assert "Cannot read uint16" in str(exc_info.value)
+        assert exc_info.value.offset == 1
 
     def test_read_uint32_out_of_bounds(self):
-        """Test _read_uint32 returns 0 when offset is out of bounds."""
+        """Test _read_uint32 raises ParseError when offset is out of bounds."""
         parser = HeaderParser()
 
         data = b"\x01\x02\x03"
-        assert parser._read_uint32(data, 10) == 0
+        with pytest.raises(ParseError) as exc_info:
+            parser._read_uint32(data, 10)
+
+        assert "Cannot read uint32" in str(exc_info.value)
+        assert exc_info.value.offset == 10
+
         # Also test partial bounds (offset+4 > len)
-        assert parser._read_uint32(data, 1) == 0
+        with pytest.raises(ParseError) as exc_info:
+            parser._read_uint32(data, 1)
+
+        assert "Cannot read uint32" in str(exc_info.value)
+        assert exc_info.value.offset == 1
 
     def test_parse_version_specific_unknown_fallback(self):
         """Test _parse_version_specific uses fallback for truly unknown versions."""
