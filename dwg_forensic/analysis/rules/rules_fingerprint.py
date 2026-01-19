@@ -16,6 +16,16 @@ from dwg_forensic.analysis.rules.models import (
 class FingerprintRulesMixin:
     """Mixin providing TAMPER-029 through TAMPER-035 check implementations."""
 
+    def _get_forensic_meta(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Get forensic_meta from context safely."""
+        return context.get("forensic_meta", {})
+
+    def _check_trusted_dwg_authenticity(self, context: Dict[str, Any]) -> bool:
+        """Check if TrustedDWG confirms Autodesk application."""
+        meta = self._get_forensic_meta(context)
+        trusted = meta.get("trusted_dwg", {})
+        return trusted.get("autodesk_app", False)
+
     def _check_oda_sdk_artifacts(
         self, rule: TamperingRule, context: Dict[str, Any]
     ) -> RuleResult:
@@ -28,6 +38,14 @@ class FingerprintRulesMixin:
         oda_detection = context.get("oda_detection", {})
 
         is_oda = fingerprint.get("is_oda_based", False) or oda_detection.get("is_oda_based", False)
+
+        # Check forensic_meta for ODA product names
+        meta = self._get_forensic_meta(context)
+        app_info = meta.get("app_info", {})
+        product_name = (app_info.get("product_name") or "").lower()
+        oda_products = ["bricscad", "draftsight", "nanocad", "librecad", "zwcad", "ares"]
+        from_product = any(p in product_name for p in oda_products)
+        is_oda = is_oda or from_product
         indicators = oda_detection.get("indicators", [])
         detected_apps = oda_detection.get("detected_applications", [])
 
@@ -80,7 +98,13 @@ class FingerprintRulesMixin:
         raw_evidence = fingerprint.get("raw_evidence", {})
         bricscad_markers = raw_evidence.get("bricscad_markers", [])
 
-        if not is_bricscad and not bricscad_markers:
+        # Check forensic_meta for BricsCAD
+        meta = self._get_forensic_meta(context)
+        app_info = meta.get("app_info", {})
+        product_name = (app_info.get("product_name") or "").lower()
+        from_product = "bricscad" in product_name or "bricsys" in product_name
+
+        if not is_bricscad and not bricscad_markers and not from_product:
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
@@ -127,7 +151,13 @@ class FingerprintRulesMixin:
         codepage = metadata.get("codepage", "")
         has_cyrillic = "1251" in str(codepage)
 
-        if not is_nanocad and not has_cyrillic:
+        # Check forensic_meta for NanoCAD
+        meta = self._get_forensic_meta(context)
+        app_info = meta.get("app_info", {})
+        product_name = (app_info.get("product_name") or "").lower()
+        from_product = "nanocad" in product_name or "nanosoft" in product_name
+
+        if not is_nanocad and not has_cyrillic and not from_product:
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
@@ -179,7 +209,13 @@ class FingerprintRulesMixin:
         # Check for DraftSight license type property
         license_type = metadata.get("DS_LICENSE_TYPE", metadata.get("ds_license_type"))
 
-        if not is_draftsight and not license_type:
+        # Check forensic_meta for DraftSight
+        meta = self._get_forensic_meta(context)
+        app_info = meta.get("app_info", {})
+        product_name = (app_info.get("product_name") or "").lower()
+        from_product = "draftsight" in product_name or "dassault" in product_name
+
+        if not is_draftsight and not license_type and not from_product:
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
@@ -314,10 +350,16 @@ class FingerprintRulesMixin:
         metadata = context.get("metadata", {})
         timestamp_anomalies = context.get("timestamp_anomalies", {})
 
-        # Get timestamp values
-        tdcreate = timestamp_data.get("tdcreate") or metadata.get("tdcreate")
-        tdupdate = timestamp_data.get("tdupdate") or metadata.get("tdupdate")
-        tdindwg = timestamp_data.get("tdindwg") or metadata.get("tdindwg")
+        # Get timestamp values (must use 'is None' check since 0 is valid)
+        tdcreate = timestamp_data.get("tdcreate")
+        if tdcreate is None:
+            tdcreate = metadata.get("tdcreate")
+        tdupdate = timestamp_data.get("tdupdate")
+        if tdupdate is None:
+            tdupdate = metadata.get("tdupdate")
+        tdindwg = timestamp_data.get("tdindwg")
+        if tdindwg is None:
+            tdindwg = metadata.get("tdindwg")
 
         # Check for patterns already detected
         patterns = timestamp_anomalies.get("patterns", [])
@@ -460,13 +502,23 @@ class FingerprintRulesMixin:
                 confidence=1.0,
             )
 
+        # Cross-validate with TrustedDWG
+        is_autodesk = self._check_trusted_dwg_authenticity(context)
+        confidence = 0.85
+        description = f"[WARN] Missing AutoCAD identifiers: {', '.join(missing_identifiers)}"
+
+        if is_autodesk and missing_identifiers:
+            # SUSPICIOUS: TrustedDWG says Autodesk but identifiers missing
+            description = f"[CRITICAL] TrustedDWG confirms Autodesk but identifiers missing: {', '.join(missing_identifiers)}"
+            confidence = 0.95
+
         return RuleResult(
             rule_id=rule.rule_id,
             rule_name=rule.name,
             status=RuleStatus.FAILED,
             severity=rule.severity,
-            description=f"[WARN] Missing AutoCAD identifiers: {', '.join(missing_identifiers)}",
-            confidence=0.85,
+            description=description,
+            confidence=confidence,
             details={
                 "missing_identifiers": missing_identifiers,
                 "fingerprintguid": fingerprintguid,
