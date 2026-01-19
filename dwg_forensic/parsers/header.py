@@ -228,10 +228,11 @@ class HeaderParser:
             preview_addr = self._read_uint32(data, self.OFFSET_PREVIEW_ADDR_R13)
             codepage = self._read_uint16(data, self.OFFSET_CODEPAGE_R13)
         else:
-            # Fallback for unknown versions
-            maintenance = 0
-            preview_addr = 0
-            codepage = 0
+            # Unknown version - cannot reliably extract header fields
+            # Return None to indicate unavailable (not zero, which could be valid)
+            maintenance = None
+            preview_addr = None
+            codepage = None
 
         return HeaderAnalysis(
             version_string=version_string,

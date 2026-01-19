@@ -399,6 +399,9 @@ class SectionMapParser:
         Page structure:
         - Page header (32 bytes)
         - Section descriptors (variable)
+
+        After parsing descriptors, this method also locates the actual section
+        data by scanning for data pages that follow the section map.
         """
         try:
             # Parse page header
@@ -431,6 +434,14 @@ class SectionMapParser:
 
             # Parse section descriptors from decompressed content
             self._parse_section_descriptors(page_content, data, result)
+
+            # Calculate where section data pages start (after section page map)
+            data_area_start = content_offset + header.compressed_size
+            # Align to 4-byte boundary
+            data_area_start = (data_area_start + 3) & ~3
+
+            # Now scan for actual section data pages and populate data_offset
+            self._locate_section_data_pages(data, data_area_start, result)
 
         except DecompressionError as e:
             result.parsing_errors.append(
@@ -564,6 +575,116 @@ class SectionMapParser:
         if found_sections == 0:
             result.parsing_errors.append(
                 "No sections found via heuristic scanning"
+            )
+
+    def _locate_section_data_pages(
+        self,
+        data: bytes,
+        data_area_start: int,
+        result: SectionMapResult
+    ) -> None:
+        """
+        Locate actual section data pages and populate data_offset for each section.
+
+        After parsing section descriptors, we know WHAT sections exist but not WHERE
+        their data is. This method scans the data area for section data pages
+        (marked with SECTION_DATA_PAGE = 0x4163003B) and matches them to sections.
+
+        The data pages follow the section page map and contain:
+        - Page header (32 bytes) with section_type indicator
+        - Compressed section data
+
+        Args:
+            data: Full file bytes
+            data_area_start: Offset where section data pages begin
+            result: SectionMapResult to update with data_offset values
+        """
+        if not result.sections:
+            return
+
+        # Track which sections we've found data for
+        sections_found = set()
+        scan_pos = data_area_start
+        max_scan = min(len(data), data_area_start + 0x100000)  # Limit scan to 1MB
+
+        while scan_pos < max_scan - 32:
+            try:
+                # Look for data page marker
+                marker = struct.unpack_from("<I", data, scan_pos)[0]
+
+                if marker == self.SECTION_DATA_PAGE:
+                    # Found a data page - parse its header
+                    try:
+                        page_header = PageHeader.from_bytes(data, scan_pos)
+
+                        # The section_type is encoded in the page header
+                        # Read it from offset +4 in the header (after page_type)
+                        # Actually, for data pages, we need to identify section by other means
+                        # Let's try reading the section type from header field
+                        section_type_raw = struct.unpack_from("<I", data, scan_pos + 20)[0]
+
+                        # Match to known sections by size
+                        matched_section = None
+                        for sec_type, sec_info in result.sections.items():
+                            if sec_type in sections_found:
+                                continue
+                            # Match by compressed size (with some tolerance for padding)
+                            if abs(sec_info.compressed_size - page_header.compressed_size) < 16:
+                                matched_section = sec_type
+                                break
+
+                        # If no size match, try section type from header
+                        if matched_section is None and section_type_raw in result.sections:
+                            if section_type_raw not in sections_found:
+                                matched_section = section_type_raw
+
+                        # If still no match, try sequential assignment
+                        if matched_section is None:
+                            for sec_type in result.sections:
+                                if sec_type not in sections_found:
+                                    matched_section = sec_type
+                                    break
+
+                        if matched_section is not None:
+                            # Update the section's data_offset
+                            result.sections[matched_section].data_offset = scan_pos + 32
+                            sections_found.add(matched_section)
+
+                            # Move past this page
+                            scan_pos += 32 + page_header.compressed_size
+                            # Align to 4-byte boundary
+                            scan_pos = (scan_pos + 3) & ~3
+                            continue
+
+                    except Exception:
+                        pass
+
+                # Check for section page map marker (skip it)
+                if marker == self.SECTION_PAGE_MAP:
+                    try:
+                        page_header = PageHeader.from_bytes(data, scan_pos)
+                        scan_pos += 32 + page_header.compressed_size
+                        scan_pos = (scan_pos + 3) & ~3
+                        continue
+                    except Exception:
+                        pass
+
+                scan_pos += 4
+
+            except Exception:
+                scan_pos += 4
+
+        # Log results
+        unfound = set(result.sections.keys()) - sections_found
+        if unfound:
+            result.parsing_errors.append(
+                f"Could not locate data pages for section types: {list(unfound)}"
+            )
+
+        # If we found at least some sections, mark partial success
+        if sections_found:
+            result.parsing_errors.append(
+                f"Located data pages for {len(sections_found)} of {len(result.sections)} sections"
             )
 
     def read_section_data(

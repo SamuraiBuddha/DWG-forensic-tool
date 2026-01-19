@@ -540,8 +540,8 @@ class PDFReportGenerator:
         else:
             integrity_text = (
                 "File integrity verification FAILED. The CRC32 checksum stored in the file header "
-                "does NOT match the calculated checksum. This proves the file was "
-                "modified after it was originally saved, indicating tampering."
+                "does NOT match the calculated checksum. This indicates the file was "
+                "modified after it was originally saved."
             )
         paragraphs.append(integrity_text)
 
@@ -1287,17 +1287,17 @@ class PDFReportGenerator:
             finding = (
                 f"<b>[!] CRITICAL FINDING:</b> The stored CRC value ({analysis.crc_validation.header_crc_stored}) "
                 f"does NOT match the calculated CRC value ({analysis.crc_validation.header_crc_calculated}). "
-                "This proves the file was modified by something OTHER than AutoCAD after its last "
-                "legitimate save. AutoCAD always updates the CRC when saving - a mismatch means "
+                "This indicates the file was modified by something OTHER than AutoCAD after its last "
+                "legitimate save. AutoCAD always updates the CRC when saving - a mismatch indicates "
                 "the file was altered by external means."
             )
             elements.append(Paragraph(finding, styles['CriticalNarrative']))
 
             why_matters = (
                 "<b>Why This Matters:</b> A CRC mismatch cannot occur through normal AutoCAD usage. "
-                "It proves the file was modified using a hex editor, non-Autodesk software, or other "
+                "This indicates the file was modified using a hex editor, non-Autodesk software, or other "
                 "tools that altered the binary content without properly updating the checksum. "
-                "This is definitive evidence that the file was tampered with outside the normal "
+                "This is strong evidence of modification outside the normal "
                 "AutoCAD workflow. The file's integrity cannot be trusted."
             )
             elements.append(Paragraph(why_matters, styles['Narrative']))
@@ -1383,7 +1383,7 @@ class PDFReportGenerator:
         elif not analysis.crc_validation.is_valid:
             summary = (
                 f"<b>Summary:</b> The technical analysis found DEFINITIVE EVIDENCE OF TAMPERING. "
-                f"The CRC checksum FAILED validation, which mathematically proves the file was "
+                f"The CRC checksum FAILED validation, which indicates the file was "
                 f"modified after it was saved. CRC validation is {crc_status}. "
                 f"This file should not be relied upon as authentic evidence."
             )
@@ -1430,7 +1430,7 @@ class PDFReportGenerator:
             ),
             "editing_time_impossible": (
                 "<b>What this means:</b> The recorded editing time exceeds what is physically "
-                "possible given the calendar time between creation and last save. This proves "
+                "possible given the calendar time between creation and last save. This indicates "
                 "the system clock was manipulated to falsify when work was done."
             ),
         }
@@ -1458,7 +1458,7 @@ class PDFReportGenerator:
                 "<b>Plain English:</b> Every DWG file contains a mathematical checksum (CRC) that "
                 "AutoCAD recalculates and updates each time it saves. A valid CRC means the file "
                 "was last modified by AutoCAD or compatible software that correctly updates this "
-                "value. The CRC in this file does NOT match the calculated value, which proves "
+                "value. The CRC in this file does NOT match the calculated value, which indicates "
                 "the file was modified by something other than AutoCAD - such as a hex editor, "
                 "file corruption, or tampering software - after its last legitimate save."
             )
@@ -1469,7 +1469,7 @@ class PDFReportGenerator:
                 "CANNOT be reset through normal AutoCAD operations. The editing time recorded "
                 "in this file EXCEEDS the calendar time between creation and last save dates. "
                 "This is mathematically impossible unless the computer's clock was manipulated. "
-                "This proves the creation date was falsified to make the file appear older than "
+                "This indicates the creation date was falsified to make the file appear older than "
                 "it actually is."
             )
         elif "ntfs" in indicator_type and "creat" in indicator_type:
@@ -1495,7 +1495,7 @@ class PDFReportGenerator:
                 "<b>Plain English:</b> Windows NTFS stores two sets of timestamps: "
                 "$STANDARD_INFORMATION (SI) and $FILE_NAME (FN). The SI timestamps can be modified "
                 "by users or software, but the FN timestamps are protected by Windows and much "
-                "harder to alter. When SI and FN timestamps disagree, it proves someone used "
+                "harder to alter. When SI and FN timestamps disagree, this indicates someone used "
                 "specialized tools (a technique called 'timestomping') to falsify when this file "
                 "was created. The FN timestamp reveals the true creation time."
             )
@@ -1512,7 +1512,7 @@ class PDFReportGenerator:
                 "<b>Plain English:</b> DWG files contain multiple version identifiers that should "
                 "be internally consistent. This file has version markers that contradict each "
                 "other, indicating it was processed by software that modified some fields but "
-                "not others. This inconsistency proves the file was altered outside of normal "
+                "not others. This inconsistency indicates the file was altered outside of normal "
                 "AutoCAD operations."
             )
         elif "guid" in indicator_type or "fingerprint" in indicator_type:
@@ -1529,13 +1529,13 @@ class PDFReportGenerator:
                 "counter that runs whenever the file is open for editing. Unlike other timestamps, "
                 "TDINDWG cannot be reset through normal AutoCAD operations. The editing time in "
                 "this file is inconsistent with the claimed creation and modification dates, "
-                "proving that timestamps were manipulated to misrepresent when work was performed."
+                "indicating that timestamps were manipulated to misrepresent when work was performed."
             )
         elif "zero" in indicator_type and "edit" in indicator_type:
             return (
                 "<b>Plain English:</b> This file shows zero or near-zero editing time (TDINDWG), "
                 "yet contains drawing content. A file with actual drawing work would accumulate "
-                "editing time. Zero editing time proves the file was either: (1) Programmatically "
+                "editing time. Zero editing time indicates the file was either: (1) Programmatically "
                 "generated without using AutoCAD's drawing interface; (2) Converted from another "
                 "format; or (3) Had its metadata reset to hide its true editing history."
             )
@@ -1576,7 +1576,7 @@ class PDFReportGenerator:
                 f"and {num_anomalies} anomaly(ies). Of these, {critical_count} finding(s) represent "
                 f"DEFINITIVE EVIDENCE of tampering - these are not probabilistic assessments but "
                 f"mathematical or forensic certainties. Based on these findings, this file should "
-                f"NOT be considered authentic. The evidence proves deliberate manipulation of file "
+                f"NOT be considered authentic. The evidence indicates deliberate manipulation of file "
                 f"data or timestamps."
             )
             elements.append(Paragraph(summary, styles['CriticalNarrative']))

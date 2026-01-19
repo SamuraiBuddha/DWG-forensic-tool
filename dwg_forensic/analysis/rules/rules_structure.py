@@ -80,9 +80,33 @@ class StructureRulesMixin:
     ) -> RuleResult:
         """TAMPER-037: Missing Header Section Detection.
 
-        The AcDb:Header section is essential for valid DWG files.
-        Its absence or corruption indicates structural tampering.
+        The AcDb:Header section is essential for AutoCAD-created DWG files.
+        Its absence in ODA SDK-based files is NORMAL, not tampering.
         """
+        # Check if this is an ODA SDK file - missing AcDb sections is NORMAL
+        fingerprint = context.get("application_fingerprint", {})
+        structure = context.get("structure_analysis", {})
+
+        is_oda_based = fingerprint.get("is_oda_based", False)
+        structure_type = structure.get("structure_type", "")
+        detected_tool = structure.get("detected_tool", "unknown")
+
+        if is_oda_based or structure_type == "non_autocad":
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.PASSED,
+                severity=rule.severity,
+                description=f"[OK] AcDb:Header section not present - normal for ODA SDK-based software ({detected_tool})",
+                confidence=1.0,
+                details={
+                    "detected_tool": detected_tool,
+                    "is_oda_based": True,
+                    "structure_type": structure_type,
+                    "forensic_note": "ODA SDK applications create valid DWG files without AutoCAD-specific AcDb: sections. This is expected, not tampering.",
+                },
+            )
+
         section_map = context.get("section_map", {})
 
         if not section_map:
@@ -95,7 +119,23 @@ class StructureRulesMixin:
                 confidence=0.0,
             )
 
+        # Check if section map parsing had errors - don't treat failures as tampering
+        parsing_errors = section_map.get("parsing_errors", [])
         sections = section_map.get("sections", {})
+
+        # If we have parsing errors and no/few sections, this is a parsing failure, not tampering
+        if parsing_errors and len(sections) == 0:
+            error_summary = "; ".join(str(e)[:50] for e in parsing_errors[:3])
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.INCONCLUSIVE,
+                severity=rule.severity,
+                description=f"Section map parsing failed - cannot determine if AcDb:Header is present. Errors: {error_summary}",
+                confidence=0.0,
+                details={"parsing_errors": parsing_errors},
+            )
+
         # Section type 1 is HEADER (AcDb:Header)
         has_header = 1 in sections or "1" in sections or "HEADER" in str(sections).upper()
 
@@ -109,15 +149,20 @@ class StructureRulesMixin:
                 confidence=1.0,
             )
 
+        # Only return FAILED if parsing succeeded but header is missing
+        # If there were partial parsing errors, reduce confidence
+        confidence = 0.95 if not parsing_errors else 0.6
+
         return RuleResult(
             rule_id=rule.rule_id,
             rule_name=rule.name,
             status=RuleStatus.FAILED,
             severity=rule.severity,
             description="[FAIL] AcDb:Header section missing - structural tampering detected",
-            confidence=0.95,
+            confidence=confidence,
             details={
                 "missing_section": "AcDb:Header",
+                "parsing_errors": parsing_errors if parsing_errors else None,
                 "forensic_significance": (
                     "The Header section contains critical drawing variables including "
                     "timestamps. Its absence indicates severe file corruption or "
@@ -311,7 +356,16 @@ class StructureRulesMixin:
         """TAMPER-040: Section Map Integrity Failure.
 
         Checks for section map parsing failures or structural anomalies.
+        ODA SDK files may have different section structures - this is normal.
         """
+        # Check if this is an ODA SDK file - different section structure is NORMAL
+        fingerprint = context.get("application_fingerprint", {})
+        structure = context.get("structure_analysis", {})
+
+        is_oda_based = fingerprint.get("is_oda_based", False)
+        structure_type = structure.get("structure_type", "")
+        detected_tool = structure.get("detected_tool", "unknown")
+
         section_map = context.get("section_map", {})
 
         if not section_map:
@@ -327,7 +381,33 @@ class StructureRulesMixin:
         parsing_errors = section_map.get("parsing_errors", [])
         section_count = section_map.get("section_count", 0)
 
-        # Check for parsing errors
+        # For ODA files, parsing errors related to AutoCAD-specific sections are expected
+        if parsing_errors and (is_oda_based or structure_type == "non_autocad"):
+            # Check if errors are benign (missing AutoCAD-specific structures)
+            benign_error_keywords = ["AcDb:", "autocad", "header", "classes"]
+            all_benign = all(
+                any(keyword.lower() in str(err).lower() for keyword in benign_error_keywords)
+                for err in parsing_errors
+            )
+
+            if all_benign:
+                return RuleResult(
+                    rule_id=rule.rule_id,
+                    rule_name=rule.name,
+                    status=RuleStatus.PASSED,
+                    severity=rule.severity,
+                    description=f"[OK] Section parsing differences expected for ODA SDK-based software ({detected_tool})",
+                    confidence=1.0,
+                    details={
+                        "detected_tool": detected_tool,
+                        "is_oda_based": True,
+                        "structure_type": structure_type,
+                        "parsing_notes": parsing_errors,
+                        "forensic_note": "ODA SDK files use different internal section organization than AutoCAD. Parsing differences are expected and not indicative of tampering.",
+                    },
+                )
+
+        # Check for parsing errors (non-ODA or serious errors)
         if parsing_errors:
             return RuleResult(
                 rule_id=rule.rule_id,
@@ -347,6 +427,23 @@ class StructureRulesMixin:
 
         # Check for suspiciously low section count
         if section_count == 0:
+            # For ODA files, section_count might be zero due to different parsing logic
+            if is_oda_based or structure_type == "non_autocad":
+                return RuleResult(
+                    rule_id=rule.rule_id,
+                    rule_name=rule.name,
+                    status=RuleStatus.PASSED,
+                    severity=rule.severity,
+                    description=f"[OK] Non-standard section structure for ODA SDK-based software ({detected_tool})",
+                    confidence=1.0,
+                    details={
+                        "detected_tool": detected_tool,
+                        "is_oda_based": True,
+                        "structure_type": structure_type,
+                        "forensic_note": "ODA SDK files organize sections differently than AutoCAD. Zero AutoCAD-style sections is expected.",
+                    },
+                )
+
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,

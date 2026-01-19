@@ -137,10 +137,16 @@ class NTFSRulesMixin:
     def _check_ntfs_impossible_timestamp(
         self, rule: TamperingRule, context: Dict[str, Any]
     ) -> RuleResult:
-        """TAMPER-021: NTFS Impossible Timestamp Order.
+        """TAMPER-021: NTFS Creation After Modification (INFORMATIONAL - Normal Copy Behavior).
 
-        IMPOSSIBLE CONDITION: File creation timestamp after modification
-        timestamp cannot occur naturally on any filesystem.
+        IMPORTANT: This is NOT evidence of tampering. This is NORMAL Windows copy behavior.
+
+        When a file is COPIED on Windows:
+        - NTFS Created = time of copy (new timestamp)
+        - NTFS Modified = PRESERVED from source (old timestamp)
+        Result: Created > Modified is EXPECTED for ANY copied file.
+
+        This check is retained for informational purposes only to indicate file was copied.
         """
         ntfs_data = context.get("ntfs_data", {})
 
@@ -162,7 +168,7 @@ class NTFSRulesMixin:
                 rule_name=rule.name,
                 status=RuleStatus.PASSED,
                 severity=rule.severity,
-                description="[OK] NTFS timestamps in valid order",
+                description="[OK] NTFS timestamps indicate file was created on this machine (not copied)",
                 confidence=1.0,
             )
 
@@ -172,59 +178,66 @@ class NTFSRulesMixin:
         return RuleResult(
             rule_id=rule.rule_id,
             rule_name=rule.name,
-            status=RuleStatus.FAILED,
+            status=RuleStatus.PASSED,  # Changed from FAILED - this is normal behavior
             severity=rule.severity,
             description=(
-                "[FAIL] IMPOSSIBLE: File created after it was modified - "
-                "this cannot occur naturally"
+                "[INFO] File was copied to this machine: NTFS Created timestamp "
+                "is newer than Modified timestamp (normal Windows copy behavior)"
             ),
-            expected="Created timestamp <= Modified timestamp",
-            found=f"Created: {si_created}, Modified: {si_modified}",
-            confidence=1.0,
+            expected="Created <= Modified (for files created on this machine)",
+            found=f"Created: {si_created}, Modified: {si_modified} (indicates file copy)",
+            confidence=1.0,  # High confidence this is normal copy behavior
             details={
                 "forensic_conclusion": (
-                    "PROVEN MANIPULATION: A file cannot be modified before it exists. "
-                    "This timestamp ordering is physically impossible and proves "
-                    "deliberate timestamp manipulation."
+                    "NORMAL FILE COPY BEHAVIOR: NTFS Created timestamp is later than Modified "
+                    "timestamp. This is EXPECTED when a file is copied on Windows. The operating "
+                    "system sets Created to the time of copy but PRESERVES the original Modified "
+                    "timestamp from the source. This is NOT evidence of timestamp manipulation."
                 ),
+                "is_normal_windows_behavior": True,
             },
         )
 
     def _check_dwg_ntfs_creation_contradiction(
         self, rule: TamperingRule, context: Dict[str, Any]
     ) -> RuleResult:
-        """TAMPER-022: DWG vs NTFS Creation Timestamp Contradiction.
+        """TAMPER-022: DWG vs NTFS Creation Timestamp Difference (DEPRECATED).
 
-        PROVEN BACKDATING: If DWG internal creation date is before the file
-        existed on the filesystem, this is IMPOSSIBLE and proves backdating.
+        NOTE: This rule has been deprecated. A DWG internal timestamp predating
+        the NTFS filesystem timestamp is NORMAL for transferred/copied files.
+        The NTFS "Created" timestamp reflects when the file arrived on THIS
+        machine, not the original authorship date. This is NOT evidence of backdating.
+
+        This rule now returns PASSED for informational tracking only.
         """
         ntfs_data = context.get("ntfs_data", {})
         contradictions = context.get("ntfs_contradictions", {})
 
-        # Check for pre-computed contradictions (dict format from analyzer)
-        if isinstance(contradictions, dict) and contradictions.get("creation_contradiction"):
+        # Check for creation time difference (renamed from creation_contradiction)
+        if isinstance(contradictions, dict) and contradictions.get("creation_time_difference"):
             details = contradictions.get("creation_details", {})
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
-                status=RuleStatus.FAILED,
-                severity=rule.severity,
+                status=RuleStatus.PASSED,  # Changed from FAILED - this is normal behavior
+                severity=rule.severity,  # Keep original severity from rule definition
                 description=(
-                    f"[FAIL] PROVEN BACKDATING: "
-                    f"DWG claims creation before file existed on filesystem"
+                    f"[INFO] File transfer detected: "
+                    f"DWG authorship predates arrival on this filesystem (normal for copied files)"
                 ),
-                expected="DWG created >= NTFS created",
-                found=details.get("forensic_conclusion", "Creation timestamp contradiction"),
-                confidence=1.0,
+                expected="DWG created >= NTFS created (for files created on this machine)",
+                found=details.get("forensic_note", "Creation time difference detected"),
+                confidence=0.95,  # High confidence this is normal file transfer
                 details={
                     "forensic_conclusion": (
-                        "DEFINITIVE PROOF: A file cannot contain a creation date from before "
-                        "the file itself was created on the filesystem. This conclusively "
-                        "proves the DWG internal timestamp was BACKDATED."
+                        "NORMAL FILE TRANSFER: The DWG internal timestamp predates the NTFS "
+                        "filesystem timestamp. This is expected when a file is copied or transferred "
+                        "to this machine. NTFS 'Created' reflects arrival time, not authorship date."
                     ),
                     "dwg_created": details.get("dwg_created"),
                     "ntfs_created": details.get("ntfs_created"),
                     "difference_hours": details.get("difference_hours"),
+                    "is_normal_for_transferred_files": True,
                 },
             )
 
@@ -313,7 +326,40 @@ class NTFSRulesMixin:
         1. Programmatic file generation
         2. Direct timestamp manipulation
         3. File created by copying another file
+
+        NOTE: ODA SDK-based files (BricsCAD, DraftSight, etc.) typically do NOT
+        record TDINDWG. Zero edit time for these files is NORMAL, not tampering.
         """
+        # Check for ODA SDK files - zero edit time is EXPECTED
+        structure = context.get("structure_analysis", {})
+        structure_type = structure.get("structure_type", "")
+        detected_tool = structure.get("detected_tool", "unknown")
+        is_oda_based = structure.get("is_oda_based", False)
+
+        fingerprint = context.get("application_fingerprint", {})
+        if not is_oda_based:
+            is_oda_based = fingerprint.get("is_oda_based", False)
+
+        if is_oda_based or structure_type == "non_autocad":
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.PASSED,
+                severity=rule.severity,
+                description=f"[OK] Zero/minimal edit time is normal for ODA SDK files ({detected_tool})",
+                confidence=1.0,
+                details={
+                    "detected_tool": detected_tool,
+                    "is_oda_based": True,
+                    "structure_type": structure_type,
+                    "forensic_note": (
+                        "ODA SDK-based applications (BricsCAD, DraftSight, NanoCAD, etc.) "
+                        "do not track editing time in TDINDWG. Zero edit time is expected "
+                        "and is NOT an indication of tampering for these files."
+                    ),
+                },
+            )
+
         timestamp_data = context.get("timestamp_data", {})
         metadata = context.get("metadata", {})
 
@@ -374,7 +420,40 @@ class NTFSRulesMixin:
 
         The ratio of editing time to file complexity (size) should be reasonable.
         Very large files with minimal edit time indicate copying or manipulation.
+
+        NOTE: ODA SDK-based files do not track TDINDWG, so edit ratio analysis
+        is not applicable and would produce false positives.
         """
+        # Check for ODA SDK files - edit ratio analysis is NOT applicable
+        structure = context.get("structure_analysis", {})
+        structure_type = structure.get("structure_type", "")
+        detected_tool = structure.get("detected_tool", "unknown")
+        is_oda_based = structure.get("is_oda_based", False)
+
+        fingerprint = context.get("application_fingerprint", {})
+        if not is_oda_based:
+            is_oda_based = fingerprint.get("is_oda_based", False)
+
+        if is_oda_based or structure_type == "non_autocad":
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.PASSED,
+                severity=rule.severity,
+                description=f"[OK] Edit ratio analysis not applicable for ODA SDK files ({detected_tool})",
+                confidence=1.0,
+                details={
+                    "detected_tool": detected_tool,
+                    "is_oda_based": True,
+                    "structure_type": structure_type,
+                    "forensic_note": (
+                        "ODA SDK-based applications do not track editing time (TDINDWG). "
+                        "Edit ratio analysis requires valid TDINDWG data and is therefore "
+                        "not applicable to these files."
+                    ),
+                },
+            )
+
         timestamp_data = context.get("timestamp_data", {})
         metadata = context.get("metadata", {})
         file_data = context.get("file", {})
@@ -494,21 +573,24 @@ class NTFSRulesMixin:
 
         if detected_tool or is_oda_based:
             tool_name = detected_tool or "ODA-based application"
+            # ODA-based applications are LEGITIMATE CAD software, not tampering tools
+            # Return PASSED with informational note about the detected tool
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
-                status=RuleStatus.FAILED,
+                status=RuleStatus.PASSED,  # Changed from FAILED - legitimate CAD software
                 severity=rule.severity,
-                description=f"[INFO] Third-party tool detected: {tool_name}",
+                description=f"[OK] File created by legitimate third-party CAD software: {tool_name}",
                 found=f"Detected application: {detected_app}",
-                confidence=0.8,
+                confidence=1.0,
                 details={
                     "detected_tool": tool_name,
                     "is_oda_based": is_oda_based,
                     "forensic_note": (
-                        f"{tool_name} is a third-party CAD application. "
-                        "Third-party tools may not preserve Autodesk timestamp integrity "
-                        "and can be used to manipulate file metadata."
+                        f"{tool_name} is a legitimate third-party CAD application based on "
+                        "the ODA SDK (Open Design Alliance). These tools create valid DWG files "
+                        "but may not include AutoCAD-specific metadata like TDINDWG or TrustedDWG "
+                        "watermarks. This is EXPECTED behavior, not evidence of tampering."
                     ),
                 },
             )
@@ -629,13 +711,12 @@ class NTFSRulesMixin:
 
         if ntfs_data.get("si_fn_mismatch"):
             impossible_conditions.append("NTFS $SI/$FN timestamp mismatch (timestomping)")
-        if ntfs_data.get("creation_after_modification"):
-            impossible_conditions.append("File created after modification (impossible)")
+        # NOTE: creation_after_modification is NORMAL for copied files - NOT an impossible condition
 
         # Handle dict format from analyzer
         if isinstance(contradictions, dict):
-            if contradictions.get("creation_contradiction"):
-                impossible_conditions.append("DWG creation predates filesystem (backdating)")
+            # Note: creation_time_difference is NORMAL for transferred files, NOT impossible
+            # We no longer treat this as an impossible condition
             if contradictions.get("modification_contradiction"):
                 strong_indicators.append("DWG/NTFS modification timestamp mismatch")
 

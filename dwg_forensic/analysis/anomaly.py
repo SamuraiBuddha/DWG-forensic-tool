@@ -513,7 +513,7 @@ class AnomalyDetector:
         self, timestamp_data: "TimestampData"
     ) -> List[Anomaly]:
         """
-        Detect suspiciously precise or round timestamp values.
+        Detect unusually precise or round timestamp values.
 
         Legitimate files rarely have perfectly round timestamps like
         exactly midnight (0.0 fractional day) or zero editing time.
@@ -526,7 +526,7 @@ class AnomalyDetector:
         """
         anomalies: List[Anomaly] = []
 
-        # Check for suspiciously round creation time (exactly midnight)
+        # Check for unusually round creation time (exactly midnight)
         if timestamp_data.tdcreate is not None:
             fractional = timestamp_data.tdcreate % 1.0
             if fractional == 0.0:

@@ -363,9 +363,10 @@ class TestHeaderParser:
         result = parser._parse_version_specific(data, "AC9999")
 
         assert result.version_string == "AC9999"
-        assert result.maintenance_version == 0
-        assert result.preview_address == 0
-        assert result.codepage == 0
+        # Unknown versions should return None, not 0, to indicate unavailable data
+        assert result.maintenance_version is None
+        assert result.preview_address is None
+        assert result.codepage is None
 
     def test_read_version_string_invalid_prefix(self):
         """Test _read_version_string raises error for non-AC prefix."""

@@ -126,6 +126,9 @@ class ForensicAnalyzer:
         # Progress callback for terminal display
         self._progress_callback = progress_callback
 
+        # Forensic error tracking - ALL errors are potential evidence in forensic analysis
+        self._analysis_errors: List[Dict[str, Any]] = []
+
         # Phase 1 parsers
         self.header_parser = HeaderParser()
         self.crc_validator = CRCValidator()
@@ -196,7 +199,15 @@ class ForensicAnalyzer:
                 if not self._narrator.is_available():
                     self._narrator = None
                     self._use_llm = False
-            except Exception:
+            except Exception as e:
+                import traceback
+                self._analysis_errors.append({
+                    "operation": "forensic_narrator_init",
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "traceback": traceback.format_exc(),
+                    "timestamp": datetime.now().isoformat(),
+                })
                 self._narrator = None
                 self._use_llm = False
 
@@ -207,7 +218,15 @@ class ForensicAnalyzer:
                     llm_model=llm_model or "mistral",
                     ollama_host="http://localhost:11434",
                 )
-            except Exception:
+            except Exception as e:
+                import traceback
+                self._analysis_errors.append({
+                    "operation": "forensic_reasoner_init",
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "traceback": traceback.format_exc(),
+                    "timestamp": datetime.now().isoformat(),
+                })
                 self._reasoner = None
 
         # Smoking gun synthesizer - filters to ONLY definitive proof
@@ -229,8 +248,15 @@ class ForensicAnalyzer:
         if self._progress_callback:
             try:
                 self._progress_callback(step, status, message)
-            except Exception:
-                pass  # Don't let callback errors affect analysis
+            except Exception as e:
+                # Record callback failure but don't halt analysis
+                # In forensic software, even callback failures are logged
+                self._analysis_errors.append({
+                    "operation": "progress_callback",
+                    "step": step,
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                })
 
     def analyze(self, file_path: Path) -> ForensicAnalysis:
         """Perform complete forensic analysis on a DWG file.
@@ -287,6 +313,14 @@ class ForensicAnalyzer:
                 f"{app_name.upper()} (confidence: {confidence})"
             )
         except Exception as e:
+            import traceback
+            self._analysis_errors.append({
+                "operation": "fingerprinting",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "traceback": traceback.format_exc(),
+                "timestamp": datetime.now().isoformat(),
+            })
             self._report_progress("fingerprint", "error", f"Fingerprinting failed: {e}")
 
         # Revit Export Detection - critical for interpreting CRC and timestamp behavior
@@ -303,6 +337,14 @@ class ForensicAnalyzer:
             else:
                 self._report_progress("revit", "complete", "Not a Revit export")
         except Exception as e:
+            import traceback
+            self._analysis_errors.append({
+                "operation": "revit_detection",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "traceback": traceback.format_exc(),
+                "timestamp": datetime.now().isoformat(),
+            })
             self._report_progress("revit", "error", f"Revit detection failed: {e}")
 
         # DWG Structure Analysis - detect non-standard or stripped DWG files
@@ -332,6 +374,14 @@ class ForensicAnalyzer:
                     f"Structure type: {structure_analysis.structure_type.value}"
                 )
         except Exception as e:
+            import traceback
+            self._analysis_errors.append({
+                "operation": "structure_analysis",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "traceback": traceback.format_exc(),
+                "timestamp": datetime.now().isoformat(),
+            })
             self._report_progress("structure", "error", f"Structure analysis failed: {e}")
 
         # Parse timestamps for advanced forensic analysis
@@ -364,6 +414,14 @@ class ForensicAnalyzer:
             else:
                 self._report_progress("sections", "complete", f"Sections found: {section_count}")
         except Exception as e:
+            import traceback
+            self._analysis_errors.append({
+                "operation": "section_parsing",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "traceback": traceback.format_exc(),
+                "timestamp": datetime.now().isoformat(),
+            })
             self._report_progress("sections", "error", f"Section parsing failed: {e}")
 
         # Deep DWG Parsing: Drawing Variables Extraction
@@ -406,6 +464,14 @@ class ForensicAnalyzer:
                     f"No timestamps found (method: {method})"
                 )
         except Exception as e:
+            import traceback
+            self._analysis_errors.append({
+                "operation": "drawing_vars_extraction",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "traceback": traceback.format_exc(),
+                "timestamp": datetime.now().isoformat(),
+            })
             self._report_progress("drawing_vars", "error", f"Drawing vars extraction failed: {e}")
 
         # Deep DWG Parsing: Handle Gap Analysis
@@ -420,6 +486,14 @@ class ForensicAnalyzer:
             else:
                 self._report_progress("handles", "complete", f"Handle gaps: {gap_count}")
         except Exception as e:
+            import traceback
+            self._analysis_errors.append({
+                "operation": "handle_analysis",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "traceback": traceback.format_exc(),
+                "timestamp": datetime.now().isoformat(),
+            })
             self._report_progress("handles", "error", f"Handle analysis failed: {e}")
 
         # Phase 3: Anomaly detection (including advanced timestamp anomalies and NTFS cross-validation)
@@ -438,7 +512,7 @@ class ForensicAnalyzer:
             timestamp_data=timestamp_data, anomalies=anomalies, metadata=metadata,
             ntfs_data=ntfs_data, ntfs_contradictions=ntfs_contradictions,
             section_map=section_map, drawing_vars=drawing_vars, handle_map=handle_map,
-            fingerprint=fingerprint_result,
+            fingerprint=fingerprint_result, structure_analysis=structure_analysis,
         )
         rule_results = self.rule_engine.evaluate_all(rule_context)
         failed_rules = self.rule_engine.get_failed_rules(rule_results)
@@ -449,7 +523,8 @@ class ForensicAnalyzer:
         tampering_indicators = self._detect_tampering(
             crc_validation, failed_rules, version_string,
             timestamp_data=timestamp_data, ntfs_data=ntfs_data,
-            ntfs_contradictions=ntfs_contradictions
+            ntfs_contradictions=ntfs_contradictions,
+            structure_analysis=structure_analysis,
         )
         self._report_progress("tampering", "complete", f"Indicators: {len(tampering_indicators)}")
 
@@ -491,6 +566,14 @@ class ForensicAnalyzer:
                 source = "Neo4j" if (self._knowledge_client and self._knowledge_client.is_connected) else "fallback"
                 self._report_progress("knowledge", "complete", f"Knowledge enriched ({source})")
             except Exception as e:
+                import traceback
+                self._analysis_errors.append({
+                    "operation": "knowledge_enrichment",
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "traceback": traceback.format_exc(),
+                    "timestamp": datetime.now().isoformat(),
+                })
                 self._report_progress("knowledge", "error", f"Knowledge enrichment failed: {str(e)}")
 
         # SMOKING GUN SYNTHESIS: Filter to ONLY definitive proof
@@ -532,6 +615,14 @@ class ForensicAnalyzer:
                         "No definitive proof of tampering (red herrings filtered)"
                     )
             except Exception as e:
+                import traceback
+                self._analysis_errors.append({
+                    "operation": "smoking_gun_synthesis",
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "traceback": traceback.format_exc(),
+                    "timestamp": datetime.now().isoformat(),
+                })
                 self._report_progress("smoking_gun", "error", f"Smoking gun synthesis failed: {str(e)}")
 
         # LLM FORENSIC REASONING: Use LLM to actually REASON about evidence
@@ -613,6 +704,14 @@ class ForensicAnalyzer:
                         f"LLM: No definitive proof ({len(reasoning.filtered_red_herrings)} red herrings filtered)"
                     )
             except Exception as e:
+                import traceback
+                self._analysis_errors.append({
+                    "operation": "llm_reasoning",
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "traceback": traceback.format_exc(),
+                    "timestamp": datetime.now().isoformat(),
+                })
                 self._report_progress("reasoning", "error", f"LLM reasoning failed: {str(e)}")
 
         # Build partial analysis for LLM narrative generation
@@ -677,6 +776,14 @@ class ForensicAnalyzer:
                     error_msg = narrative_result.error or "Unknown error"
                     self._report_progress("llm", "error", f"LLM generation failed: {error_msg}")
             except Exception as e:
+                import traceback
+                self._analysis_errors.append({
+                    "operation": "llm_narrative",
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "traceback": traceback.format_exc(),
+                    "timestamp": datetime.now().isoformat(),
+                })
                 self._report_progress("llm", "error", f"LLM narrative failed: {str(e)}")
 
         # Build Revit detection dict for final analysis (if not already created for LLM)
@@ -724,6 +831,7 @@ class ForensicAnalyzer:
             smoking_gun_report=smoking_gun_report_dict,
             has_definitive_proof=has_definitive_proof,
             llm_reasoning=llm_reasoning_dict,
+            analysis_errors=self._analysis_errors if self._analysis_errors else None,
             analysis_timestamp=datetime.now(),
             analyzer_version=__version__,
         )
@@ -796,8 +904,16 @@ class ForensicAnalyzer:
                     include_admissibility=True,
                 )
                 forensic_knowledge_dict = knowledge.model_dump()
-            except Exception:
-                pass  # Continue without knowledge on error
+            except Exception as e:
+                import traceback
+                self._analysis_errors.append({
+                    "operation": "analyze_tampering_knowledge_enrichment",
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "traceback": traceback.format_exc(),
+                    "timestamp": datetime.now().isoformat(),
+                })
+                # Continue without knowledge on error
 
         # Generate comprehensive report
         report = self.risk_scorer.generate_report(
@@ -997,37 +1113,39 @@ class ForensicAnalyzer:
                     )
                 )
 
-            # Creation after modification = Impossible condition
+            # Creation after modification = NORMAL for copied files (informational only)
             if ntfs_data.creation_after_modification:
                 anomalies.append(
                     Anomaly(
                         anomaly_type=AnomalyType.NTFS_CREATION_AFTER_MODIFICATION,
                         description=(
-                            "IMPOSSIBLE TIMESTAMP ORDER: File creation timestamp is later than "
-                            "modification timestamp. This is physically impossible and proves "
-                            "deliberate timestamp manipulation."
+                            "INFORMATIONAL: File was copied to this machine. NTFS Created timestamp "
+                            "is newer than Modified timestamp. This is NORMAL Windows copy behavior - "
+                            "the operating system sets Created to time of copy but preserves the "
+                            "original Modified timestamp from the source."
                         ),
-                        severity=RiskLevel.CRITICAL,
+                        severity=RiskLevel.INFO,  # Changed from CRITICAL - this is normal behavior
                         details={
                             "created": str(ntfs_data.si_timestamps.created) if ntfs_data.si_timestamps.created else None,
                             "modified": str(ntfs_data.si_timestamps.modified) if ntfs_data.si_timestamps.modified else None,
-                            "forensic_conclusion": "Timestamps have been manipulated to create an impossible state",
+                            "forensic_conclusion": "Normal Windows file copy behavior - NOT evidence of tampering",
+                            "is_normal_copy_behavior": True,
                         },
                     )
                 )
 
-        # DWG vs NTFS contradictions
+        # DWG vs NTFS creation time differences (NORMAL for transferred files)
         if ntfs_contradictions:
-            if ntfs_contradictions.get("creation_contradiction"):
+            if ntfs_contradictions.get("creation_time_difference"):
                 anomalies.append(
                     Anomaly(
-                        anomaly_type=AnomalyType.DWG_NTFS_CREATION_CONTRADICTION,
+                        anomaly_type=AnomalyType.DWG_NTFS_CREATION_DIFFERENCE,
                         description=(
-                            "PROVEN BACKDATING: DWG internal creation timestamp predates the "
-                            "NTFS filesystem creation timestamp. The file claims to have been "
-                            "created before it existed on this filesystem."
+                            "File transfer detected: DWG internal creation timestamp predates "
+                            "NTFS filesystem timestamp. This is normal for copied/transferred files - "
+                            "NTFS 'Created' reflects when the file arrived on this machine."
                         ),
-                        severity=RiskLevel.CRITICAL,
+                        severity=RiskLevel.INFO,  # Changed from CRITICAL - this is normal behavior
                         details=ntfs_contradictions.get("creation_details", {}),
                     )
                 )
@@ -1061,6 +1179,7 @@ class ForensicAnalyzer:
         drawing_vars: Optional[DrawingVariablesResult] = None,
         handle_map: Optional[HandleMapResult] = None,
         fingerprint: Optional[FingerprintResult] = None,
+        structure_analysis: Optional["StructureAnalysisResult"] = None,
     ) -> Dict[str, Any]:
         """Build context dictionary for tampering rule evaluation.
 
@@ -1077,6 +1196,7 @@ class ForensicAnalyzer:
             drawing_vars: Optional deep parsing drawing variables results
             handle_map: Optional deep parsing handle map results
             fingerprint: Optional CAD application fingerprint result
+            structure_analysis: Optional structure analysis result for ODA detection
 
         Returns:
             Context dictionary for rule evaluation
@@ -1092,6 +1212,18 @@ class ForensicAnalyzer:
                 "is_valid": crc_validation.is_valid,
                 "header_crc_stored": crc_validation.header_crc_stored,
                 "header_crc_calculated": crc_validation.header_crc_calculated,
+                "section_results": [
+                    {
+                        "section_name": s.section_name,
+                        "is_valid": s.is_valid,
+                        "stored_crc": s.stored_crc,
+                        "calculated_crc": s.calculated_crc,
+                    }
+                    for s in (crc_validation.section_results or [])
+                ],
+                "is_revit_export": crc_validation.is_revit_export,
+                "is_oda_export": crc_validation.is_oda_export,
+                "forensic_notes": crc_validation.forensic_notes,
             },
             "file": {
                 "path": str(file_path),
@@ -1218,7 +1350,7 @@ class ForensicAnalyzer:
 
         # Add CAD application fingerprint for software-specific rules
         if fingerprint:
-            context["fingerprint"] = {
+            context["application_fingerprint"] = {
                 "detected_application": fingerprint.detected_application.value,
                 "confidence": fingerprint.confidence,
                 "is_autodesk": fingerprint.is_autodesk,
@@ -1235,6 +1367,15 @@ class ForensicAnalyzer:
                 ],
             }
 
+        # Add structure analysis for ODA/non-AutoCAD detection
+        if structure_analysis:
+            context["structure_analysis"] = {
+                "structure_type": structure_analysis.structure_type.value if structure_analysis.structure_type else "unknown",
+                "detected_tool": structure_analysis.detected_tool or "unknown",
+                "confidence": structure_analysis.confidence,
+                "is_oda_based": structure_analysis.structure_type.value == "non_autocad" if structure_analysis.structure_type else False,
+            }
+
         return context
 
     def _detect_tampering(
@@ -1245,6 +1386,7 @@ class ForensicAnalyzer:
         timestamp_data: Optional[TimestampData] = None,
         ntfs_data: Optional[NTFSForensicData] = None,
         ntfs_contradictions: Optional[Dict[str, Any]] = None,
+        structure_analysis: Optional["StructureAnalysisResult"] = None,
     ) -> List[TamperingIndicator]:
         """Detect tampering indicators with definitive forensic conclusions.
 
@@ -1255,15 +1397,28 @@ class ForensicAnalyzer:
             timestamp_data: Optional parsed timestamp data
             ntfs_data: Optional NTFS forensic data for cross-validation
             ntfs_contradictions: Optional dict of NTFS/DWG contradictions
+            structure_analysis: Optional structure analysis for ODA detection
 
         Returns:
             List of tampering indicators with forensic conclusions
         """
         indicators = []
 
+        # Check if this is an ODA/Revit file where CRC=0 is normal
+        is_oda_file = (
+            structure_analysis and
+            structure_analysis.structure_type and
+            structure_analysis.structure_type.value == "non_autocad"
+        )
+        is_revit_file = crc_validation.is_revit_export
+
         # CRC modification (only if CRC is available for this version)
         # "N/A" indicates version doesn't support CRC
-        if crc_validation.header_crc_stored != "N/A" and not crc_validation.is_valid:
+        # Skip for ODA/Revit files where CRC=0 is expected
+        if (crc_validation.header_crc_stored != "N/A" and
+            not crc_validation.is_valid and
+            not is_oda_file and
+            not is_revit_file):
             indicators.append(
                 TamperingIndicator(
                     indicator_type=TamperingIndicatorType.CRC_MODIFIED,
@@ -1357,34 +1512,22 @@ class ForensicAnalyzer:
                     )
                 )
 
-            # Creation after modification = Impossible
-            if ntfs_data.creation_after_modification:
-                indicators.append(
-                    TamperingIndicator(
-                        indicator_type=TamperingIndicatorType.NTFS_IMPOSSIBLE_TIMESTAMP,
-                        description=(
-                            "IMPOSSIBLE TIMESTAMP CONDITION: File creation timestamp is later "
-                            "than modification timestamp. This proves deliberate manipulation."
-                        ),
-                        confidence=1.0,
-                        evidence=(
-                            f"Created: {ntfs_data.si_timestamps.created}, "
-                            f"Modified: {ntfs_data.si_timestamps.modified}"
-                        ),
-                    )
-                )
+            # Creation after modification = NORMAL for copied files (informational)
+            # NOTE: This is NOT included as a tampering indicator anymore
+            # It's now tracked as informational context in anomalies only
+            # if ntfs_data.creation_after_modification: # REMOVED - not tampering evidence
 
-        # DWG vs NTFS contradictions = Backdating proof
+        # DWG vs NTFS creation time differences (NORMAL for file transfers)
         if ntfs_contradictions:
-            if ntfs_contradictions.get("creation_contradiction"):
+            if ntfs_contradictions.get("creation_time_difference"):
                 indicators.append(
                     TamperingIndicator(
-                        indicator_type=TamperingIndicatorType.PROVEN_BACKDATING,
+                        indicator_type=TamperingIndicatorType.FILE_TRANSFER_DETECTED,
                         description=(
-                            "PROVEN BACKDATING: DWG internal creation timestamp predates NTFS "
-                            "filesystem creation. The file claims to exist before it was created."
+                            "File transfer context: DWG authorship predates arrival on this filesystem. "
+                            "This is expected behavior for any file that was copied or transferred."
                         ),
-                        confidence=1.0,
+                        confidence=0.95,  # High confidence this is a transfer, not tampering
                         evidence=str(ntfs_contradictions.get("creation_details", {})),
                     )
                 )
@@ -1522,7 +1665,7 @@ class ForensicAnalyzer:
         from dwg_forensic.parsers.timestamp import mjd_to_datetime
 
         contradictions = {
-            "creation_contradiction": False,
+            "creation_time_difference": False,  # Renamed from creation_contradiction
             "modification_contradiction": False,
             "creation_details": {},
             "modification_details": {},
@@ -1556,16 +1699,21 @@ class ForensicAnalyzer:
             time_diff = (ntfs_created - dwg_created).total_seconds() / 3600
 
             if time_diff > tolerance_hours:
-                # DWG claims creation BEFORE filesystem creation = BACKDATING
-                contradictions["creation_contradiction"] = True
+                # DWG internal timestamp predates NTFS filesystem timestamp
+                # This is NORMAL for transferred/copied files - NTFS Created reflects
+                # when file arrived on THIS machine, not original authorship date
+                contradictions["creation_time_difference"] = True  # Renamed - not a "contradiction"
                 contradictions["creation_details"] = {
                     "dwg_created": dwg_created.isoformat(),
                     "ntfs_created": ntfs_created.isoformat(),
                     "difference_hours": round(time_diff, 2),
-                    "forensic_conclusion": (
-                        f"DWG claims creation {round(time_diff, 1)} hours before "
-                        f"filesystem creation. This is PROVEN BACKDATING."
+                    "forensic_note": (
+                        f"DWG internal creation timestamp predates NTFS filesystem timestamp by "
+                        f"{round(time_diff / 24, 1)} days. This is EXPECTED for files that were "
+                        f"copied or transferred to this machine. The NTFS 'Created' timestamp "
+                        f"reflects when the file arrived on this system, not original authorship."
                     ),
+                    "is_normal_for_transferred_files": True,
                 }
 
         # Cross-validate modification timestamps
@@ -1622,17 +1770,19 @@ class ForensicAnalyzer:
             )
         if ntfs_data.creation_after_modification:
             conclusions.append(
-                "IMPOSSIBLE STATE: Creation timestamp is later than modification timestamp."
+                "FILE COPY DETECTED: Creation timestamp is later than modification timestamp - "
+                "this is NORMAL Windows copy behavior, NOT evidence of tampering."
             )
 
         contradiction_details = None
         dwg_ntfs_contradiction = False
         if ntfs_contradictions:
-            if ntfs_contradictions.get("creation_contradiction"):
-                dwg_ntfs_contradiction = True
+            # Note: creation_time_difference is NORMAL for transferred files, not a contradiction
+            if ntfs_contradictions.get("creation_time_difference"):
+                # This is informational, not a contradiction - don't set dwg_ntfs_contradiction flag
                 conclusions.append(
                     ntfs_contradictions.get("creation_details", {}).get(
-                        "forensic_conclusion", "DWG/NTFS creation timestamp contradiction."
+                        "forensic_note", "DWG internal timestamp predates NTFS timestamp (normal for transferred files)."
                     )
                 )
             if ntfs_contradictions.get("modification_contradiction"):

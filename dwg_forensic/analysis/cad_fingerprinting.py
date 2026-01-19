@@ -896,7 +896,7 @@ class CADFingerprinter:
             anomalies["patterns"].append("ZERO_TDINDWG")
             anomalies["likely_third_party"] = True
             anomalies["forensic_notes"].append(
-                "Zero TDINDWG (editing time) is highly suspicious - genuine CAD editing "
+                "Zero TDINDWG (editing time) indicates non-interactive file generation - genuine CAD editing "
                 "always accumulates time. Common in LibreCAD, QCAD, and converted files."
             )
 
@@ -1001,7 +1001,7 @@ class CADFingerprinter:
             results["raw_values"]["TDINDWG"] = tdindwg
 
             if isinstance(edit_time, (int, float)) and edit_time < 2000:
-                # Less than 2000 seconds (~33 minutes) is suspicious
+                # Less than 2000 seconds (~33 minutes) indicates automated generation
                 # Revit exports have ~1000 (~16 seconds)
                 results["detected_signatures"].append("REVIT_NEAR_ZERO_TDINDWG")
                 if results["likely_application"] is None:

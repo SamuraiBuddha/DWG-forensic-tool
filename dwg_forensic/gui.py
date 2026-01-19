@@ -583,7 +583,7 @@ class ForensicGUI:
             "-" * 40,
             f"Stored CRC: {analysis.crc_validation.header_crc_stored}",
             f"Calculated CRC: {analysis.crc_validation.header_crc_calculated}",
-            f"Valid: {'Yes' if analysis.crc_validation.is_valid else 'NO - POSSIBLE TAMPERING'}",
+            f"Valid: {'Yes' if analysis.crc_validation.is_valid else 'NO - Modified after last save'}",
         ]
 
         lines.extend([

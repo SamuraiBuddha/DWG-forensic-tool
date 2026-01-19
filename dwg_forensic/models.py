@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 class RiskLevel(str, Enum):
     """Risk level classification for forensic analysis."""
+    INFO = "INFO"  # Informational only - not a risk
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
@@ -39,7 +40,8 @@ class AnomalyType(str, Enum):
     NTFS_SI_FN_MISMATCH = "NTFS_SI_FN_MISMATCH"  # Definitive timestomping proof
     NTFS_NANOSECOND_TRUNCATION = "NTFS_NANOSECOND_TRUNCATION"  # Tool signature
     NTFS_CREATION_AFTER_MODIFICATION = "NTFS_CREATION_AFTER_MODIFICATION"  # Impossible
-    DWG_NTFS_CREATION_CONTRADICTION = "DWG_NTFS_CREATION_CONTRADICTION"  # Backdating proof
+    DWG_NTFS_CREATION_CONTRADICTION = "DWG_NTFS_CREATION_CONTRADICTION"  # Backdating proof (DEPRECATED - use FILE_TRANSFER_DETECTED)
+    DWG_NTFS_CREATION_DIFFERENCE = "DWG_NTFS_CREATION_DIFFERENCE"  # Normal file transfer time difference
     DWG_NTFS_MODIFICATION_CONTRADICTION = "DWG_NTFS_MODIFICATION_CONTRADICTION"
 
 
@@ -60,7 +62,8 @@ class TamperingIndicatorType(str, Enum):
     NTFS_TOOL_SIGNATURE = "NTFS_TOOL_SIGNATURE"  # Nanosecond truncation
     NTFS_IMPOSSIBLE_TIMESTAMP = "NTFS_IMPOSSIBLE_TIMESTAMP"  # Created > Modified
     DWG_NTFS_CONTRADICTION = "DWG_NTFS_CONTRADICTION"  # Internal vs filesystem mismatch
-    PROVEN_BACKDATING = "PROVEN_BACKDATING"  # Definitive backdating evidence
+    PROVEN_BACKDATING = "PROVEN_BACKDATING"  # Definitive backdating evidence (DEPRECATED - use FILE_TRANSFER_DETECTED)
+    FILE_TRANSFER_DETECTED = "FILE_TRANSFER_DETECTED"  # Normal file transfer/copy context
 
 
 class FileInfo(BaseModel):
@@ -83,9 +86,9 @@ class HeaderAnalysis(BaseModel):
     """DWG file header analysis results."""
     version_string: str = Field(..., description="Raw version string from header (e.g., 'AC1032')")
     version_name: str = Field(..., description="Human-readable version name (e.g., 'AutoCAD 2018+')")
-    maintenance_version: int = Field(..., description="Maintenance release version number", ge=0)
-    preview_address: int = Field(..., description="Offset to preview image data", ge=0)
-    codepage: int = Field(..., description="Code page identifier", ge=0)
+    maintenance_version: Optional[int] = Field(None, description="Maintenance release version number (None for unknown versions)", ge=0)
+    preview_address: Optional[int] = Field(None, description="Offset to preview image data (None for unknown versions)", ge=0)
+    codepage: Optional[int] = Field(None, description="Code page identifier (None for unknown versions)", ge=0)
     is_supported: bool = Field(..., description="Whether this version is supported for analysis (R18+ only)")
 
 
@@ -106,6 +109,23 @@ class CRCValidation(BaseModel):
     section_results: list[SectionCRCResult] = Field(
         default_factory=list,
         description="CRC validation results for individual sections"
+    )
+    # Forensic context fields
+    is_revit_export: bool = Field(
+        default=False,
+        description="Whether file is a Revit export (CRC=0 is expected for Revit)"
+    )
+    is_oda_export: bool = Field(
+        default=False,
+        description="Whether file was created by ODA SDK-based software (may have CRC=0)"
+    )
+    forensic_notes: Optional[str] = Field(
+        None,
+        description="Forensic context explaining CRC validation result"
+    )
+    validation_skipped: bool = Field(
+        default=False,
+        description="Whether CRC validation was skipped (e.g., unsupported version)"
     )
 
 
@@ -279,11 +299,11 @@ class NTFSTimestampAnalysis(BaseModel):
     # Nanosecond precision data (critical for forensic analysis)
     si_created_nanoseconds: Optional[int] = Field(
         None,
-        description="Nanosecond component of created timestamp (0 = suspicious)"
+        description="Nanosecond component of created timestamp (0 = indicates truncation)"
     )
     si_modified_nanoseconds: Optional[int] = Field(
         None,
-        description="Nanosecond component of modified timestamp (0 = suspicious)"
+        description="Nanosecond component of modified timestamp (0 = indicates truncation)"
     )
 
     # File Name timestamps (kernel-only, resistant to timestomping)
@@ -307,7 +327,7 @@ class NTFSTimestampAnalysis(BaseModel):
     )
     impossible_timestamps: bool = Field(
         default=False,
-        description="Created > Modified is physically impossible"
+        description="Created > Modified (INFORMATIONAL: indicates file was copied - NORMAL Windows behavior)"
     )
 
     # Cross-validation with DWG internal timestamps
@@ -383,6 +403,11 @@ class ForensicAnalysis(BaseModel):
     llm_reasoning: Optional[Dict[str, Any]] = Field(
         None,
         description="LLM forensic reasoning about evidence significance (smoking guns vs red herrings)"
+    )
+    # Forensic error tracking - ALL errors are potential evidence in forensic analysis
+    analysis_errors: Optional[List[Dict[str, Any]]] = Field(
+        None,
+        description="List of all errors encountered during analysis (forensic audit trail)"
     )
     analysis_timestamp: datetime = Field(
         default_factory=datetime.now,

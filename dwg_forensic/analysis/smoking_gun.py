@@ -166,13 +166,13 @@ class SmokingGunSynthesizer:
         ),
         "TAMPER-037": (
             "The mandatory AcDb:Header section is missing or corrupted. This section "
-            "is REQUIRED by the DWG specification. Its absence proves the file "
-            "structure has been tampered with at the binary level."
+            "is REQUIRED by the DWG specification. Its absence indicates the file "
+            "structure has been tampered with at the binary level or was corrupted."
         ),
         "TAMPER-038": (
             "The DWG internal timestamps (TDCREATE/TDUPDATE) contradict the filesystem "
-            "timestamps beyond normal variance. This proves the timestamps were "
-            "manipulated."
+            "timestamps beyond normal variance. This indicates the timestamps were "
+            "manipulated or the file was transferred/copied."
         ),
         "TAMPER-040": (
             "The DWG section map is corrupted or invalid. The section map is critical "
@@ -281,8 +281,8 @@ class SmokingGunSynthesizer:
     def _get_legal_significance(self, result: RuleResult) -> str:
         """Get legal significance statement for a finding."""
         legal_statements = {
-            "TAMPER-001": "CRC mismatch constitutes cryptographic proof of modification.",
-            "TAMPER-002": "Section CRC mismatch proves data alteration.",
+            "TAMPER-001": "CRC mismatch indicates modification after last save.",
+            "TAMPER-002": "Section CRC mismatch indicates data alteration.",
             "TAMPER-005": "Impossible timestamp order proves manipulation.",
             "TAMPER-006": "Future timestamp proves manual clock manipulation.",
             "TAMPER-013": "Mathematical impossibility proves backdating.",
@@ -293,11 +293,11 @@ class SmokingGunSynthesizer:
             "TAMPER-022": "File predates its own creation - impossible without tampering.",
             "TAMPER-023": "Timestamp contradiction indicates copying or manipulation.",
             "TAMPER-027": "Compound evidence exceeds threshold for coincidence.",
-            "TAMPER-028": "Aggregate score proves manipulation beyond reasonable doubt.",
-            "TAMPER-036": "Handle gaps prove deliberate content deletion.",
-            "TAMPER-037": "Missing mandatory section proves structural tampering.",
-            "TAMPER-038": "Internal/external timestamp contradiction proves manipulation.",
-            "TAMPER-040": "Section map corruption proves binary-level tampering.",
+            "TAMPER-028": "Aggregate score indicates manipulation beyond reasonable doubt.",
+            "TAMPER-036": "Handle gaps indicate deliberate content deletion.",
+            "TAMPER-037": "Missing mandatory section indicates structural tampering or corruption.",
+            "TAMPER-038": "Internal/external timestamp contradiction indicates manipulation.",
+            "TAMPER-040": "Section map corruption indicates binary-level tampering.",
         }
         return legal_statements.get(
             result.rule_id,

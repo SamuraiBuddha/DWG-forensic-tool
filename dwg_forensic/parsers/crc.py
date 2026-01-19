@@ -137,20 +137,53 @@ class CRCValidator:
 
                 crc_matches = (stored_crc == calculated_crc)
 
+                # Determine forensic context
+                forensic_notes = None
+                is_valid_forensic = crc_matches
+
+                # Handle Revit exports (CRC=0 is expected and valid)
+                if is_revit_export:
+                    if stored_crc == 0:
+                        # Revit exports store CRC as 0x00000000 by design
+                        is_valid_forensic = True
+                        forensic_notes = (
+                            "Revit export detected. CRC value of 0x00000000 is expected "
+                            "and normal for Revit DWG exports - Revit does not compute "
+                            "CRC checksums during export. This is NOT an indication of tampering."
+                        )
+                    elif not crc_matches:
+                        # Revit export but CRC is non-zero and doesn't match
+                        forensic_notes = (
+                            "Revit export detected with unexpected CRC value. "
+                            "File may have been modified after Revit export."
+                        )
+
+                # Handle CRC=0 for non-Revit files (could be ODA SDK)
+                elif stored_crc == 0 and not crc_matches:
+                    forensic_notes = (
+                        "CRC value is 0x00000000. This may indicate the file was created "
+                        "by ODA SDK-based software (BricsCAD, DraftSight, etc.) which may "
+                        "not compute CRC checksums. Consider checking application fingerprint."
+                    )
+                    # Don't automatically mark as valid - requires fingerprint check
+
+                # Standard CRC mismatch
+                elif not crc_matches:
+                    forensic_notes = (
+                        "CRC mismatch detected. This indicates the file header was "
+                        "modified after the last save operation. This could be due to "
+                        "hex editing, file corruption, or post-processing tools."
+                    )
+
                 # Build validation result
                 validation = CRCValidation(
                     header_crc_stored=stored_hex,
                     header_crc_calculated=calculated_hex,
-                    is_valid=crc_matches,
+                    is_valid=is_valid_forensic,
                     section_results=[],
+                    is_revit_export=is_revit_export,
+                    forensic_notes=forensic_notes,
                 )
-
-                # Add Revit-specific forensic note if detected
-                if is_revit_export and not crc_matches:
-                    # Note: CRCValidation model would need a notes field
-                    # For now, we mark as valid with a note that this is expected for Revit
-                    # This is a forensic judgment call - Revit exports may have CRC mismatches
-                    pass  # Could extend CRCValidation model to include forensic_notes
 
                 return validation
 
@@ -234,9 +267,13 @@ class CRCValidator:
                 f"Only read {len(header_data)} bytes."
             )
 
-        # Calculate CRC32 using zlib
-        # zlib.crc32 returns a signed 32-bit integer on some platforms,
-        # so we mask it to get unsigned value
+        # CRC32 Forensic Note:
+        # zlib.crc32 returns a signed 32-bit integer on some platforms (Python 2.x legacy).
+        # We mask with 0xFFFFFFFF to ensure consistent unsigned 32-bit representation.
+        # This is mathematically equivalent and does NOT affect forensic validity:
+        # - The bit pattern is identical
+        # - Comparison with stored CRC values remains accurate
+        # - Platform-independent results ensure reproducible forensic analysis
         crc_value = zlib.crc32(header_data) & 0xFFFFFFFF
 
         return crc_value

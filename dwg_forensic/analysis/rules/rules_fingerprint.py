@@ -42,19 +42,23 @@ class FingerprintRulesMixin:
             )
 
         app_list = ", ".join(detected_apps) if detected_apps else "Unknown ODA-based app"
+        # ODA SDK-based applications are LEGITIMATE CAD software
+        # Detection is informational, not evidence of tampering
         return RuleResult(
             rule_id=rule.rule_id,
             rule_name=rule.name,
-            status=RuleStatus.FAILED,
+            status=RuleStatus.PASSED,  # Changed from FAILED - legitimate software
             severity=rule.severity,
-            description=f"[INFO] ODA SDK artifacts detected: {app_list}",
-            confidence=0.9,
+            description=f"[OK] File created by ODA SDK-based software: {app_list}",
+            confidence=1.0,
             details={
                 "is_oda_based": True,
                 "indicators": indicators,
                 "detected_applications": detected_apps,
                 "forensic_note": (
-                    "ODA-based applications may not maintain Autodesk timestamp integrity."
+                    "ODA SDK-based applications (BricsCAD, DraftSight, NanoCAD, etc.) are "
+                    "legitimate CAD software. They create valid DWG files but may not include "
+                    "AutoCAD-specific metadata. This is expected behavior, not tampering."
                 ),
             },
         )
@@ -86,19 +90,22 @@ class FingerprintRulesMixin:
                 confidence=1.0,
             )
 
+        # BricsCAD is a LEGITIMATE CAD application - detection is informational
         return RuleResult(
             rule_id=rule.rule_id,
             rule_name=rule.name,
-            status=RuleStatus.FAILED,
+            status=RuleStatus.PASSED,  # Changed from FAILED - legitimate software
             severity=rule.severity,
-            description="[INFO] BricsCAD application signatures detected",
-            confidence=0.95,
+            description="[OK] File created by BricsCAD (legitimate CAD software)",
+            confidence=1.0,
             details={
                 "application": "BricsCAD",
+                "vendor": "Bricsys",
                 "markers": bricscad_markers,
                 "forensic_note": (
-                    "BricsCAD is an ODA-based CAD application by Bricsys. "
-                    "Files created by BricsCAD may have different timestamp handling."
+                    "BricsCAD is a legitimate ODA-based CAD application by Bricsys. "
+                    "It creates valid DWG files but may not include AutoCAD-specific metadata "
+                    "like TDINDWG or TrustedDWG watermarks. This is expected behavior."
                 ),
             },
         )
@@ -132,9 +139,11 @@ class FingerprintRulesMixin:
 
         details = {
             "application": "NanoCAD",
-            "origin": "Russian (Nanosoft)",
+            "vendor": "Nanosoft",
+            "origin": "Russia",
             "forensic_note": (
-                "NanoCAD is a Russian ODA-based CAD application. "
+                "NanoCAD is a legitimate ODA-based CAD application by Nanosoft. "
+                "It creates valid DWG files but may not include AutoCAD-specific metadata. "
                 "Files may contain Cyrillic text in CP1251 encoding."
             ),
         }
@@ -143,13 +152,14 @@ class FingerprintRulesMixin:
             details["codepage"] = codepage
             details["cyrillic_indicator"] = True
 
+        # NanoCAD is a LEGITIMATE CAD application - detection is informational
         return RuleResult(
             rule_id=rule.rule_id,
             rule_name=rule.name,
-            status=RuleStatus.FAILED,
+            status=RuleStatus.PASSED,  # Changed from FAILED - legitimate software
             severity=rule.severity,
-            description="[INFO] NanoCAD application signatures detected",
-            confidence=0.9 if is_nanocad else 0.7,
+            description="[OK] File created by NanoCAD (legitimate CAD software)",
+            confidence=1.0,
             details=details,
         )
 
@@ -183,7 +193,8 @@ class FingerprintRulesMixin:
             "application": "DraftSight",
             "vendor": "Dassault Systemes",
             "forensic_note": (
-                "DraftSight is an ODA-based CAD application by Dassault Systemes. "
+                "DraftSight is a legitimate ODA-based CAD application by Dassault Systemes. "
+                "It creates valid DWG files but may not include AutoCAD-specific metadata. "
                 "Free version was discontinued in 2019."
             ),
         }
@@ -191,13 +202,14 @@ class FingerprintRulesMixin:
         if license_type:
             details["license_type"] = license_type
 
+        # DraftSight is a LEGITIMATE CAD application - detection is informational
         return RuleResult(
             rule_id=rule.rule_id,
             rule_name=rule.name,
-            status=RuleStatus.FAILED,
+            status=RuleStatus.PASSED,  # Changed from FAILED - legitimate software
             severity=rule.severity,
-            description="[INFO] DraftSight application signatures detected",
-            confidence=0.95,
+            description="[OK] File created by DraftSight (legitimate CAD software)",
+            confidence=1.0,
             details=details,
         )
 
@@ -264,7 +276,40 @@ class FingerprintRulesMixin:
 
         Detects when TDCREATE and TDUPDATE are both zero or identical
         with zero TDINDWG - a strong indicator of programmatic generation.
+
+        NOTE: ODA SDK-based files may have zero timestamps. This is EXPECTED
+        for these legitimate CAD applications, not evidence of tampering.
         """
+        # Check for ODA SDK files - zero timestamps may be EXPECTED
+        structure = context.get("structure_analysis", {})
+        structure_type = structure.get("structure_type", "")
+        detected_tool = structure.get("detected_tool", "unknown")
+        is_oda_based = structure.get("is_oda_based", False)
+
+        fingerprint = context.get("application_fingerprint", {})
+        if not is_oda_based:
+            is_oda_based = fingerprint.get("is_oda_based", False)
+
+        if is_oda_based or structure_type == "non_autocad":
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.PASSED,
+                severity=rule.severity,
+                description=f"[OK] Zero timestamp patterns expected for ODA SDK files ({detected_tool})",
+                confidence=1.0,
+                details={
+                    "detected_tool": detected_tool,
+                    "is_oda_based": True,
+                    "structure_type": structure_type,
+                    "forensic_note": (
+                        "ODA SDK-based applications may not fully populate timestamp fields. "
+                        "Zero or identical timestamps are expected behavior for these legitimate "
+                        "CAD applications, not evidence of manipulation."
+                    ),
+                },
+            )
+
         timestamp_data = context.get("timestamp_data", {})
         metadata = context.get("metadata", {})
         timestamp_anomalies = context.get("timestamp_anomalies", {})
@@ -333,7 +378,40 @@ class FingerprintRulesMixin:
 
         AutoCAD always generates FINGERPRINTGUID and VERSIONGUID.
         Their absence indicates third-party CAD tool origin.
+
+        NOTE: ODA SDK-based files (BricsCAD, DraftSight, etc.) do NOT generate
+        these identifiers. This is EXPECTED for these legitimate CAD applications.
         """
+        # Check for ODA SDK files - missing identifiers is EXPECTED
+        structure = context.get("structure_analysis", {})
+        structure_type = structure.get("structure_type", "")
+        detected_tool = structure.get("detected_tool", "unknown")
+        is_oda_based = structure.get("is_oda_based", False)
+
+        fingerprint = context.get("application_fingerprint", {})
+        if not is_oda_based:
+            is_oda_based = fingerprint.get("is_oda_based", False)
+
+        if is_oda_based or structure_type == "non_autocad":
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.PASSED,
+                severity=rule.severity,
+                description=f"[OK] Missing AutoCAD identifiers is normal for ODA SDK files ({detected_tool})",
+                confidence=1.0,
+                details={
+                    "detected_tool": detected_tool,
+                    "is_oda_based": True,
+                    "structure_type": structure_type,
+                    "forensic_note": (
+                        "ODA SDK-based applications do not generate FINGERPRINTGUID and "
+                        "VERSIONGUID identifiers. This is expected behavior for legitimate "
+                        "third-party CAD applications, not evidence of tampering."
+                    ),
+                },
+            )
+
         metadata = context.get("metadata", {})
         timestamp_anomalies = context.get("timestamp_anomalies", {})
 

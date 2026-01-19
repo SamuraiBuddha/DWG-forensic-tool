@@ -84,7 +84,7 @@ class NTFSForensicData:
     # Detection flags
     si_fn_mismatch: bool = False  # SI earlier than FN = timestomping
     nanoseconds_truncated: bool = False  # Timestamps ending in .0000000
-    creation_after_modification: bool = False  # Impossible condition
+    creation_after_modification: bool = False  # NORMAL for copied files - NOT tampering evidence
 
     # Forensic details
     mismatch_details: Optional[str] = None
@@ -103,8 +103,8 @@ class NTFSForensicData:
         """Returns True if any timestomping indicator is present."""
         return (
             self.si_fn_mismatch or
-            self.nanoseconds_truncated or
-            self.creation_after_modification
+            self.nanoseconds_truncated
+            # NOTE: creation_after_modification is NORMAL for copied files - NOT included
         )
 
 
@@ -337,10 +337,16 @@ class NTFSTimestampParser:
             )
 
         # Detection 2: Creation After Modification
-        # This is physically impossible on any file system
+        # IMPORTANT: This is NORMAL for copied files on Windows
+        # When copying a file, Windows:
+        # - Sets NTFS Created = time of copy (new)
+        # - Preserves NTFS Modified from source (old)
+        # Result: Created > Modified is EXPECTED for ANY copied file
+        # This is NOT evidence of tampering - it's standard Windows copy behavior
         if si.created and si.modified:
             if si.created > si.modified:
                 forensic_data.creation_after_modification = True
+                # Note: This flag is for informational purposes only
 
         # Detection 3: $SI vs $FN Mismatch
         # This requires MFT parsing which needs admin privileges

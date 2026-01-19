@@ -1620,10 +1620,16 @@ class TestNTFSNanosecondTruncationRule:
 
 
 class TestNTFSImpossibleTimestampRule:
-    """Test TAMPER-021 NTFS Impossible Timestamp rule."""
+    """Test TAMPER-021 NTFS Creation After Modification rule (now INFORMATIONAL)."""
 
     def test_impossible_timestamp_detected(self):
-        """Test detection of impossible timestamps (created > modified)."""
+        """Test that creation_after_modification is now INFORMATIONAL (normal copy behavior).
+
+        IMPORTANT: This test has been updated to reflect the corrected behavior.
+        When a file is COPIED on Windows, the NTFS Created timestamp is set to the
+        time of copy, but Modified is PRESERVED from the source. This results in
+        Created > Modified, which is NORMAL Windows behavior, NOT tampering.
+        """
         engine = TamperingRuleEngine()
         context = {
             "ntfs_data": {
@@ -1636,8 +1642,10 @@ class TestNTFSImpossibleTimestampRule:
         results = engine.evaluate_all(context)
         result = next(r for r in results if r.rule_id == "TAMPER-021")
 
-        assert result.status == RuleStatus.FAILED
-        assert "IMPOSSIBLE" in result.description or "cannot" in result.description.lower()
+        # Changed from FAILED to PASSED - this is normal copy behavior
+        assert result.status == RuleStatus.PASSED
+        # Check for informational messaging about file copy
+        assert "copied" in result.description.lower() or "info" in result.description.lower()
 
     def test_no_impossible_timestamps(self):
         """Test passes when timestamps are logically consistent."""
@@ -1658,15 +1666,16 @@ class TestDWGNTFSCreationContradictionRule:
     """Test TAMPER-022 DWG/NTFS Creation Contradiction rule."""
 
     def test_creation_contradiction_detected(self):
-        """Test detection of DWG creation predating filesystem creation."""
+        """Test detection of DWG creation predating filesystem creation (now NORMAL for transfers)."""
         engine = TamperingRuleEngine()
         context = {
             "ntfs_contradictions": {
-                "creation_contradiction": True,
+                "creation_time_difference": True,  # Renamed from creation_contradiction
                 "creation_details": {
                     "dwg_created": "2020-01-01T10:00:00",
                     "ntfs_created": "2024-06-15T10:00:00",
-                    "forensic_conclusion": "DWG claims creation 4+ years before file existed",
+                    "forensic_note": "DWG internal creation timestamp predates NTFS filesystem timestamp. This is EXPECTED for files that were copied or transferred.",
+                    "is_normal_for_transferred_files": True,
                 },
             }
         }
@@ -1674,8 +1683,9 @@ class TestDWGNTFSCreationContradictionRule:
         results = engine.evaluate_all(context)
         result = next(r for r in results if r.rule_id == "TAMPER-022")
 
-        assert result.status == RuleStatus.FAILED
-        assert "BACKDATING" in result.description or "contradiction" in result.description.lower()
+        # This is now informational - PASSED status indicates normal file transfer
+        assert result.status == RuleStatus.PASSED
+        assert "transfer" in result.description.lower() or "normal" in result.description.lower()
 
     def test_no_creation_contradiction(self):
         """Test passes when DWG and NTFS creation times are consistent."""
@@ -1685,14 +1695,14 @@ class TestDWGNTFSCreationContradictionRule:
                 "si_created": "2024-01-01T10:00:00",
             },
             "ntfs_contradictions": {
-                "creation_contradiction": False,
+                "creation_time_difference": False,  # Renamed from creation_contradiction
             },
         }
 
         results = engine.evaluate_all(context)
         result = next(r for r in results if r.rule_id == "TAMPER-022")
 
-        # Returns PASSED when we have ntfs_data and no contradiction
+        # Returns PASSED when we have ntfs_data and no time difference
         assert result.status == RuleStatus.PASSED
 
 
@@ -1811,20 +1821,25 @@ class TestThirdPartyToolRule:
     """Test TAMPER-026 Third-Party Tool Detection rule."""
 
     def test_third_party_tool_detected(self):
-        """Test detection of known third-party tools from fingerprint."""
+        """Test detection of known third-party tools returns PASSED (not tampering).
+
+        Legitimate third-party CAD software (LibreCAD, BricsCAD, etc.) creates valid
+        DWG files. Detecting their use is informational, not evidence of tampering.
+        """
         engine = TamperingRuleEngine()
         context = {
             "application_fingerprint": {
                 "is_autodesk": False,
                 "is_oda_based": False,
-                "detected_application": "LibreCAD",  # Known third-party tool
+                "detected_application": "LibreCAD",  # Known legitimate third-party tool
             }
         }
 
         results = engine.evaluate_all(context)
         result = next(r for r in results if r.rule_id == "TAMPER-026")
 
-        assert result.status == RuleStatus.FAILED
+        # Legitimate third-party CAD software is not tampering
+        assert result.status == RuleStatus.PASSED
 
     def test_autodesk_tool(self):
         """Test passes with valid Autodesk application fingerprint."""

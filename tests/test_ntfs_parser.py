@@ -134,9 +134,15 @@ class TestNTFSForensicData:
         assert data.has_timestomping_evidence() is True
 
     def test_has_timestomping_evidence_creation_after_modification(self):
-        """Test has_timestomping_evidence with impossible timestamp."""
+        """Test has_timestomping_evidence does NOT flag creation_after_modification.
+
+        IMPORTANT: creation_after_modification is NORMAL for copied files on Windows.
+        When copying a file, Windows sets Created=time of copy but preserves Modified
+        from the source. This is NOT timestomping evidence.
+        """
         data = NTFSForensicData(creation_after_modification=True)
-        assert data.has_timestomping_evidence() is True
+        # This should be False - creation_after_modification is NOT timestomping evidence
+        assert data.has_timestomping_evidence() is False
 
     def test_has_timestomping_evidence_multiple_indicators(self):
         """Test has_timestomping_evidence with multiple indicators."""

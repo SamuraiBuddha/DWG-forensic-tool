@@ -21,7 +21,14 @@ class BasicRulesMixin:
     def _check_header_crc(
         self, rule: TamperingRule, context: Dict[str, Any]
     ) -> RuleResult:
-        """TAMPER-001: Check header CRC."""
+        """TAMPER-001: Check header CRC.
+
+        CRC=0x00000000 is NORMAL for:
+        - Revit exports (Revit doesn't compute CRC during export)
+        - ODA SDK-based software (BricsCAD, DraftSight, NanoCAD, etc.)
+
+        These are NOT indications of tampering.
+        """
         # Support both context formats
         crc = context.get("crc") or context.get("crc_validation", {})
 
@@ -38,8 +45,68 @@ class BasicRulesMixin:
         is_valid = crc.get("is_valid", True)
         stored = crc.get("header_crc_stored", "")
         calculated = crc.get("header_crc_calculated", "")
+        forensic_notes = crc.get("forensic_notes", "")
+        is_revit = crc.get("is_revit_export", False)
+        is_oda = crc.get("is_oda_export", False)
+
+        # Check structure analysis for ODA detection (more reliable than CRC-based detection)
+        structure = context.get("structure_analysis", {})
+        structure_type = structure.get("structure_type", "")
+        detected_tool = structure.get("detected_tool", "unknown")
+
+        # CRC=0 is NORMAL for ODA SDK files - NOT tampering
+        if stored == "0x00000000" and (structure_type == "non_autocad" or is_oda):
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.PASSED,
+                severity=rule.severity,
+                description=f"[OK] CRC=0 is normal for ODA SDK-based software ({detected_tool})",
+                expected=stored,
+                found=calculated,
+                confidence=1.0,
+                details={
+                    "detected_tool": detected_tool,
+                    "is_oda_based": True,
+                    "structure_type": structure_type,
+                    "forensic_note": "ODA SDK-based applications (BricsCAD, DraftSight, etc.) "
+                                     "do not compute CRC checksums. CRC=0 is expected and "
+                                     "is NOT an indication of tampering.",
+                },
+            )
+
+        # CRC=0 is NORMAL for Revit exports - NOT tampering
+        if stored == "0x00000000" and is_revit:
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.PASSED,
+                severity=rule.severity,
+                description="[OK] CRC=0 is normal for Revit DWG exports",
+                expected=stored,
+                found=calculated,
+                confidence=1.0,
+                details={
+                    "is_revit_export": True,
+                    "forensic_note": "Revit does not compute CRC checksums during DWG export. "
+                                     "CRC=0 is expected and is NOT an indication of tampering.",
+                },
+            )
 
         if is_valid:
+            # Include forensic context if CRC didn't match but was marked valid (e.g., Revit)
+            if stored != calculated and forensic_notes:
+                return RuleResult(
+                    rule_id=rule.rule_id,
+                    rule_name=rule.name,
+                    status=RuleStatus.PASSED,
+                    severity=rule.severity,
+                    description=f"[OK] CRC validation passed - {forensic_notes}",
+                    expected=stored,
+                    found=calculated,
+                    confidence=1.0,
+                    details={"is_revit_export": is_revit, "forensic_notes": forensic_notes},
+                )
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
@@ -51,16 +118,21 @@ class BasicRulesMixin:
                 confidence=1.0,
             )
 
+        # CRC mismatch - include forensic context if available
+        description = "[FAIL] Header CRC32 mismatch - file modified after last save"
+        if forensic_notes:
+            description = f"[FAIL] {forensic_notes}"
+
         return RuleResult(
             rule_id=rule.rule_id,
             rule_name=rule.name,
             status=RuleStatus.FAILED,
             severity=rule.severity,
-            description="[FAIL] Header CRC32 mismatch - possible tampering",
+            description=description,
             expected=stored,
             found=calculated,
             confidence=1.0,
-            details={"tampering_indicator": "crc_mismatch"},
+            details={"tampering_indicator": "crc_mismatch", "forensic_notes": forensic_notes},
         )
 
     def _check_section_crc(
