@@ -986,6 +986,23 @@ class CADFingerprinter:
                     "this is a LibreDWG placeholder value indicating the file was "
                     "created by LibreDWG library."
                 )
+            # =================================================================
+            # Check FINGERPRINTGUID for Revit/ODA export "01CA" pattern
+            # GUID prefix 30314341 = ASCII "01CA" - indicates Revit or ODA export
+            # Pattern: 30314341-XXXX-0000-0000-... (Autodesk export format)
+            # =================================================================
+            elif fingerprint_guid.upper().startswith("30314341-"):
+                results["detected_signatures"].append("REVIT_ODA_GUID_PATTERN")
+                if results["likely_application"] is None:
+                    results["likely_application"] = CADApplication.REVIT_EXPORT
+                results["confidence"] = max(results["confidence"], 0.92)
+                results["forensic_notes"].append(
+                    f"FINGERPRINTGUID '{fingerprint_guid}' starts with '30314341-' "
+                    "(ASCII '01CA') - this is an Autodesk Revit or ODA SDK export signature. "
+                    "Files with this pattern are legitimate exports, not tampering indicators. "
+                    "Zero CRC and missing timestamps are EXPECTED for these files."
+                )
+                results["is_revit_or_oda_export"] = True
 
         # =================================================================
         # Check TDINDWG for Revit export pattern (near-zero editing time)

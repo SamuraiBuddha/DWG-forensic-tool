@@ -53,18 +53,27 @@ class TestHelperMethods(TestFingerprintRulesMixin):
 
 
 class TestODAArtifacts(TestFingerprintRulesMixin):
-    """Tests for TAMPER-029: ODA SDK Artifact Detection."""
+    """Tests for TAMPER-029: ODA SDK Artifact Detection.
+
+    NOTE: ODA SDK-based tools are LEGITIMATE software. Detection returns
+    PASSED status (informational) - not FAILED. This is intentional behavior.
+    """
 
     def test_detects_oda_from_fingerprint(self):
-        """Test detection when cad_fingerprint.is_oda_based is True."""
+        """Test detection when cad_fingerprint.is_oda_based is True.
+
+        ODA detection returns PASSED because ODA SDK tools are legitimate.
+        """
         context = {
             "cad_fingerprint": {"is_oda_based": True},
             "oda_detection": {"is_oda_based": True, "detected_applications": ["bricscad"]},
         }
         rule = self._make_rule("TAMPER-029")
         result = self.engine._check_oda_sdk_artifacts(rule, context)
-        assert result.status == RuleStatus.FAILED
+        # ODA tools are legitimate - detection is informational, not a failure
+        assert result.status == RuleStatus.PASSED
         assert "ODA" in result.description
+        assert result.details.get("is_oda_based") is True
 
     def test_detects_oda_from_forensic_meta_bricscad(self):
         """Test detection from forensic_meta for BricsCAD."""
@@ -77,7 +86,8 @@ class TestODAArtifacts(TestFingerprintRulesMixin):
         }
         rule = self._make_rule("TAMPER-029")
         result = self.engine._check_oda_sdk_artifacts(rule, context)
-        assert result.status == RuleStatus.FAILED
+        # BricsCAD is legitimate ODA-based software - passes
+        assert result.status == RuleStatus.PASSED
 
     def test_detects_oda_from_forensic_meta_nanocad(self):
         """Test detection from forensic_meta for NanoCAD."""
@@ -90,7 +100,8 @@ class TestODAArtifacts(TestFingerprintRulesMixin):
         }
         rule = self._make_rule("TAMPER-029")
         result = self.engine._check_oda_sdk_artifacts(rule, context)
-        assert result.status == RuleStatus.FAILED
+        # NanoCAD is legitimate ODA-based software - passes
+        assert result.status == RuleStatus.PASSED
 
     def test_no_oda_for_autocad(self):
         """Test no ODA detection for AutoCAD."""
@@ -115,16 +126,24 @@ class TestODAArtifacts(TestFingerprintRulesMixin):
 
 
 class TestBricsCADSignature(TestFingerprintRulesMixin):
-    """Tests for TAMPER-030: BricsCAD Signature Detection."""
+    """Tests for TAMPER-030: BricsCAD Signature Detection.
+
+    NOTE: BricsCAD is LEGITIMATE software. Detection returns PASSED status
+    (informational) - not FAILED. This is intentional behavior.
+    """
 
     def test_detects_bricscad_from_fingerprint(self):
-        """Test detection from cad_fingerprint."""
+        """Test detection from cad_fingerprint.
+
+        BricsCAD detection returns PASSED because it's legitimate software.
+        """
         context = {
             "cad_fingerprint": {"detected_application": "bricscad"}
         }
         rule = self._make_rule("TAMPER-030")
         result = self.engine._check_bricscad_signature(rule, context)
-        assert result.status == RuleStatus.FAILED
+        # BricsCAD is legitimate - detection is informational, not a failure
+        assert result.status == RuleStatus.PASSED
         assert "BricsCAD" in result.description
 
     def test_detects_bricscad_from_forensic_meta(self):
@@ -137,7 +156,8 @@ class TestBricsCADSignature(TestFingerprintRulesMixin):
         }
         rule = self._make_rule("TAMPER-030")
         result = self.engine._check_bricscad_signature(rule, context)
-        assert result.status == RuleStatus.FAILED
+        # BricsCAD is legitimate software - passes
+        assert result.status == RuleStatus.PASSED
 
     def test_detects_bricsys_from_forensic_meta(self):
         """Test detection of Bricsys in product name."""
@@ -149,7 +169,8 @@ class TestBricsCADSignature(TestFingerprintRulesMixin):
         }
         rule = self._make_rule("TAMPER-030")
         result = self.engine._check_bricscad_signature(rule, context)
-        assert result.status == RuleStatus.FAILED
+        # Bricsys products are legitimate - passes
+        assert result.status == RuleStatus.PASSED
 
     def test_no_detection_for_autocad(self):
         """Test no detection for AutoCAD."""
@@ -163,17 +184,25 @@ class TestBricsCADSignature(TestFingerprintRulesMixin):
 
 
 class TestNanoCADSignature(TestFingerprintRulesMixin):
-    """Tests for TAMPER-031: NanoCAD Signature Detection."""
+    """Tests for TAMPER-031: NanoCAD Signature Detection.
+
+    NOTE: NanoCAD is LEGITIMATE software. Detection returns PASSED status
+    (informational) - not FAILED. This is intentional behavior.
+    """
 
     def test_detects_nanocad_from_fingerprint(self):
-        """Test detection from cad_fingerprint."""
+        """Test detection from cad_fingerprint.
+
+        NanoCAD detection returns PASSED because it's legitimate software.
+        """
         context = {
             "cad_fingerprint": {"detected_application": "nanocad"},
             "metadata": {}
         }
         rule = self._make_rule("TAMPER-031")
         result = self.engine._check_nanocad_signature(rule, context)
-        assert result.status == RuleStatus.FAILED
+        # NanoCAD is legitimate - detection is informational, not a failure
+        assert result.status == RuleStatus.PASSED
 
     def test_detects_nanocad_from_forensic_meta(self):
         """Test detection from forensic_meta."""
@@ -186,17 +215,22 @@ class TestNanoCADSignature(TestFingerprintRulesMixin):
         }
         rule = self._make_rule("TAMPER-031")
         result = self.engine._check_nanocad_signature(rule, context)
-        assert result.status == RuleStatus.FAILED
+        # NanoCAD is legitimate software - passes
+        assert result.status == RuleStatus.PASSED
 
     def test_detects_cyrillic_codepage(self):
-        """Test detection from CP1251 Cyrillic codepage."""
+        """Test detection from CP1251 Cyrillic codepage.
+
+        Cyrillic codepage suggests NanoCAD but is not definitive evidence.
+        """
         context = {
             "cad_fingerprint": {"detected_application": ""},
             "metadata": {"codepage": 1251}
         }
         rule = self._make_rule("TAMPER-031")
         result = self.engine._check_nanocad_signature(rule, context)
-        assert result.status == RuleStatus.FAILED
+        # NanoCAD indication via codepage - passes as legitimate
+        assert result.status == RuleStatus.PASSED
 
     def test_no_detection_for_autocad(self):
         """Test no detection for AutoCAD."""
@@ -210,17 +244,25 @@ class TestNanoCADSignature(TestFingerprintRulesMixin):
 
 
 class TestDraftSightSignature(TestFingerprintRulesMixin):
-    """Tests for TAMPER-032: DraftSight Signature Detection."""
+    """Tests for TAMPER-032: DraftSight Signature Detection.
+
+    NOTE: DraftSight is LEGITIMATE software. Detection returns PASSED status
+    (informational) - not FAILED. This is intentional behavior.
+    """
 
     def test_detects_draftsight_from_fingerprint(self):
-        """Test detection from cad_fingerprint."""
+        """Test detection from cad_fingerprint.
+
+        DraftSight detection returns PASSED because it's legitimate software.
+        """
         context = {
             "cad_fingerprint": {"detected_application": "draftsight"},
             "metadata": {}
         }
         rule = self._make_rule("TAMPER-032")
         result = self.engine._check_draftsight_signature(rule, context)
-        assert result.status == RuleStatus.FAILED
+        # DraftSight is legitimate - detection is informational, not a failure
+        assert result.status == RuleStatus.PASSED
 
     def test_detects_draftsight_from_forensic_meta(self):
         """Test detection from forensic_meta."""
@@ -233,7 +275,8 @@ class TestDraftSightSignature(TestFingerprintRulesMixin):
         }
         rule = self._make_rule("TAMPER-032")
         result = self.engine._check_draftsight_signature(rule, context)
-        assert result.status == RuleStatus.FAILED
+        # DraftSight is legitimate software - passes
+        assert result.status == RuleStatus.PASSED
 
     def test_detects_dassault_from_forensic_meta(self):
         """Test detection of Dassault in product name."""
@@ -246,7 +289,8 @@ class TestDraftSightSignature(TestFingerprintRulesMixin):
         }
         rule = self._make_rule("TAMPER-032")
         result = self.engine._check_draftsight_signature(rule, context)
-        assert result.status == RuleStatus.FAILED
+        # Dassault products (DraftSight) are legitimate software - passes
+        assert result.status == RuleStatus.PASSED
 
     def test_no_detection_for_autocad(self):
         """Test no detection for AutoCAD."""
@@ -354,3 +398,108 @@ class TestMissingAutoCADIdentifiers(TestFingerprintRulesMixin):
         rule = self._make_rule("TAMPER-035")
         result = self.engine._check_missing_autocad_identifiers(rule, context)
         assert result.status == RuleStatus.PASSED
+
+    def test_revit_export_passes_missing_identifiers(self):
+        """Test that Revit exports pass even with missing identifiers."""
+        context = {
+            "metadata": {
+                "fingerprintguid": "30314341-3233-0000-0000-000003c00100",
+                "some_field": "value"
+            },
+            "timestamp_anomalies": {},
+        }
+        rule = self._make_rule("TAMPER-035")
+        result = self.engine._check_missing_autocad_identifiers(rule, context)
+        assert result.status == RuleStatus.PASSED
+        assert "Revit" in result.description or result.details.get("is_revit_export")
+
+
+class TestRevitExportDetection(TestFingerprintRulesMixin):
+    """Tests for TAMPER-041: Revit Export Signature Detection."""
+
+    def test_detects_revit_from_guid_pattern(self):
+        """Test detection from GUID prefix 30314341 (ASCII '01CA')."""
+        context = {
+            "metadata": {"fingerprintguid": "30314341-3233-0000-0000-000003c00100"},
+        }
+        rule = self._make_rule("TAMPER-041")
+        result = self.engine._check_revit_export_signature(rule, context)
+        assert result.status == RuleStatus.PASSED
+        assert "Revit" in result.description or result.details.get("is_revit_export")
+
+    def test_detects_revit_from_revit_detection_context(self):
+        """Test detection from revit_detection context."""
+        context = {
+            "metadata": {},
+            "revit_detection": {"is_revit_export": True, "confidence_score": 0.85},
+        }
+        rule = self._make_rule("TAMPER-041")
+        result = self.engine._check_revit_export_signature(rule, context)
+        assert result.status == RuleStatus.PASSED
+        assert result.details.get("is_revit_export")
+
+    def test_detects_revit_from_crc_flag(self):
+        """Test detection from CRC validation Revit flag."""
+        context = {
+            "metadata": {},
+            "crc_validation": {"is_revit_export": True},
+        }
+        rule = self._make_rule("TAMPER-041")
+        result = self.engine._check_revit_export_signature(rule, context)
+        assert result.status == RuleStatus.PASSED
+
+    def test_no_detection_for_autocad(self):
+        """Test no detection for AutoCAD files."""
+        context = {
+            "metadata": {
+                "fingerprintguid": "{12345678-1234-1234-1234-123456789012}",
+                "versionguid": "{87654321-4321-4321-4321-210987654321}"
+            },
+            "crc_validation": {"is_valid": True},
+        }
+        rule = self._make_rule("TAMPER-041")
+        result = self.engine._check_revit_export_signature(rule, context)
+        assert result.status == RuleStatus.PASSED
+        assert not result.details or not result.details.get("is_revit_export")
+
+    def test_helper_method_check_revit_export(self):
+        """Test the _check_revit_export helper method."""
+        # Test with Revit GUID pattern
+        context = {
+            "metadata": {"fingerprintguid": "30314341-3233-0000-0000-000003c00100"},
+        }
+        result = self.engine._check_revit_export(context)
+        assert result["is_revit"]
+        assert result["confidence"] >= 0.9
+        assert "guid_01ca_pattern" in result["indicators"]
+
+        # Test with revit_detection context
+        context = {
+            "metadata": {},
+            "revit_detection": {"is_revit_export": True, "confidence_score": 0.85},
+        }
+        result = self.engine._check_revit_export(context)
+        assert result["is_revit"]
+
+        # Test with no Revit indicators
+        context = {
+            "metadata": {"fingerprintguid": "{12345678-1234-1234-1234-123456789012}"},
+        }
+        result = self.engine._check_revit_export(context)
+        assert not result["is_revit"]
+
+
+class TestZeroTimestampWithRevit(TestFingerprintRulesMixin):
+    """Tests for TAMPER-034 with Revit export handling."""
+
+    def test_revit_export_passes_zero_timestamps(self):
+        """Test that Revit exports pass even with zero timestamps."""
+        context = {
+            "metadata": {"fingerprintguid": "30314341-3233-0000-0000-000003c00100"},
+            "timestamp_data": {"tdcreate": 0, "tdupdate": 0, "tdindwg": 0},
+            "timestamp_anomalies": {},
+        }
+        rule = self._make_rule("TAMPER-034")
+        result = self.engine._check_zero_timestamp_pattern(rule, context)
+        assert result.status == RuleStatus.PASSED
+        assert "Revit" in result.description or result.details.get("is_revit_export")

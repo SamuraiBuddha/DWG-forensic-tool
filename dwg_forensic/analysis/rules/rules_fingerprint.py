@@ -14,7 +14,10 @@ from dwg_forensic.analysis.rules.models import (
 
 
 class FingerprintRulesMixin:
-    """Mixin providing TAMPER-029 through TAMPER-035 check implementations."""
+    """Mixin providing TAMPER-029 through TAMPER-036 check implementations."""
+
+    # Revit/ODA export GUID signature: "30314341-" = ASCII "01CA"
+    REVIT_GUID_PREFIX = "30314341-"
 
     def _get_forensic_meta(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Get forensic_meta from context safely."""
@@ -25,6 +28,78 @@ class FingerprintRulesMixin:
         meta = self._get_forensic_meta(context)
         trusted = meta.get("trusted_dwg", {})
         return trusted.get("autodesk_app", False)
+
+    def _check_revit_export(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Detect Revit export based on multiple signatures.
+
+        Returns dict with:
+            is_revit: bool - True if Revit export detected
+            confidence: float - Detection confidence (0.0-1.0)
+            indicators: list - List of indicators found
+            forensic_note: str - Explanation of findings
+        """
+        indicators = []
+        confidence = 0.0
+
+        # Check revit_detection from analyzer
+        revit_detection = context.get("revit_detection", {})
+        if revit_detection.get("is_revit_export"):
+            indicators.append("revit_detector_positive")
+            confidence = max(confidence, revit_detection.get("confidence_score", 0.7))
+
+        # Check FINGERPRINTGUID for "30314341-" pattern (ASCII "01CA")
+        metadata = context.get("metadata", {})
+        fingerprint_guid = metadata.get("fingerprintguid") or metadata.get("fingerprint_guid", "")
+        if fingerprint_guid and str(fingerprint_guid).upper().startswith(self.REVIT_GUID_PREFIX):
+            indicators.append("guid_01ca_pattern")
+            confidence = max(confidence, 0.92)
+
+        # Check forensic_meta for Revit product name
+        meta = self._get_forensic_meta(context)
+        app_info = meta.get("app_info", {})
+        product_name = (app_info.get("product_name") or "").lower()
+        if "revit" in product_name:
+            indicators.append("product_name_revit")
+            confidence = max(confidence, 0.95)
+
+        # Check cad_fingerprint for Revit detection
+        fingerprint = context.get("cad_fingerprint", {})
+        detected_app = fingerprint.get("detected_application", "")
+        if detected_app.lower() in ["revit_export", "revit"]:
+            indicators.append("fingerprint_revit")
+            confidence = max(confidence, 0.85)
+
+        # Check for Revit signatures in drawing vars analysis
+        detected_sigs = fingerprint.get("detected_signatures", [])
+        revit_sigs = [s for s in detected_sigs if "REVIT" in s.upper()]
+        if revit_sigs:
+            indicators.extend(revit_sigs)
+            confidence = max(confidence, 0.80)
+
+        # Check CRC validation for Revit flag
+        crc = context.get("crc_validation", {})
+        if crc.get("is_revit_export"):
+            indicators.append("crc_revit_flag")
+            confidence = max(confidence, 0.75)
+
+        is_revit = len(indicators) > 0 and confidence >= 0.5
+
+        forensic_note = ""
+        if is_revit:
+            forensic_note = (
+                f"Revit export detected (confidence: {confidence:.0%}). "
+                f"Indicators: {', '.join(indicators)}. "
+                "Revit exports have EXPECTED characteristics: zero CRC, "
+                "missing TDCREATE/TDUPDATE, and malformed GUIDs. "
+                "These are NOT tampering indicators."
+            )
+
+        return {
+            "is_revit": is_revit,
+            "confidence": confidence,
+            "indicators": indicators,
+            "forensic_note": forensic_note,
+        }
 
     def _check_oda_sdk_artifacts(
         self, rule: TamperingRule, context: Dict[str, Any]
@@ -313,9 +388,26 @@ class FingerprintRulesMixin:
         Detects when TDCREATE and TDUPDATE are both zero or identical
         with zero TDINDWG - a strong indicator of programmatic generation.
 
-        NOTE: ODA SDK-based files may have zero timestamps. This is EXPECTED
-        for these legitimate CAD applications, not evidence of tampering.
+        NOTE: ODA SDK-based files and Revit exports may have zero timestamps.
+        This is EXPECTED for these legitimate CAD applications, not evidence of tampering.
         """
+        # Check for Revit export - zero timestamps are EXPECTED
+        revit_check = self._check_revit_export(context)
+        if revit_check["is_revit"]:
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.PASSED,
+                severity=rule.severity,
+                description="[OK] Zero/missing timestamps expected for Revit exports",
+                confidence=1.0,
+                details={
+                    "is_revit_export": True,
+                    "revit_indicators": revit_check["indicators"],
+                    "forensic_note": revit_check["forensic_note"],
+                },
+            )
+
         # Check for ODA SDK files - zero timestamps may be EXPECTED
         structure = context.get("structure_analysis", {})
         structure_type = structure.get("structure_type", "")
@@ -512,6 +604,24 @@ class FingerprintRulesMixin:
             description = f"[CRITICAL] TrustedDWG confirms Autodesk but identifiers missing: {', '.join(missing_identifiers)}"
             confidence = 0.95
 
+        # Check for Revit export - missing identifiers are EXPECTED
+        revit_check = self._check_revit_export(context)
+        if revit_check["is_revit"]:
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.PASSED,
+                severity=rule.severity,
+                description="[OK] Missing AutoCAD identifiers expected for Revit export",
+                confidence=1.0,
+                details={
+                    "is_revit_export": True,
+                    "revit_indicators": revit_check["indicators"],
+                    "revit_confidence": revit_check["confidence"],
+                    "forensic_note": revit_check["forensic_note"],
+                },
+            )
+
         return RuleResult(
             rule_id=rule.rule_id,
             rule_name=rule.name,
@@ -527,6 +637,62 @@ class FingerprintRulesMixin:
                     "AutoCAD always generates unique FINGERPRINTGUID and VERSIONGUID "
                     "identifiers for every file. Their absence is definitive proof "
                     "the file was not created by genuine AutoCAD software."
+                ),
+            },
+        )
+
+    def _check_revit_export_signature(
+        self, rule: TamperingRule, context: Dict[str, Any]
+    ) -> RuleResult:
+        """TAMPER-036: Revit Export Signature Detection.
+
+        Detects Autodesk Revit DWG exports by multiple signatures:
+        - FINGERPRINTGUID starting with "30314341-" (ASCII "01CA")
+        - Zero CRC (Revit doesn't compute CRC during export)
+        - Missing TDCREATE/TDUPDATE timestamps
+        - Revit-specific object classes
+
+        FORENSIC IMPORTANCE: Revit exports are LEGITIMATE files that have
+        characteristics that may appear suspicious (zero CRC, missing timestamps,
+        malformed GUIDs). This detection PREVENTS FALSE POSITIVES.
+        """
+        revit_check = self._check_revit_export(context)
+
+        if not revit_check["is_revit"]:
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.PASSED,
+                severity=rule.severity,
+                description="[OK] No Revit export signatures detected",
+                confidence=1.0,
+            )
+
+        # Revit export detected - this is INFORMATIONAL, not a failure
+        return RuleResult(
+            rule_id=rule.rule_id,
+            rule_name=rule.name,
+            status=RuleStatus.PASSED,  # PASSED because Revit is legitimate
+            severity=rule.severity,
+            description=(
+                f"[INFO] Revit export detected (confidence: {revit_check['confidence']:.0%})"
+            ),
+            confidence=revit_check["confidence"],
+            details={
+                "is_revit_export": True,
+                "indicators": revit_check["indicators"],
+                "forensic_note": revit_check["forensic_note"],
+                "expected_characteristics": [
+                    "Zero CRC (0x00000000) - Revit does not compute CRC",
+                    "Missing TDCREATE/TDUPDATE - Revit does not set creation timestamps",
+                    "FINGERPRINTGUID with '30314341-' prefix (ASCII '01CA')",
+                    "Malformed VERSIONGUID format",
+                ],
+                "forensic_conclusion": (
+                    "This file is a legitimate Revit DWG export. "
+                    "The characteristics that appear suspicious (zero CRC, missing timestamps) "
+                    "are EXPECTED and NORMAL for Revit exports. "
+                    "These are NOT indicators of tampering."
                 ),
             },
         )

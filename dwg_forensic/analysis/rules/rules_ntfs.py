@@ -86,6 +86,10 @@ class NTFSRulesMixin:
         With 10 million possible values, timestamps naturally ending in .0000000
         are statistically improbable (p < 0.0001). Multiple truncated timestamps
         indicate manipulation by forensic/timestomping tools.
+
+        EXCEPTION: Revit exports and file transfers commonly have truncated nanoseconds
+        due to export processes and file copying. For these files, truncated nanoseconds
+        are EXPECTED and should not be flagged as tool signatures.
         """
         ntfs_data = context.get("ntfs_data", {})
 
@@ -110,6 +114,40 @@ class NTFSRulesMixin:
                 severity=rule.severity,
                 description="[OK] Timestamps have normal nanosecond distribution",
                 confidence=1.0,
+            )
+
+        # Check if this is a Revit export - truncated nanoseconds are EXPECTED
+        revit_detection = context.get("revit_detection", {})
+        is_revit = revit_detection.get("is_revit_export", False)
+
+        # Also check CRC for Revit flag (context uses "crc" not "crc_validation")
+        crc_data = context.get("crc", {})
+        if not is_revit and crc_data.get("is_revit_export", False):
+            is_revit = True
+
+        if is_revit:
+            return RuleResult(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                status=RuleStatus.PASSED,
+                severity=rule.severity,
+                description=(
+                    "[OK] REVIT EXPORT: Nanosecond truncation is EXPECTED for Revit exports. "
+                    "Revit DWG files are commonly shared between team members and systems, "
+                    "causing legitimate nanosecond truncation through file transfers."
+                ),
+                found="Revit export detected - nanosecond truncation is normal",
+                confidence=0.9,
+                details={
+                    "forensic_conclusion": (
+                        "This file has been identified as an Autodesk Revit export. "
+                        "Nanosecond truncation in NTFS timestamps is EXPECTED for these files "
+                        "because: (1) Revit's export process may not preserve full precision, "
+                        "(2) exported DWG files are commonly transferred between systems for "
+                        "collaboration, and file copy operations reset nanosecond values."
+                    ),
+                    "is_revit_export": True,
+                },
             )
 
         return RuleResult(

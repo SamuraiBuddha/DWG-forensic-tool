@@ -1094,24 +1094,47 @@ class ForensicAnalyzer:
                     )
                 )
 
-            # Nanosecond truncation = Tool signature
+            # Nanosecond truncation = Tool signature (but NOT for Revit exports)
             if ntfs_data.nanoseconds_truncated:
-                anomalies.append(
-                    Anomaly(
-                        anomaly_type=AnomalyType.NTFS_NANOSECOND_TRUNCATION,
-                        description=(
-                            "TOOL SIGNATURE DETECTED: NTFS timestamps have nanosecond values "
-                            "of exactly zero. Natural filesystem operations always include "
-                            "non-zero nanoseconds. This indicates use of timestamp manipulation tools."
-                        ),
-                        severity=RiskLevel.HIGH,
-                        details={
-                            "created_nanoseconds": ntfs_data.si_timestamps.created_nanoseconds,
-                            "modified_nanoseconds": ntfs_data.si_timestamps.modified_nanoseconds,
-                            "forensic_conclusion": "Timestamps were set programmatically, not by normal file operations",
-                        },
+                # Check if this is a Revit export - truncated nanoseconds are EXPECTED
+                is_revit = crc_validation.is_revit_export if crc_validation else False
+
+                if is_revit:
+                    # Revit exports commonly have truncated nanoseconds due to file transfers
+                    anomalies.append(
+                        Anomaly(
+                            anomaly_type=AnomalyType.NTFS_NANOSECOND_TRUNCATION,
+                            description=(
+                                "REVIT EXPORT - EXPECTED: NTFS timestamps have zero nanoseconds. "
+                                "This is NORMAL for Revit exports which are commonly transferred "
+                                "between systems. File copy operations reset nanosecond values."
+                            ),
+                            severity=RiskLevel.INFO,  # INFO level for Revit exports
+                            details={
+                                "created_nanoseconds": ntfs_data.si_timestamps.created_nanoseconds,
+                                "modified_nanoseconds": ntfs_data.si_timestamps.modified_nanoseconds,
+                                "forensic_conclusion": "Normal for Revit export - not evidence of tampering",
+                                "is_revit_export": True,
+                            },
+                        )
                     )
-                )
+                else:
+                    anomalies.append(
+                        Anomaly(
+                            anomaly_type=AnomalyType.NTFS_NANOSECOND_TRUNCATION,
+                            description=(
+                                "TOOL SIGNATURE DETECTED: NTFS timestamps have nanosecond values "
+                                "of exactly zero. Natural filesystem operations always include "
+                                "non-zero nanoseconds. This indicates use of timestamp manipulation tools."
+                            ),
+                            severity=RiskLevel.HIGH,
+                            details={
+                                "created_nanoseconds": ntfs_data.si_timestamps.created_nanoseconds,
+                                "modified_nanoseconds": ntfs_data.si_timestamps.modified_nanoseconds,
+                                "forensic_conclusion": "Timestamps were set programmatically, not by normal file operations",
+                            },
+                        )
+                    )
 
             # Creation after modification = NORMAL for copied files (informational only)
             if ntfs_data.creation_after_modification:
@@ -1494,23 +1517,26 @@ class ForensicAnalyzer:
                     )
                 )
 
-            # Nanosecond truncation = Tool signature
+            # Nanosecond truncation = Tool signature (but NOT for Revit exports)
             if ntfs_data.nanoseconds_truncated:
-                indicators.append(
-                    TamperingIndicator(
-                        indicator_type=TamperingIndicatorType.NTFS_TOOL_SIGNATURE,
-                        description=(
-                            "TIMESTAMP MANIPULATION TOOL DETECTED: NTFS timestamps have "
-                            "nanosecond values of exactly zero. Natural filesystem operations "
-                            "always include random nanosecond values."
-                        ),
-                        confidence=0.95,
-                        evidence=(
-                            f"Created nanoseconds: {ntfs_data.si_timestamps.created_nanoseconds}, "
-                            f"Modified nanoseconds: {ntfs_data.si_timestamps.modified_nanoseconds}"
-                        ),
+                # Skip this indicator for Revit exports - truncated nanoseconds are expected
+                if not is_revit_file:
+                    indicators.append(
+                        TamperingIndicator(
+                            indicator_type=TamperingIndicatorType.NTFS_TOOL_SIGNATURE,
+                            description=(
+                                "TIMESTAMP MANIPULATION TOOL DETECTED: NTFS timestamps have "
+                                "nanosecond values of exactly zero. Natural filesystem operations "
+                                "always include random nanosecond values."
+                            ),
+                            confidence=0.95,
+                            evidence=(
+                                f"Created nanoseconds: {ntfs_data.si_timestamps.created_nanoseconds}, "
+                                f"Modified nanoseconds: {ntfs_data.si_timestamps.modified_nanoseconds}"
+                            ),
+                        )
                     )
-                )
+                # For Revit exports, this is normal - don't add as tampering indicator
 
             # Creation after modification = NORMAL for copied files (informational)
             # NOTE: This is NOT included as a tampering indicator anymore

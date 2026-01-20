@@ -168,20 +168,20 @@ class TestTamperingRuleEngine:
     """Test TamperingRuleEngine functionality."""
 
     def test_init_loads_builtin_rules(self):
-        """Test that engine loads 38 built-in rules (10 basic + 6 advanced + 10 NTFS + 7 CAD fingerprinting + 5 deep parsing)."""
+        """Test that engine loads 39 built-in rules (10 basic + 6 advanced + 10 NTFS + 8 CAD fingerprinting + 5 deep parsing)."""
         engine = TamperingRuleEngine()
         rules = engine.get_builtin_rules()
-        assert len(rules) == 38
+        assert len(rules) == 39
 
     def test_builtin_rule_ids(self):
-        """Test that all 38 TAMPER rules exist (excludes TAMPER-003 and TAMPER-004)."""
+        """Test that all 39 TAMPER rules exist (excludes TAMPER-003 and TAMPER-004)."""
         engine = TamperingRuleEngine()
         rules = engine.get_builtin_rules()
         rule_ids = [r.rule_id for r in rules]
 
         # TAMPER-003 and TAMPER-004 were removed (TrustedDWG watermark rules)
         excluded_rules = {"TAMPER-003", "TAMPER-004"}
-        for i in range(1, 41):
+        for i in range(1, 42):
             expected_id = f"TAMPER-{i:03d}"
             if expected_id in excluded_rules:
                 assert expected_id not in rule_ids, f"Rule {expected_id} should be removed"
@@ -246,8 +246,8 @@ rules:
         engine = TamperingRuleEngine()
         engine.load_rules(rules_file)
 
-        # Should have 39 rules now (38 built-in + 1 custom)
-        assert len(engine.rules) == 39
+        # Should have 40 rules now (39 built-in + 1 custom)
+        assert len(engine.rules) == 40
 
 
 # ============================================================================

@@ -68,6 +68,8 @@ class RevitDetector:
     2. Specific object patterns in sections
     3. Drawing variables unique to Revit exports
     4. Structural patterns in section maps
+    5. FINGERPRINTGUID pattern "30314341-" (ASCII "01CA") - Revit/ODA signature
+    6. Header structure: Preview Addr = 0x120, null Summary/VBA addresses
     """
 
     # Known Revit signature strings
@@ -85,6 +87,15 @@ class RevitDetector:
         b"Revit MEP",
         b"Revit LT",
     ]
+
+    # GUID prefix that indicates Revit/ODA export
+    # "30314341" = ASCII "01CA" (Autodesk export signature)
+    REVIT_GUID_PREFIX = b"30314341-"
+    REVIT_GUID_PREFIX_STR = "30314341-"
+
+    # Header structure constants for Revit exports
+    # Revit uses Preview Addr = 0x120 (instead of AutoCAD's 0x1C0)
+    REVIT_PREVIEW_ADDRESS = 0x120
 
     def __init__(self):
         """Initialize Revit detector."""
@@ -115,6 +126,8 @@ class RevitDetector:
         self._check_header_signatures(file_data)
         self._check_application_markers(file_data)
         self._check_object_patterns(file_data)
+        self._check_header_structure(file_data)
+        self._check_guid_pattern(file_data)
 
         # Calculate confidence and determine result
         confidence = self._calculate_confidence()
@@ -205,6 +218,105 @@ class RevitDetector:
                     )
                 )
 
+    def _check_header_structure(self, data: bytes) -> None:
+        """
+        Check for Revit-specific header structure patterns.
+
+        Revit exports have distinctive header values:
+        - Preview Address = 0x120 (instead of AutoCAD's 0x1C0)
+        - Summary Info Address = 0x00000000 (null)
+        - VBA Project Address = 0x00000000 (null)
+
+        This pattern is highly reliable for detecting Revit exports.
+        """
+        if len(data) < 0x24:  # Need at least 36 bytes for header
+            return
+
+        # DWG R18+ header structure (AC1024, AC1027, AC1032):
+        # Offset 0x0D (13): Preview Image Address (4 bytes, little-endian)
+        # Offset 0x13 (19): Summary Info Address (4 bytes, little-endian)
+        # Offset 0x17 (23): VBA Project Address (4 bytes, little-endian)
+
+        # Check version string first (must be AC1024, AC1027, or AC1032)
+        version = data[:6]
+        if version not in [b"AC1024", b"AC1027", b"AC1032"]:
+            return  # Only check R18+ files
+
+        try:
+            preview_addr = struct.unpack_from("<I", data, 0x0D)[0]
+            summary_addr = struct.unpack_from("<I", data, 0x13)[0]
+            vba_addr = struct.unpack_from("<I", data, 0x17)[0]
+
+            # Revit export detection based on header structure
+            # Primary indicator: Preview Address = 0x120 (Revit uses this, AutoCAD uses 0x1C0)
+            # Secondary: Summary and VBA addresses may be 0 or small values
+
+            is_revit_preview = preview_addr == self.REVIT_PREVIEW_ADDRESS
+
+            if is_revit_preview:
+                # Calculate confidence based on additional indicators
+                confidence = 0.85  # Base confidence for Preview=0x120
+                details_parts = [f"Preview=0x{preview_addr:X} (Revit signature)"]
+
+                if summary_addr == 0:
+                    confidence = min(confidence + 0.05, 0.95)
+                    details_parts.append(f"Summary=0x{summary_addr:X} (null)")
+                else:
+                    details_parts.append(f"Summary=0x{summary_addr:X}")
+
+                if vba_addr == 0:
+                    confidence = min(confidence + 0.03, 0.95)
+                    details_parts.append(f"VBA=0x{vba_addr:X} (null)")
+                else:
+                    details_parts.append(f"VBA=0x{vba_addr:X}")
+
+                self._signatures_found.append(
+                    RevitSignature(
+                        signature_type="HEADER_STRUCTURE",
+                        location="DWG Header (offsets 0x0D-0x1A)",
+                        confidence=confidence,
+                        details=(
+                            f"Revit export header: {', '.join(details_parts)}. "
+                            "Preview Address 0x120 is distinctive for Revit DWG exports "
+                            "(AutoCAD uses 0x1C0). Zero CRC and missing timestamps are "
+                            "EXPECTED behavior for these files."
+                        ),
+                    )
+                )
+        except struct.error:
+            pass  # Header too short or malformed
+
+    def _check_guid_pattern(self, data: bytes) -> None:
+        """
+        Check for Revit/ODA GUID pattern in FINGERPRINTGUID.
+
+        FINGERPRINTGUID prefix "30314341-" = ASCII "01CA" which is a known
+        signature for Autodesk Revit and ODA SDK exports. This is one of
+        the most reliable indicators of a Revit export.
+
+        The GUID is typically stored in the drawing variables section or
+        may appear as a string pattern in the file.
+        """
+        # Search for the GUID pattern in the file
+        # The GUID typically appears as ASCII text in the file
+        search_region = data[:262144]  # Search first 256KB
+
+        # Check for ASCII GUID pattern
+        if self.REVIT_GUID_PREFIX in search_region:
+            offset = search_region.find(self.REVIT_GUID_PREFIX)
+            self._signatures_found.append(
+                RevitSignature(
+                    signature_type="GUID_PATTERN",
+                    location=f"FINGERPRINTGUID at offset 0x{offset:X}",
+                    confidence=0.93,
+                    details=(
+                        f"FINGERPRINTGUID starts with '30314341-' (ASCII '01CA'). "
+                        "This is an Autodesk Revit/ODA export signature. Files with "
+                        "this pattern have zero CRC and missing timestamps by design."
+                    ),
+                )
+            )
+
     def _calculate_confidence(self) -> float:
         """
         Calculate overall confidence score based on signatures found.
@@ -219,7 +331,9 @@ class RevitDetector:
 
         # Weight by signature type
         weights = {
-            "OBJECT_CLASS": 2.0,  # Strongest indicator
+            "OBJECT_CLASS": 2.0,  # Strongest indicator (Revit class names)
+            "GUID_PATTERN": 2.0,  # Very strong - "30314341-" prefix
+            "HEADER_STRUCTURE": 1.8,  # Strong - Preview=0x120 pattern
             "APP_MARKER": 1.5,
             "HEADER_STRING": 1.0,
         }

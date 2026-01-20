@@ -448,6 +448,19 @@ class TamperingRuleEngine(
                 evidence_strength=EvidenceStrength.DEFINITIVE,
                 is_smoking_gun=True,
             ),
+            # Revit Export Detection (TAMPER-041) - FALSE POSITIVE PREVENTION
+            TamperingRule(
+                rule_id="TAMPER-041",
+                name="Revit Export Signature Detection",
+                severity=RuleSeverity.INFO,
+                description=(
+                    "Detects Autodesk Revit DWG exports by GUID pattern, zero CRC, "
+                    "and missing timestamps. Revit exports are LEGITIMATE files - "
+                    "this detection PREVENTS FALSE POSITIVES."
+                ),
+                evidence_strength=EvidenceStrength.INFORMATIONAL,
+                is_smoking_gun=False,
+            ),
         ]
         self.rules.extend(builtin)
 
@@ -565,6 +578,8 @@ class TamperingRuleEngine(
             "TAMPER-038": self._check_dwg_internal_timestamp_contradiction,
             "TAMPER-039": self._check_handle_gap_ratio,
             "TAMPER-040": self._check_section_map_integrity,
+            # Revit Export Detection (TAMPER-041)
+            "TAMPER-041": self._check_revit_export_signature,
         }
 
         evaluator = evaluators.get(rule.rule_id)
