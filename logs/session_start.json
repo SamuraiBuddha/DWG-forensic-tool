@@ -1,0 +1,65 @@
+[
+  {
+    "session_id": "6d0835d0-7d33-435a-96eb-2e915fde04f9",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\6d0835d0-7d33-435a-96eb-2e915fde04f9.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "hook_event_name": "SessionStart",
+    "source": "startup",
+    "model": "claude-haiku-4-5-20251001"
+  },
+  {
+    "session_id": "6d0835d0-7d33-435a-96eb-2e915fde04f9",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\6d0835d0-7d33-435a-96eb-2e915fde04f9.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "hook_event_name": "SessionStart",
+    "source": "resume"
+  },
+  {
+    "session_id": "6d0835d0-7d33-435a-96eb-2e915fde04f9",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\6d0835d0-7d33-435a-96eb-2e915fde04f9.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "hook_event_name": "SessionStart",
+    "source": "compact",
+    "model": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "session_id": "6d0835d0-7d33-435a-96eb-2e915fde04f9",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\6d0835d0-7d33-435a-96eb-2e915fde04f9.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "hook_event_name": "SessionStart",
+    "source": "compact",
+    "model": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "session_id": "6d0835d0-7d33-435a-96eb-2e915fde04f9",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\6d0835d0-7d33-435a-96eb-2e915fde04f9.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "hook_event_name": "SessionStart",
+    "source": "compact",
+    "model": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "session_id": "6d0835d0-7d33-435a-96eb-2e915fde04f9",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\6d0835d0-7d33-435a-96eb-2e915fde04f9.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "hook_event_name": "SessionStart",
+    "source": "compact",
+    "model": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "session_id": "6d0835d0-7d33-435a-96eb-2e915fde04f9",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\6d0835d0-7d33-435a-96eb-2e915fde04f9.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "hook_event_name": "SessionStart",
+    "source": "compact",
+    "model": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "session_id": "6d0835d0-7d33-435a-96eb-2e915fde04f9",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\6d0835d0-7d33-435a-96eb-2e915fde04f9.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "hook_event_name": "SessionStart",
+    "source": "compact",
+    "model": "claude-haiku-4-5-20251001"
+  }
+]

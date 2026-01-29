@@ -357,6 +357,10 @@ class ForensicAnalysis(BaseModel):
         None,
         description="NTFS filesystem timestamp analysis for cross-validation"
     )
+    file_provenance: Optional[Dict[str, Any]] = Field(
+        None,
+        description="File origin and creation context (Revit export, ODA tool, file transfer, etc.)"
+    )
     application_fingerprint: Optional[ApplicationFingerprint] = Field(
         None,
         description="Application fingerprint"

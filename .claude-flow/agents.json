@@ -1,0 +1,56 @@
+{
+  "agents": {
+    "forensic-agent-1769722452883-otvp": {
+      "agentId": "forensic-agent-1769722452883-otvp",
+      "agentType": "specialist",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "role": "specialist",
+        "hiveRole": "specialist"
+      },
+      "createdAt": "2026-01-29T21:34:12.883Z",
+      "domain": "hive-mind"
+    },
+    "forensic-agent-1769722452883-piva": {
+      "agentId": "forensic-agent-1769722452883-piva",
+      "agentType": "specialist",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "role": "specialist",
+        "hiveRole": "specialist"
+      },
+      "createdAt": "2026-01-29T21:34:12.883Z",
+      "domain": "hive-mind"
+    },
+    "forensic-agent-1769722452883-bdl1": {
+      "agentId": "forensic-agent-1769722452883-bdl1",
+      "agentType": "specialist",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "role": "specialist",
+        "hiveRole": "specialist"
+      },
+      "createdAt": "2026-01-29T21:34:12.883Z",
+      "domain": "hive-mind"
+    },
+    "forensic-agent-1769722452883-cpzf": {
+      "agentId": "forensic-agent-1769722452883-cpzf",
+      "agentType": "specialist",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "role": "specialist",
+        "hiveRole": "specialist"
+      },
+      "createdAt": "2026-01-29T21:34:12.883Z",
+      "domain": "hive-mind"
+    }
+  }
+}

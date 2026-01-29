@@ -1,0 +1,34 @@
+[
+  {
+    "session_id": "6d0835d0-7d33-435a-96eb-2e915fde04f9",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\6d0835d0-7d33-435a-96eb-2e915fde04f9.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "can you load this project into the SERENA tool?"
+  },
+  {
+    "session_id": "6d0835d0-7d33-435a-96eb-2e915fde04f9",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\6d0835d0-7d33-435a-96eb-2e915fde04f9.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "well, i am not sure this program really does the actual forensic investigation.  I need a full review, testing, research on how to operate forensically on digital files, then specifically .dwg format.  I need the program to be able to unfold and identify the pertinent pieces of data. I believe there is a wealth of research in there, but I dont see the program actually working yet, almost all files flag, even ones i know are good."
+  },
+  {
+    "session_id": "6d0835d0-7d33-435a-96eb-2e915fde04f9",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\6d0835d0-7d33-435a-96eb-2e915fde04f9.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "- Mix of AutoCAD + Revit + other CAD software - Detecting deliberate tampering for litigation - I created them from Autocad.  yes, please fix all 4 of those bullet point.  use a swarm that is designed for complex organization of a high level concept, maybe the hive mind? make sure the swarm has a researcher that is making use of code language library plugins"
+  },
+  {
+    "session_id": "6d0835d0-7d33-435a-96eb-2e915fde04f9",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\6d0835d0-7d33-435a-96eb-2e915fde04f9.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "ok, we hit limits but my dad let me use his usage for a bit, can you pick up and nudge the swarm"
+  }
+]

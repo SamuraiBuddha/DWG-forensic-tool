@@ -1,0 +1,22 @@
+{
+  "initialized": true,
+  "topology": "hierarchical",
+  "workers": [
+    "forensic-agent-1769722452883-otvp",
+    "forensic-agent-1769722452883-piva",
+    "forensic-agent-1769722452883-bdl1",
+    "forensic-agent-1769722452883-cpzf"
+  ],
+  "consensus": {
+    "pending": [],
+    "history": []
+  },
+  "sharedMemory": {},
+  "createdAt": "2026-01-29T21:34:12.536Z",
+  "updatedAt": "2026-01-29T21:34:12.884Z",
+  "queen": {
+    "agentId": "orchestrator-001",
+    "electedAt": "2026-01-29T21:34:12.536Z",
+    "term": 1
+  }
+}

@@ -505,6 +505,45 @@ class ForensicAnalyzer:
         )
         self._report_progress("anomalies", "complete", f"Anomalies detected: {len(anomalies)}")
 
+        # Phase 2.5: File Provenance Detection (BEFORE rule evaluation to prevent false positives)
+        self._report_progress("provenance", "start", "Detecting file provenance")
+        file_provenance = None
+        file_provenance_dict = None
+        try:
+            from dwg_forensic.analysis.provenance_detector import ProvenanceDetector
+            provenance_detector = ProvenanceDetector()
+            file_provenance = provenance_detector.detect(file_path)
+
+            # Convert to dict for ForensicAnalysis output
+            file_provenance_dict = {
+                "source_application": file_provenance.source_application,
+                "is_export": file_provenance.is_export,
+                "is_transferred": file_provenance.is_transferred,
+                "confidence": file_provenance.confidence,
+                "rules_to_skip": file_provenance.rules_to_skip,
+                "detection_notes": file_provenance.detection_notes,
+                "is_revit_export": file_provenance.is_revit_export,
+                "is_oda_tool": file_provenance.is_oda_tool,
+                "is_native_autocad": file_provenance.is_native_autocad,
+                "revit_confidence": file_provenance.revit_confidence,
+                "fingerprint_confidence": file_provenance.fingerprint_confidence,
+                "transfer_indicators": file_provenance.transfer_indicators,
+            }
+
+            self._report_progress(
+                "provenance",
+                "complete",
+                f"Provenance: {file_provenance.source_application} (confidence: {file_provenance.confidence:.2f})"
+            )
+        except Exception as e:
+            error_msg = f"Provenance detection failed: {str(e)}"
+            self._analysis_errors.append({
+                "phase": "provenance_detection",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            })
+            self._report_progress("provenance", "error", error_msg)
+
         # Phase 3: Tampering rule evaluation (with NTFS cross-validation data + deep parsing)
         self._report_progress("rules", "start", "Evaluating tampering rules")
         rule_context = self._build_rule_context(
@@ -514,7 +553,10 @@ class ForensicAnalyzer:
             section_map=section_map, drawing_vars=drawing_vars, handle_map=handle_map,
             fingerprint=fingerprint_result, structure_analysis=structure_analysis,
         )
-        rule_results = self.rule_engine.evaluate_all(rule_context)
+
+        # Pass skip_rules from provenance to prevent false positives
+        skip_rules = file_provenance.rules_to_skip if file_provenance else []
+        rule_results = self.rule_engine.evaluate_all(rule_context, skip_rules=skip_rules)
         failed_rules = self.rule_engine.get_failed_rules(rule_results)
         self._report_progress("rules", "complete", f"Rules triggered: {len(failed_rules)}")
 
@@ -819,6 +861,7 @@ class ForensicAnalyzer:
             crc_validation=crc_validation,
             metadata=metadata,
             ntfs_analysis=ntfs_analysis,
+            file_provenance=file_provenance_dict,
             application_fingerprint=app_fingerprint,
             revit_detection=revit_detection_dict,
             structure_analysis=structure_analysis_dict,

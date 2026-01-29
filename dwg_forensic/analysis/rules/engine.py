@@ -632,14 +632,38 @@ class TamperingRuleEngine(
 
         return False
 
-    def evaluate_all(self, context: Dict[str, Any]) -> List[RuleResult]:
-        """Evaluate all enabled rules."""
+    def evaluate_all(
+        self,
+        context: Dict[str, Any],
+        skip_rules: Optional[List[str]] = None
+    ) -> List[RuleResult]:
+        """Evaluate all enabled rules.
+
+        Args:
+            context: Analysis context dictionary
+            skip_rules: Optional list of rule IDs to skip (e.g., ["TAMPER-001", "TAMPER-002"])
+                        Used for provenance-based filtering (Revit exports, ODA tools, etc.)
+
+        Returns:
+            List of RuleResults
+        """
         self.results = []
+        skip_set = set(skip_rules or [])
 
         for rule in self.rules:
-            if rule.enabled:
+            if rule.enabled and rule.rule_id not in skip_set:
                 result = self.evaluate_rule(rule, context)
                 self.results.append(result)
+            elif rule.rule_id in skip_set:
+                # Add a skipped result for audit trail
+                self.results.append(RuleResult(
+                    rule_id=rule.rule_id,
+                    rule_name=rule.name,
+                    status=RuleStatus.INCONCLUSIVE,
+                    severity=rule.severity,
+                    description=f"Rule skipped based on file provenance (legitimate file characteristic)",
+                    confidence=0.0,
+                ))
 
         return self.results
 
