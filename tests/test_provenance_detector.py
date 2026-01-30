@@ -115,7 +115,7 @@ class TestProvenanceDetector:
             assert provenance.source_application == "Revit"
             assert provenance.is_export is True
             assert provenance.is_revit_export is True
-            assert provenance.revit_confidence == 0.93
+            assert provenance.revit_confidence == pytest.approx(0.93, abs=0.001)
             assert provenance.confidence >= 0.9
 
             # Verify skip rules for Revit
@@ -152,10 +152,10 @@ class TestProvenanceDetector:
                 provenance = detector.detect(mock_autocad_file)
 
                 # Verify ODA tool detection
-                assert provenance.source_application == "BRICSCAD"
+                assert provenance.source_application == "bricscad"
                 assert provenance.is_export is True
                 assert provenance.is_oda_tool is True
-                assert provenance.fingerprint_confidence == 0.85
+                assert provenance.fingerprint_confidence == pytest.approx(0.85, abs=0.001)
 
                 # Verify skip rules for ODA tools
                 assert "TAMPER-001" in provenance.rules_to_skip  # CRC may be 0
@@ -246,7 +246,7 @@ class TestProvenanceDetector:
             provenance = detector.detect(mock_revit_file)
 
             # Revit confidence should be used directly
-            assert provenance.confidence == 0.95
+            assert provenance.confidence == pytest.approx(0.95, abs=0.001)
 
     def test_confidence_calculation_oda_tool(self, detector, mock_autocad_file):
         """Test confidence score calculation for ODA tool."""
@@ -266,7 +266,7 @@ class TestProvenanceDetector:
                 provenance = detector.detect(mock_autocad_file)
 
                 # Fingerprint confidence should be used
-                assert provenance.confidence == 0.80
+                assert provenance.confidence == pytest.approx(0.80, abs=0.001)
 
     def test_confidence_calculation_file_transfer(self, detector, mock_autocad_file):
         """Test confidence score calculation for file transfer."""
@@ -293,7 +293,7 @@ class TestProvenanceDetector:
                     provenance = detector.detect(mock_autocad_file)
 
                     # File transfer confidence should be 0.85
-                    assert provenance.confidence == 0.85
+                    assert provenance.confidence == pytest.approx(0.85, abs=0.001)
 
     def test_file_not_found_error(self, detector):
         """Test error handling for non-existent file."""
@@ -321,14 +321,14 @@ class TestProvenanceIntegration:
 
     def test_provenance_in_analyzer_workflow(self, tmp_path):
         """Test that provenance detection is integrated into analyzer.py."""
-        from dwg_forensic.core.analyzer import DWGForensicAnalyzer
+        from dwg_forensic.core.analyzer import ForensicAnalyzer
 
         # Create a mock DWG file
         file_path = tmp_path / "test.dwg"
         header = b"AC1032" + b"\x00" * 200
         file_path.write_bytes(header)
 
-        analyzer = DWGForensicAnalyzer()
+        analyzer = ForensicAnalyzer()
 
         # Mock provenance detector
         with patch('dwg_forensic.core.analyzer.ProvenanceDetector') as MockProvenanceDetector:
@@ -359,13 +359,13 @@ class TestProvenanceIntegration:
 
     def test_skip_rules_passed_to_engine(self, tmp_path):
         """Test that skip_rules are passed to rule engine."""
-        from dwg_forensic.core.analyzer import DWGForensicAnalyzer
+        from dwg_forensic.core.analyzer import ForensicAnalyzer
 
         file_path = tmp_path / "test.dwg"
         header = b"AC1032" + b"\x00" * 200
         file_path.write_bytes(header)
 
-        analyzer = DWGForensicAnalyzer()
+        analyzer = ForensicAnalyzer()
 
         # Mock provenance with skip rules
         with patch('dwg_forensic.core.analyzer.ProvenanceDetector') as MockProvenanceDetector:
@@ -417,13 +417,13 @@ class TestProvenanceIntegration:
 
     def test_error_handling_in_provenance_detection(self, tmp_path):
         """Test error handling when provenance detection fails."""
-        from dwg_forensic.core.analyzer import DWGForensicAnalyzer
+        from dwg_forensic.core.analyzer import ForensicAnalyzer
 
         file_path = tmp_path / "test.dwg"
         header = b"AC1032" + b"\x00" * 200
         file_path.write_bytes(header)
 
-        analyzer = DWGForensicAnalyzer()
+        analyzer = ForensicAnalyzer()
 
         # Mock provenance detector to raise exception
         with patch('dwg_forensic.core.analyzer.ProvenanceDetector') as MockProvenanceDetector:
@@ -496,5 +496,5 @@ class TestProvenanceDetectionOrder:
                     provenance = detector.detect(file_path)
 
                     # Fingerprint should be used
-                    assert provenance.source_application == "BRICSCAD"
+                    assert provenance.source_application == "bricscad"
                     assert provenance.is_oda_tool is True

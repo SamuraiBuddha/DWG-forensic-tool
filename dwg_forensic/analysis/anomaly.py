@@ -35,17 +35,102 @@ from dwg_forensic.analysis.version_dates import (
 
 if TYPE_CHECKING:
     from dwg_forensic.parsers.timestamp import TimestampData
+    from dwg_forensic.analysis.provenance_detector import FileProvenance
 
 
 class AnomalyDetector:
     """
     Detects anomalies in DWG files including timestamp inconsistencies,
     version mismatches, and structural issues.
+
+    Phase 2: Provenance-aware detection with context-dependent tolerances
+    to eliminate false positives for Revit exports, ODA tools, and transfers.
     """
 
-    def __init__(self):
-        """Initialize the anomaly detector."""
-        pass
+    def __init__(self, provenance: Optional["FileProvenance"] = None):
+        """
+        Initialize the anomaly detector with optional provenance context.
+
+        Args:
+            provenance: Optional FileProvenance object to adjust detection tolerances
+                       based on file origin (Revit exports, ODA tools, etc.)
+        """
+        self._provenance = provenance
+
+    def _get_clock_skew_tolerance(self) -> int:
+        """
+        Get clock skew tolerance in seconds based on file provenance.
+
+        Returns:
+            Tolerance in seconds for timestamp clock skew checks
+        """
+        if not self._provenance:
+            return 300  # Default: 5 minutes
+
+        # Revit exports may have greater clock drift
+        if self._provenance.is_revit_export:
+            return 600  # 10 minutes for Revit
+
+        # ODA tools also have looser timestamp characteristics
+        if self._provenance.is_oda_tool:
+            return 450  # 7.5 minutes for ODA
+
+        # Native AutoCAD and others use standard tolerance
+        return 300  # 5 minutes (default)
+
+    def _get_edit_time_tolerance(self) -> float:
+        """
+        Get editing time tolerance multiplier based on file provenance.
+
+        Returns:
+            Tolerance multiplier for editing time checks (e.g., 1.1 = 10% grace)
+        """
+        if not self._provenance:
+            return 1.1  # Default: 10% tolerance
+
+        # Revit and ODA tools may have different editing time characteristics
+        if self._provenance.is_revit_export or self._provenance.is_oda_tool:
+            return 1.2  # 20% tolerance for non-native AutoCAD
+
+        # Native AutoCAD uses standard tolerance
+        return 1.1  # 10% (default)
+
+    def _get_null_ratio_threshold(self) -> float:
+        """
+        Get null byte ratio threshold based on file provenance.
+
+        Returns:
+            Maximum acceptable null byte ratio (0.0 to 1.0)
+        """
+        if not self._provenance:
+            return 0.3  # Default: 30%
+
+        # Revit exports legitimately have null padding
+        if self._provenance.is_revit_export:
+            return 0.5  # 50% for Revit
+
+        # ODA tools also use more null padding
+        if self._provenance.is_oda_tool:
+            return 0.4  # 40% for ODA
+
+        # Native AutoCAD uses standard threshold
+        return 0.3  # 30% (default)
+
+    def _should_skip_tdindwg_check(self) -> bool:
+        """
+        Check if TDINDWG validation should be skipped based on provenance.
+
+        TDINDWG (cumulative editing time) checks are only valid for native
+        AutoCAD files. Revit and ODA tools have different editing characteristics.
+
+        Returns:
+            True if TDINDWG check should be skipped, False otherwise
+        """
+        if not self._provenance:
+            return False  # Don't skip by default
+
+        # Skip for Revit exports and ODA tools
+        return self._provenance.is_revit_export or self._provenance.is_oda_tool
 
     def detect_timestamp_anomalies(
         self, metadata: DWGMetadata, file_path: Path
@@ -109,8 +194,9 @@ class AnomalyDetector:
 
             if modified > now:
                 diff_seconds = (modified - now).total_seconds()
-                # Allow 5 minutes grace for clock skew
-                if diff_seconds > 300:
+                # Use provenance-aware clock skew tolerance
+                clock_skew_tolerance = self._get_clock_skew_tolerance()
+                if diff_seconds > clock_skew_tolerance:
                     anomalies.append(
                         Anomaly(
                             anomaly_type=AnomalyType.TIMESTAMP_ANOMALY,
@@ -141,8 +227,9 @@ class AnomalyDetector:
             time_span_hours = (modified - created).total_seconds() / 3600
             edit_hours = metadata.total_editing_time_hours
 
-            # Edit time cannot exceed total elapsed time
-            if edit_hours > time_span_hours * 1.1:  # 10% tolerance
+            # Use provenance-aware tolerance for editing time
+            edit_time_tolerance = self._get_edit_time_tolerance()
+            if edit_hours > time_span_hours * edit_time_tolerance:
                 anomalies.append(
                     Anomaly(
                         anomaly_type=AnomalyType.SUSPICIOUS_EDIT_TIME,
@@ -163,8 +250,9 @@ class AnomalyDetector:
                 internal_modified = internal_modified.replace(tzinfo=timezone.utc)
 
             diff_seconds = abs((internal_modified - fs_modified).total_seconds())
-            # Allow 5 minute tolerance
-            if diff_seconds > 300:
+            # Use provenance-aware clock skew tolerance
+            clock_skew_tolerance = self._get_clock_skew_tolerance()
+            if diff_seconds > clock_skew_tolerance:
                 anomalies.append(
                     Anomaly(
                         anomaly_type=AnomalyType.TIMESTAMP_ANOMALY,
@@ -285,8 +373,10 @@ class AnomalyDetector:
                 file_data = f.read()
 
             # Check for excessive null padding (TAMPER-012)
+            # Use provenance-aware threshold (Revit exports have legitimate null padding)
             null_ratio = self._calculate_null_ratio(file_data)
-            if null_ratio > 0.3:  # More than 30% null bytes
+            null_threshold = self._get_null_ratio_threshold()
+            if null_ratio > null_threshold:
                 anomalies.append(
                     Anomaly(
                         anomaly_type=AnomalyType.OTHER,
@@ -363,6 +453,9 @@ class AnomalyDetector:
         the calendar span between creation and last save. If it does, this
         proves timestamp manipulation.
 
+        Phase 2: Skip this check for Revit exports and ODA tools, which have
+        different cumulative editing characteristics.
+
         Args:
             timestamp_data: Parsed timestamp data from the DWG file
 
@@ -370,6 +463,10 @@ class AnomalyDetector:
             List of detected TDINDWG anomalies
         """
         anomalies: List[Anomaly] = []
+
+        # Skip TDINDWG check for Revit exports and ODA tools
+        if self._should_skip_tdindwg_check():
+            return anomalies
 
         if timestamp_data.tdindwg is None:
             return anomalies

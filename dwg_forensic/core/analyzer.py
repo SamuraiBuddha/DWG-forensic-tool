@@ -66,6 +66,7 @@ from dwg_forensic.analysis import (
     RiskScorer,
     TamperingReport,
 )
+from dwg_forensic.analysis.provenance_detector import ProvenanceDetector
 from dwg_forensic.analysis.version_dates import get_version_release_date
 from dwg_forensic.knowledge import KnowledgeEnricher, Neo4jKnowledgeClient
 
@@ -496,21 +497,11 @@ class ForensicAnalyzer:
             })
             self._report_progress("handles", "error", f"Handle analysis failed: {e}")
 
-        # Phase 3: Anomaly detection (including advanced timestamp anomalies and NTFS cross-validation)
-        self._report_progress("anomalies", "start", "Detecting anomalies")
-        anomalies = self._detect_all_anomalies(
-            header_analysis, crc_validation, file_path,
-            timestamp_data=timestamp_data, metadata=metadata,
-            ntfs_data=ntfs_data, ntfs_contradictions=ntfs_contradictions
-        )
-        self._report_progress("anomalies", "complete", f"Anomalies detected: {len(anomalies)}")
-
-        # Phase 2.5: File Provenance Detection (BEFORE rule evaluation to prevent false positives)
+        # Phase 2.5: File Provenance Detection (BEFORE anomaly detection to prevent false positives)
         self._report_progress("provenance", "start", "Detecting file provenance")
         file_provenance = None
         file_provenance_dict = None
         try:
-            from dwg_forensic.analysis.provenance_detector import ProvenanceDetector
             provenance_detector = ProvenanceDetector()
             file_provenance = provenance_detector.detect(file_path)
 
@@ -543,6 +534,16 @@ class ForensicAnalyzer:
                 "timestamp": datetime.now().isoformat()
             })
             self._report_progress("provenance", "error", error_msg)
+
+        # Phase 3: Anomaly detection (provenance-aware, including advanced timestamp anomalies)
+        self._report_progress("anomalies", "start", "Detecting anomalies")
+        anomalies = self._detect_all_anomalies(
+            header_analysis, crc_validation, file_path,
+            timestamp_data=timestamp_data, metadata=metadata,
+            ntfs_data=ntfs_data, ntfs_contradictions=ntfs_contradictions,
+            file_provenance=file_provenance
+        )
+        self._report_progress("anomalies", "complete", f"Anomalies detected: {len(anomalies)}")
 
         # Phase 3: Tampering rule evaluation (with NTFS cross-validation data + deep parsing)
         self._report_progress("rules", "start", "Evaluating tampering rules")
@@ -902,9 +903,19 @@ class ForensicAnalyzer:
             file_path, version_string=version_string
         )
 
-        # Anomaly detection
+        # File provenance detection (for context-aware anomaly detection)
+        file_provenance = None
+        try:
+            provenance_detector = ProvenanceDetector()
+            file_provenance = provenance_detector.detect(file_path)
+        except Exception:
+            # Provenance detection is optional - continue without it
+            pass
+
+        # Anomaly detection (provenance-aware)
         anomalies = self._detect_all_anomalies(
-            header_analysis, crc_validation, file_path
+            header_analysis, crc_validation, file_path,
+            file_provenance=file_provenance
         )
 
         # Tampering rule evaluation
@@ -1062,8 +1073,12 @@ class ForensicAnalyzer:
         metadata: Optional[DWGMetadata] = None,
         ntfs_data: Optional[NTFSForensicData] = None,
         ntfs_contradictions: Optional[Dict[str, Any]] = None,
+        file_provenance = None,
     ) -> List[Anomaly]:
         """Detect all anomalies using Phase 3 AnomalyDetector.
+
+        Phase 2: Now uses provenance-aware detection to eliminate false positives
+        for Revit exports, ODA tools, and file transfers.
 
         Args:
             header_analysis: Header analysis results
@@ -1073,31 +1088,36 @@ class ForensicAnalyzer:
             metadata: Optional DWG metadata
             ntfs_data: Optional NTFS forensic data for cross-validation
             ntfs_contradictions: Optional dict of NTFS/DWG contradictions
+            file_provenance: Optional FileProvenance for context-aware detection
 
         Returns:
             List of detected anomalies
         """
         anomalies = []
 
+        # Create provenance-aware anomaly detector
+        # If provenance is available, use it to adjust tolerances
+        provenance_aware_detector = AnomalyDetector(provenance=file_provenance)
+
         # Use Phase 3 anomaly detector for version and structural anomalies
-        version_anomalies = self.anomaly_detector.detect_version_anomalies(
+        version_anomalies = provenance_aware_detector.detect_version_anomalies(
             header_analysis, file_path
         )
         anomalies.extend(version_anomalies)
 
-        structural_anomalies = self.anomaly_detector.detect_structural_anomalies(file_path)
+        structural_anomalies = provenance_aware_detector.detect_structural_anomalies(file_path)
         anomalies.extend(structural_anomalies)
 
         # Timestamp anomalies (if metadata available)
         if metadata:
-            timestamp_anomalies = self.anomaly_detector.detect_timestamp_anomalies(
+            timestamp_anomalies = provenance_aware_detector.detect_timestamp_anomalies(
                 metadata, file_path
             )
             anomalies.extend(timestamp_anomalies)
 
         # Advanced timestamp manipulation detection (if timestamp_data available)
         if timestamp_data:
-            advanced_anomalies = self.anomaly_detector.detect_advanced_timestamp_anomalies(
+            advanced_anomalies = provenance_aware_detector.detect_advanced_timestamp_anomalies(
                 header_analysis.version_string, timestamp_data, metadata
             )
             anomalies.extend(advanced_anomalies)

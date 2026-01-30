@@ -124,6 +124,8 @@ class ProvenanceDetector:
         revit_result = self._detect_revit(file_path, file_data)
         if revit_result:
             self._apply_revit_provenance(provenance, revit_result)
+            # Calculate confidence before early return
+            provenance.confidence = self._calculate_confidence(provenance)
             return provenance  # Early return for Revit exports
 
         # Step 2: Fingerprint CAD application
@@ -195,7 +197,15 @@ class ProvenanceDetector:
         Returns:
             FingerprintResult if application identified, None otherwise
         """
-        result = self.cad_fingerprinter.fingerprint(file_path, file_data)
+        # Extract header CRC from file_data (at offset 0x68 for R18+)
+        # Format: 4 bytes, little-endian unsigned int
+        header_crc = None
+        if len(file_data) >= 0x6C:
+            import struct
+            header_crc = struct.unpack("<I", file_data[0x68:0x6C])[0]
+
+        # Call fingerprint with proper parameters
+        result = self.cad_fingerprinter.fingerprint(file_path, header_crc=header_crc)
 
         # Return result if confidence is reasonable
         if result and result.confidence > 0.3:
