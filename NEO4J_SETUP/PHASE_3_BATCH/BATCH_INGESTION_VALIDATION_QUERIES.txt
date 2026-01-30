@@ -1,0 +1,222 @@
+# Phase 3 Batch Ingestion Validation Queries
+# Kara Murphy vs Danny Garcia Litigation Case
+# Generated: 2026-01-30
+======================================================================
+
+## CURRENT STATE VALIDATION
+
+### 1. Total Document Count
+```cypher
+MATCH (d:Document) RETURN count(d) AS total_documents;
+```
+Expected: 1,040 (after full import)
+Current: 45
+
+### 2. Total Party Count
+```cypher
+MATCH (p:Party) RETURN count(p) AS total_parties;
+```
+Expected: 9
+Current: 9
+
+### 3. Total Location Count
+```cypher
+MATCH (l:Location) RETURN count(l) AS total_locations;
+```
+Expected: 85
+Current: 85
+
+### 4. Total Relationships
+```cypher
+MATCH ()-[r]->() WHERE type(r) IN ['LOCATED_IN', 'REFERENCES']
+RETURN type(r) AS type, count(r) AS count;
+```
+
+### 5. Documents by Evidence Category
+```cypher
+MATCH (d:Document)
+RETURN d.evidence_category AS category, count(d) AS count
+ORDER BY count DESC;
+```
+
+### 6. Documents by File Type
+```cypher
+MATCH (d:Document)
+RETURN d.file_type AS file_type, count(d) AS count
+ORDER BY count DESC;
+```
+
+### 7. Orphan Documents (No Location)
+```cypher
+MATCH (d:Document)
+WHERE NOT (d)-[:LOCATED_IN]->()
+RETURN d.file_name AS orphan_document;
+```
+Expected: 0 orphan documents
+
+### 8. Party Reference Distribution
+```cypher
+MATCH (d:Document)-[r:REFERENCES]->(p:Party)
+RETURN p.name AS party, count(r) AS reference_count
+ORDER BY reference_count DESC;
+```
+
+### 9. Documents per Location (Top 10)
+```cypher
+MATCH (d:Document)-[:LOCATED_IN]->(l:Location)
+RETURN l.path AS location, count(d) AS doc_count
+ORDER BY doc_count DESC
+LIMIT 10;
+```
+
+### 10. Schema Constraints Verification
+```cypher
+SHOW CONSTRAINTS;
+```
+Expected constraints:
+- document_uuid_unique
+- party_uuid_unique
+- location_uuid_unique
+- evidence_uuid_unique
+
+### 11. Index Verification
+```cypher
+SHOW INDEXES;
+```
+Expected indexes:
+- document_file_name_idx
+- party_name_idx
+- location_path_idx
+
+### 12. High-Confidence Documents (>=90)
+```cypher
+MATCH (d:Document)
+WHERE d.confidence_score >= 90
+RETURN d.file_name, d.evidence_category, d.confidence_score
+ORDER BY d.confidence_score DESC
+LIMIT 20;
+```
+
+### 13. Deposition/Transcript Documents
+```cypher
+MATCH (d:Document)
+WHERE d.evidence_category = 'deposition'
+RETURN d.file_name, d.subject
+ORDER BY d.file_name;
+```
+
+### 14. Design File Documents (DWG/RVT)
+```cypher
+MATCH (d:Document)
+WHERE d.evidence_category = 'design_file'
+RETURN d.file_name, d.file_type, d.file_size_bytes
+ORDER BY d.file_size_bytes DESC;
+```
+
+### 15. Full Graph Visualization Query
+```cypher
+MATCH p=(d:Document)-[r]->(target)
+WHERE target:Location OR target:Party
+RETURN p
+LIMIT 500;
+```
+
+======================================================================
+## DATA INTEGRITY CHECKS
+======================================================================
+
+### A. Duplicate UUID Check
+```cypher
+MATCH (d:Document)
+WITH d.uuid AS uuid, count(*) AS cnt
+WHERE cnt > 1
+RETURN uuid, cnt AS duplicate_count;
+```
+Expected: 0 duplicates
+
+### B. Missing Required Properties
+```cypher
+MATCH (d:Document)
+WHERE d.file_name IS NULL OR d.file_path IS NULL
+RETURN d.uuid AS missing_required;
+```
+Expected: 0 documents with missing required fields
+
+### C. Invalid Confidence Scores
+```cypher
+MATCH (d:Document)
+WHERE d.confidence_score < 0 OR d.confidence_score > 100
+RETURN d.uuid, d.confidence_score;
+```
+Expected: 0 invalid scores
+
+### D. Location Path Consistency
+```cypher
+MATCH (d:Document)-[:LOCATED_IN]->(l:Location)
+WHERE NOT d.file_path STARTS WITH l.path
+RETURN d.file_name, d.file_path, l.path AS location_mismatch
+LIMIT 10;
+```
+Expected: 0 mismatches
+
+### E. Party Role Validation
+```cypher
+MATCH (p:Party)
+WHERE p.role NOT IN ['Plaintiff', 'Defendant', 'Architect', 'Client',
+                     'Witness', 'Law Firm', 'Software', 'Expert']
+RETURN p.name, p.role AS invalid_role;
+```
+Expected: 0 invalid roles
+
+======================================================================
+## LITIGATION QUERIES
+======================================================================
+
+### L1. Documents Mentioning Danny Garcia
+```cypher
+MATCH (d:Document)
+WHERE d.file_path CONTAINS 'Danny Garcia'
+   OR d.file_name CONTAINS 'Danny Garcia'
+   OR d.subject CONTAINS 'Danny Garcia'
+RETURN d.file_name, d.evidence_category
+ORDER BY d.file_name;
+```
+
+### L2. Evidence Timeline (by category)
+```cypher
+MATCH (d:Document)
+RETURN d.evidence_category AS category,
+       count(d) AS total,
+       sum(d.file_size_bytes) AS total_bytes
+ORDER BY total DESC;
+```
+
+### L3. Deposition Exhibit Chain
+```cypher
+MATCH (d:Document)
+WHERE d.file_name CONTAINS 'Ex ' AND d.evidence_category = 'deposition'
+RETURN d.file_name, d.subject
+ORDER BY d.file_name;
+```
+
+### L4. Design File Forensic Candidates
+```cypher
+MATCH (d:Document)
+WHERE d.file_type IN ['DWG', 'RVT']
+RETURN d.file_name, d.file_path, d.file_size_bytes
+ORDER BY d.file_size_bytes DESC
+LIMIT 20;
+```
+
+### L5. Party-Document Network
+```cypher
+MATCH (d:Document)-[r:REFERENCES]->(p:Party)
+RETURN p.name AS party,
+       collect(d.file_name)[0..5] AS sample_documents,
+       count(d) AS total_references
+ORDER BY total_references DESC;
+```
+
+======================================================================
+END OF VALIDATION QUERIES
+======================================================================

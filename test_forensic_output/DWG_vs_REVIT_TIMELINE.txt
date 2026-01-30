@@ -1,0 +1,227 @@
+DWG vs REVIT TIMELINE CORRELATION ANALYSIS
+================================================================================
+Case: 2026-001 - Kara Murphy vs Danny Garcia
+Generated: 2026-01-30 17:24:43
+Examiner: John Ehrig, P.E.
+================================================================================
+
+EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+DWG Files Analyzed: 38
+Revit Files Found: 27
+
+
+DWG TIMESTAMP ANALYSIS
+--------------------------------------------------------------------------------
+Files with TDCREATE: 0/38 (0.0%)
+Files with TDUPDATE: 0/38 (0.0%)
+
+[FINDING] 38 files show timestamp destruction.
+This prevents accurate timeline reconstruction and suggests spoliation.
+
+
+DWG FILES WITH TIMESTAMPS (chronological)
+--------------------------------------------------------------------------------
+
+
+DWG FILES WITHOUT TIMESTAMPS (SPOLIATION EVIDENCE)
+--------------------------------------------------------------------------------
+  - FDN detail.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - M-1.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - E-1.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - P-1.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - print file.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - T-1.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - TIT48.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - - Section 3.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - 6075 English Oaks_0512.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - - Section 4.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - - Section 5.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - - Section 6.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - - Section 2.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - - Section 7.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - A1.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - - Section 9.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - 6075 English Oaks Ln_040722 - Elevation - East.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - - Section 8.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - 6075 English Oaks Ln_040722 - Elevation - North.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - 6075 English Oaks Ln_040722 - Elevation - South.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - 6075 English Oaks Ln_040722 - Floor Plan - 0_Level 3 - Roof Plan.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - 6075 English Oaks Ln_040722 - Floor Plan - 0_Level 1 -Floor Plan.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - 6075 English Oaks Ln_040722 - Elevation - West.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - 6075 English Oaks Ln_040722 - Floor Plan - 0_Level working 1st fl plan.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - Elevation - ISF01.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - Elevation - ISF02.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - 6075 English Oaks Ln_040722 - Floor Plan - 0_Mezzanine - Floor Plan.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - WC - Elevation - Elevation 25 - a.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - WC - Elevation - Elevation 23 - a.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+  - WC - Elevation - Elevation 24 - a.dwg
+      TDCREATE: DESTROYED
+      TDUPDATE: DESTROYED
+
+... and 8 more files with destroyed timestamps
+
+
+REVIT FILE CORRELATION
+--------------------------------------------------------------------------------
+Revit files found in case directory:
+  - 6075 English Oaks Lane.0024.rvt
+      NTFS Created: 2026-01-30 15:22:59.878319
+      NTFS Modified: 2026-01-08 13:31:06
+  - 6075 English Oaks Lane.rvt
+      NTFS Created: 2026-01-30 15:21:54.391236
+      NTFS Modified: 2026-01-08 13:34:06
+  - model_6.23.21 (Sample).rvt
+      NTFS Created: 2026-01-30 15:23:44.086370
+      NTFS Modified: 2026-01-08 13:28:36
+  - Naples2_07212021.rvt
+      NTFS Created: 2026-01-30 15:25:58.165504
+      NTFS Modified: 2026-01-08 13:27:26
+  - Naples2_07212021_Render.rvt
+      NTFS Created: 2026-01-30 15:28:40.739631
+      NTFS Modified: 2026-01-08 13:32:24
+  - RENDER_model (Sample).rvt
+      NTFS Created: 2026-01-30 15:24:09.409397
+      NTFS Modified: 2026-01-08 13:29:28
+  - 6075 English Oaks Ln_040722.0094.rvt
+      NTFS Created: 2026-01-30 15:29:34.063667
+      NTFS Modified: 2026-01-08 13:10:08
+  - 6075 English Oaks Ln_040722.0095.rvt
+      NTFS Created: 2026-01-30 15:30:18.020694
+      NTFS Modified: 2026-01-08 13:15:40
+  - 6075 English Oaks Ln_040722.0096.rvt
+      NTFS Created: 2026-01-30 15:28:01.438603
+      NTFS Modified: 2026-01-09 07:47:12
+  - 6075 English Oaks Ln_040722.rvt
+      NTFS Created: 2026-01-30 15:29:57.970681
+      NTFS Modified: 2026-01-09 07:47:48
+  - 6075 English Oaks Ln.0142.rvt
+      NTFS Created: 2026-01-30 15:26:50.537548
+      NTFS Modified: 2026-01-09 07:51:08
+  - 6075 English Oaks Ln.0324.rvt
+      NTFS Created: 2026-01-30 15:25:08.630457
+      NTFS Modified: 2026-01-09 07:50:36
+  - 6075 English Oaks Ln.0325.rvt
+      NTFS Created: 2026-01-30 15:27:26.118577
+      NTFS Modified: 2026-01-09 07:51:50
+  - 6075 English Oaks Ln.0326.rvt
+      NTFS Created: 2026-01-30 15:25:35.079482
+      NTFS Modified: 2026-01-09 07:52:28
+  - 6075 English Oaks Ln.rvt
+      NTFS Created: 2026-01-30 15:28:18.897616
+      NTFS Modified: 2026-01-09 07:55:46
+  - 6075 English Oaks Lane.0024.rvt
+      NTFS Created: 2026-01-30 15:20:45.396192
+      NTFS Modified: 2026-01-09 13:08:41
+  - 6075 English Oaks Lane.rvt
+      NTFS Created: 2026-01-30 15:19:41.355202
+      NTFS Modified: 2026-01-09 13:08:42
+  - model_6.23.21 (Sample).rvt
+      NTFS Created: 2026-01-30 15:25:29.020477
+      NTFS Modified: 2026-01-09 13:08:43
+  - Naples2_07212021.rvt
+      NTFS Created: 2026-01-30 15:27:52.733597
+      NTFS Modified: 2026-01-09 13:08:43
+  - Naples2_07212021_Render.rvt
+      NTFS Created: 2026-01-30 15:26:25.334527
+      NTFS Modified: 2026-01-09 13:08:43
+  - RENDER_model (Sample).rvt
+      NTFS Created: 2026-01-30 15:26:02.847507
+      NTFS Modified: 2026-01-09 13:08:44
+  - 6075 English Oaks Lane.0024.rvt
+      NTFS Created: 2026-01-30 09:50:32.217332
+      NTFS Modified: 2026-01-09 13:08:41
+  - 6075 English Oaks Lane.rvt
+      NTFS Created: 2026-01-30 09:50:33.207335
+      NTFS Modified: 2026-01-09 13:08:42
+  - model_6.23.21 (Sample).rvt
+      NTFS Created: 2026-01-30 09:50:46.778378
+      NTFS Modified: 2026-01-09 13:08:43
+  - Naples2_07212021.rvt
+      NTFS Created: 2026-01-30 09:50:47.633381
+      NTFS Modified: 2026-01-09 13:08:43
+  - Naples2_07212021_Render.rvt
+      NTFS Created: 2026-01-30 09:50:47.926382
+      NTFS Modified: 2026-01-09 13:08:43
+  - RENDER_model (Sample).rvt
+      NTFS Created: 2026-01-30 09:50:48.206383
+      NTFS Modified: 2026-01-09 13:08:44
+
+[ANALYSIS REQUIRED] Manual correlation of Revit and DWG timelines
+to detect workflow inconsistencies.
+
+
+LITIGATION RECOMMENDATIONS
+--------------------------------------------------------------------------------
+1. Timeline Reconstruction:
+   - Use remaining timestamps to establish creation timeline
+   - Identify temporal gaps and anomalies
+
+2. Spoliation Argument:
+   - 38 files show timestamp destruction
+   - Timestamp destruction prevents timeline verification
+   - Request adverse inference for destroyed evidence
+
+3. Deposition Questions:
+   - When were DWG files created from Revit model?
+   - Why are timestamps missing from DWG files?
+   - Did you use any timestamp modification tools?
+

@@ -1,0 +1,1388 @@
+2026-01-30 17:25:31,861 - __main__ - INFO - ================================================================================
+2026-01-30 17:25:31,862 - __main__ - INFO - FORENSIC DWG ANALYSIS: Complete 153-File Sweep
+2026-01-30 17:25:31,862 - __main__ - INFO - Case: 2026-001 Kara Murphy vs Danny Garcia
+2026-01-30 17:25:31,862 - __main__ - INFO - ================================================================================
+2026-01-30 17:25:31,878 - __main__ - INFO - Output directory: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT
+2026-01-30 17:25:31,878 - __main__ - INFO - Scanning for DWG files...
+2026-01-30 17:25:33,908 - __main__ - INFO - Found 153 DWG files
+2026-01-30 17:25:33,909 - __main__ - INFO - DWG files by folder:
+2026-01-30 17:25:33,909 - __main__ - INFO -   Caron - Produce to John Ehrig: 58 files
+2026-01-30 17:25:33,909 - __main__ - INFO -   Gansari: 47 files
+2026-01-30 17:25:33,909 - __main__ - INFO -   6075 English Oaks - Naples 2, 2022 Drawing Files: 38 files
+2026-01-30 17:25:33,909 - __main__ - INFO -   6075 English Oaks - Naples 2, 2021 Initial Permit: 9 files
+2026-01-30 17:25:33,909 - __main__ - INFO -   6075 Enlgish Oaks AutoCAD 092021mls.dwg: 1 files
+2026-01-30 17:25:33,909 - __main__ - INFO - Starting batch forensic analysis of 153 files...
+2026-01-30 17:25:33,909 - dwg_forensic.core.batch_processor - INFO - BatchProcessor initialized with 8 workers
+2026-01-30 17:25:34,686 - dwg_forensic.core.batch_processor - INFO - Found 153 files to process in \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia
+2026-01-30 17:25:35,673 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:35,673 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:35,707 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:35,707 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:35,737 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:35,738 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:35,751 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:35,751 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:35,802 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:35,802 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:36,055 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:36,056 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:36,058 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:36,058 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:36,163 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:36,163 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:36,344 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:36,344 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:36,401 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:36,401 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:36,479 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:36,479 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:36,670 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:36,670 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:36,681 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:36,681 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:36,774 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:36,774 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:36,963 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:36,963 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:37,124 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,124 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:37,152 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,152 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,177 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,177 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,238 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,238 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,261 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,261 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,285 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,285 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,377 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,377 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:37,411 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,411 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,437 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,437 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,500 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,500 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,514 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,515 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,544 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,544 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,615 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,615 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,652 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,652 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,684 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,684 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,698 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,699 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,745 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,746 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,776 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,776 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,808 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,808 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,853 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,853 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,878 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,878 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,913 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,913 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,913 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:37,913 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:37,935 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:37,935 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:38,065 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,065 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,096 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,096 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:38,099 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,100 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,100 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,100 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,117 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,117 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,244 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,244 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:38,253 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,253 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:38,330 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,330 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:38,345 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,345 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,493 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,493 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,498 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,498 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,566 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,567 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,567 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,567 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,762 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,762 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,840 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,840 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,853 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,853 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,876 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,876 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,932 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,932 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,935 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,935 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:38,936 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:38,936 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:39,054 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,054 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,139 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,139 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,178 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,178 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,178 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,178 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,178 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,178 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,286 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,286 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:39,318 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,318 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,377 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,377 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,384 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,384 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,408 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,408 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,408 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,408 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,443 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,444 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:39,516 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,516 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,516 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,516 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,562 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,562 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,592 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,592 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,638 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,638 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,638 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,638 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,653 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,653 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,709 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,709 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:39,732 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,732 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:39,794 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,795 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,813 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,813 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,831 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,831 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:39,874 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,874 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:39,887 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,887 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:39,979 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:39,979 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:40,011 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,012 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:40,012 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,012 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:40,025 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,026 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:40,027 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,027 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:40,151 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,151 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:40,182 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,182 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:40,307 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,307 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:40,307 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,308 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:40,349 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,350 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:40,350 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,350 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:40,390 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,390 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:40,397 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,397 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:40,606 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,607 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:40,684 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,684 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:40,719 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,720 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:40,995 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:40,995 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:41,174 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,174 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,175 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,175 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,207 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,207 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:41,213 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,213 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,268 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,268 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,379 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,379 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,379 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,379 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,380 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,380 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,409 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,409 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,578 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,579 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,598 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,598 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,727 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,727 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,775 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,775 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,813 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,813 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,824 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,824 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,850 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,850 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,865 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,866 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:41,877 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:41,877 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:42,053 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,053 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:42,136 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,136 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,168 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,168 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,193 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,193 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,234 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,234 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:42,272 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,272 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,344 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,344 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,443 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,443 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,445 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,445 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,493 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,493 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,550 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,550 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,550 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,551 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:42,565 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,565 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,647 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,647 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,672 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,672 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+ilter
+2026-01-30 17:25:42,672 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,712 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,712 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,712 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,713 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,731 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,731 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,753 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,753 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:42,799 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,799 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,913 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,913 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,932 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:42,932 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:42,932 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:43,022 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:43,022 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:43,068 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:43,068 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:43,119 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:43,119 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:43,134 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:43,134 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:43,174 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:43,174 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:43,228 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:43,228 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:25:43,273 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:43,273 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:43,273 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:43,273 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:43,273 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:25:43,274 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:25:43,368 - dwg_forensic.core.batch_processor - INFO - Batch processing complete: 153/153 successful in 9.46s
+2026-01-30 17:25:43,368 - __main__ - INFO - Batch analysis complete: 153/153 successful
+2026-01-30 17:25:43,368 - __main__ - INFO - Generating CSV export: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_FORENSIC_COMPLETE_ANALYSIS.csv
+2026-01-30 17:25:43,377 - __main__ - ERROR - Fatal error during forensic sweep: 'HeaderAnalysis' object has no attribute 'crc_valid'
+Traceback (most recent call last):
+  File "C:\Users\JordanEhrig\Documents\GitHub\DWG-forensic-tool\forensic_sweep_153_dwg.py", line 478, in main
+    csv_path = generate_csv_export(batch_result, output_dir)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JordanEhrig\Documents\GitHub\DWG-forensic-tool\forensic_sweep_153_dwg.py", line 192, in generate_csv_export
+    smoking_gun_status = _determine_smoking_gun_status(analysis)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JordanEhrig\Documents\GitHub\DWG-forensic-tool\forensic_sweep_153_dwg.py", line 242, in _determine_smoking_gun_status
+    has_crc_mismatch = not analysis.header_analysis.crc_valid
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JordanEhrig\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pydantic\main.py", line 1026, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'HeaderAnalysis' object has no attribute 'crc_valid'
+2026-01-30 17:26:07,631 - __main__ - INFO - ================================================================================
+2026-01-30 17:26:07,632 - __main__ - INFO - FORENSIC DWG ANALYSIS: Complete 153-File Sweep
+2026-01-30 17:26:07,632 - __main__ - INFO - Case: 2026-001 Kara Murphy vs Danny Garcia
+2026-01-30 17:26:07,632 - __main__ - INFO - ================================================================================
+2026-01-30 17:26:07,665 - __main__ - INFO - Output directory: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT
+2026-01-30 17:26:07,665 - __main__ - INFO - Scanning for DWG files...
+2026-01-30 17:26:09,251 - __main__ - INFO - Found 153 DWG files
+2026-01-30 17:26:09,251 - __main__ - INFO - DWG files by folder:
+2026-01-30 17:26:09,251 - __main__ - INFO -   Caron - Produce to John Ehrig: 58 files
+2026-01-30 17:26:09,251 - __main__ - INFO -   Gansari: 47 files
+2026-01-30 17:26:09,251 - __main__ - INFO -   6075 English Oaks - Naples 2, 2022 Drawing Files: 38 files
+2026-01-30 17:26:09,251 - __main__ - INFO -   6075 English Oaks - Naples 2, 2021 Initial Permit: 9 files
+2026-01-30 17:26:09,251 - __main__ - INFO -   6075 Enlgish Oaks AutoCAD 092021mls.dwg: 1 files
+2026-01-30 17:26:09,251 - __main__ - INFO - Starting batch forensic analysis of 153 files...
+2026-01-30 17:26:09,252 - dwg_forensic.core.batch_processor - INFO - BatchProcessor initialized with 8 workers
+2026-01-30 17:26:10,679 - dwg_forensic.core.batch_processor - INFO - Found 153 files to process in \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia
+2026-01-30 17:26:11,713 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:11,713 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:11,717 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:11,718 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:11,728 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:11,728 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:11,732 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:11,732 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:11,927 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:11,928 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:12,060 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:12,060 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:12,208 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:12,208 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:12,310 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:12,310 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:12,327 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:12,327 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:12,357 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:12,357 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:12,444 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:12,445 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:12,505 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:12,506 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:12,753 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:12,753 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:12,756 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:12,756 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:12,983 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:12,983 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:13,020 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,020 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:13,164 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,164 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,180 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,180 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,257 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,257 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,312 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,312 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:13,350 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,350 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,379 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,379 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,457 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,457 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,493 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,493 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,495 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,495 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,496 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,496 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,509 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,509 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,661 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,661 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,663 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,663 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,693 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,693 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,699 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,699 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,709 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,709 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,759 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,759 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:13,786 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,786 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,822 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,822 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,822 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,823 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:13,861 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,861 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:13,926 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:13,926 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:14,063 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,063 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:14,078 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,078 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+ is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,078 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:14,144 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,145 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,152 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,152 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,200 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,200 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:14,208 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,208 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,275 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,275 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:14,294 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,295 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:14,325 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,325 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:14,589 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,589 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,594 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,594 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,595 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,595 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,605 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,605 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,797 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,797 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,868 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,869 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,896 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,896 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,914 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,915 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,932 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,932 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,973 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,973 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:14,979 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:14,979 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:15,101 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,101 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:15,217 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,217 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:15,240 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,240 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:15,252 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,252 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:15,307 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,307 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:15,360 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,360 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:15,466 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,467 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:15,471 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,471 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:15,496 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,496 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:15,506 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,506 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:15,515 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,515 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:15,587 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,587 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:15,622 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,622 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:15,657 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,657 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:15,808 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,808 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:15,853 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,853 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:15,903 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:15,903 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:16,107 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,107 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:16,124 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,124 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:16,192 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,192 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:16,198 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,198 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:16,302 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,303 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:16,569 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,569 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:16,625 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,627 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:16,659 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,659 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:16,671 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,671 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:16,676 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,676 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:16,719 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,719 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:16,733 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,733 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:16,784 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,784 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:16,868 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,868 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:16,902 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,902 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:16,940 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,940 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:16,955 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:16,955 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:17,008 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:17,008 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:17,018 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:17,018 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:17,103 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:17,103 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:17,127 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:17,127 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:17,201 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:17,201 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:17,449 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:17,449 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:17,468 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:17,469 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:17,469 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:17,469 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:17,897 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:17,897 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:18,006 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,006 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:18,157 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,157 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,194 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,194 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,195 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,196 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,232 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,232 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,278 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,278 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,286 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,286 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,337 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,337 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,384 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,384 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,394 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,394 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,396 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,396 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,649 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,649 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,704 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,705 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,735 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,735 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,744 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,744 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,762 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,762 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,816 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,816 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:18,823 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:18,823 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:19,044 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,044 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,048 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,049 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,065 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,065 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:19,091 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,091 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,267 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,267 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,267 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,267 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:19,292 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,293 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,366 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,366 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,445 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,445 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,445 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,445 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:19,488 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,488 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,523 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,523 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,539 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,539 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,630 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,630 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,630 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,630 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,646 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,646 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:19,678 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,679 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,699 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,699 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,720 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,720 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,771 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,771 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,808 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,808 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,843 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,843 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,858 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,858 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,866 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,866 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:19,874 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:19,874 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:20,061 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:20,061 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:20,061 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:20,061 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:20,061 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:20,061 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:20,061 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:20,061 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:20,061 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:20,061 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:20,075 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:20,076 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:20,192 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:20,193 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:20,200 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:20,200 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:20,295 - dwg_forensic.core.batch_processor - INFO - Batch processing complete: 153/153 successful in 11.04s
+2026-01-30 17:26:20,295 - __main__ - INFO - Batch analysis complete: 153/153 successful
+2026-01-30 17:26:20,295 - __main__ - INFO - Generating CSV export: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_FORENSIC_COMPLETE_ANALYSIS.csv
+2026-01-30 17:26:20,313 - __main__ - INFO - CSV export complete: 153 files
+2026-01-30 17:26:20,313 - __main__ - INFO - [OK] CSV export: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_FORENSIC_COMPLETE_ANALYSIS.csv
+2026-01-30 17:26:20,313 - __main__ - INFO - Generating tampering summary: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_TAMPERING_SUMMARY.txt
+2026-01-30 17:26:20,326 - __main__ - INFO - Tampering summary complete: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_TAMPERING_SUMMARY.txt
+2026-01-30 17:26:20,326 - __main__ - INFO - [OK] Tampering summary: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_TAMPERING_SUMMARY.txt
+2026-01-30 17:26:20,326 - __main__ - INFO - Generating top 10 smoking guns: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\TOP_10_SMOKING_GUN_DWG.txt
+2026-01-30 17:26:20,326 - __main__ - ERROR - Fatal error during forensic sweep: 'ForensicAnalysis' object has no attribute 'timestamp_analysis'
+Traceback (most recent call last):
+  File "C:\Users\JordanEhrig\Documents\GitHub\DWG-forensic-tool\forensic_sweep_153_dwg.py", line 486, in main
+    top_10_path = generate_top_10_smoking_guns(batch_result, output_dir)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JordanEhrig\Documents\GitHub\DWG-forensic-tool\forensic_sweep_153_dwg.py", line 375, in generate_top_10_smoking_guns
+    if analysis.timestamp_analysis and analysis.timestamp_analysis.timestamps:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JordanEhrig\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pydantic\main.py", line 1026, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'ForensicAnalysis' object has no attribute 'timestamp_analysis'
+2026-01-30 17:26:40,446 - __main__ - INFO - ================================================================================
+2026-01-30 17:26:40,447 - __main__ - INFO - FORENSIC DWG ANALYSIS: Complete 153-File Sweep
+2026-01-30 17:26:40,447 - __main__ - INFO - Case: 2026-001 Kara Murphy vs Danny Garcia
+2026-01-30 17:26:40,447 - __main__ - INFO - ================================================================================
+2026-01-30 17:26:40,458 - __main__ - INFO - Output directory: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT
+2026-01-30 17:26:40,458 - __main__ - INFO - Scanning for DWG files...
+2026-01-30 17:26:41,617 - __main__ - INFO - Found 153 DWG files
+2026-01-30 17:26:41,618 - __main__ - INFO - DWG files by folder:
+2026-01-30 17:26:41,618 - __main__ - INFO -   Caron - Produce to John Ehrig: 58 files
+2026-01-30 17:26:41,618 - __main__ - INFO -   Gansari: 47 files
+2026-01-30 17:26:41,618 - __main__ - INFO -   6075 English Oaks - Naples 2, 2022 Drawing Files: 38 files
+2026-01-30 17:26:41,618 - __main__ - INFO -   6075 English Oaks - Naples 2, 2021 Initial Permit: 9 files
+2026-01-30 17:26:41,618 - __main__ - INFO -   6075 Enlgish Oaks AutoCAD 092021mls.dwg: 1 files
+2026-01-30 17:26:41,618 - __main__ - INFO - Starting batch forensic analysis of 153 files...
+2026-01-30 17:26:41,618 - dwg_forensic.core.batch_processor - INFO - BatchProcessor initialized with 8 workers
+2026-01-30 17:26:42,058 - dwg_forensic.core.batch_processor - INFO - Found 153 files to process in \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia
+2026-01-30 17:26:43,019 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,019 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:43,019 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,019 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:43,046 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,046 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:43,046 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:43,269 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,269 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:43,306 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,307 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:43,314 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,314 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:43,384 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,384 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:43,384 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,384 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:43,476 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,476 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:43,603 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,604 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:43,689 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,690 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:43,721 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,721 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:43,803 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,803 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:43,828 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,828 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:43,853 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,853 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:43,916 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:43,916 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,063 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,063 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,080 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,080 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,108 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,108 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,108 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,108 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,163 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,163 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:44,238 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,238 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,278 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,278 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,289 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,289 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,347 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,347 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,422 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,423 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,458 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,458 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:44,459 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,459 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,470 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,470 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,509 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,510 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,577 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,577 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,613 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,613 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:44,613 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,613 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,629 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,629 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:44,633 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,633 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,653 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,653 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:44,739 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,739 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,798 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,798 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+ilter
+2026-01-30 17:26:44,798 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,798 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,798 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,798 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:44,798 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:44,811 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,811 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,813 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,813 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:44,870 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:44,870 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:45,000 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,000 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:45,000 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,000 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:45,000 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,000 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:45,018 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,018 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:45,098 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,098 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:45,154 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,154 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:45,154 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,154 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:45,383 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,383 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:45,388 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,388 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:45,629 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,629 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:45,703 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,703 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:45,859 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,859 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:45,881 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,882 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:45,905 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,905 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:45,933 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:45,933 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:46,080 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,080 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:46,111 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,111 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:46,196 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,196 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:46,263 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,263 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:46,303 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,303 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:46,439 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,439 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:46,441 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,441 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,452 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,452 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,458 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,458 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,521 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,521 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,543 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,543 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,611 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,611 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,626 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,626 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:46,642 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,643 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,643 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,643 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,657 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,657 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,678 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,678 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,750 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,750 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,772 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,772 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,796 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,796 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,807 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,807 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,857 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,858 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,858 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,858 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,873 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,873 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,935 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,935 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:46,935 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,935 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:46,975 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:46,975 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:47,051 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,051 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:47,057 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,058 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:47,106 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,106 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,178 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,178 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,178 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:47,178 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,267 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,267 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:47,267 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,267 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,267 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,267 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:47,267 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,267 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:47,267 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,267 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,486 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,486 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,510 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,510 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,514 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,514 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,516 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,516 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,593 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,593 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,719 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,719 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,737 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,737 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,766 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,766 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,888 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,888 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,917 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,917 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,966 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,966 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,966 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,966 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,966 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,966 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:47,977 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:47,977 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:48,190 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,190 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,210 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,211 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,222 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,222 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,253 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,253 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:48,280 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,280 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,331 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,331 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,394 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,394 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:48,435 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,435 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,452 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,452 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,462 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,462 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,481 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,481 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,517 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,517 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,564 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,564 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:48,575 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,575 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,631 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,631 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,701 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,701 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,758 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,758 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,759 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,759 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,772 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,772 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:48,774 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,774 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,884 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,884 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,929 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,929 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:48,929 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,929 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,929 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,929 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,942 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,942 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:48,958 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:48,958 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:49,020 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,020 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:49,086 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,086 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:49,118 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,118 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:49,127 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,127 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:49,156 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,157 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:26:49,328 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,328 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:49,328 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,329 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:49,343 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,343 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:49,405 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,405 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:49,449 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,450 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:49,471 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,471 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:49,541 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,541 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:49,587 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,588 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:49,757 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:49,757 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:50,061 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:26:50,061 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:26:50,151 - dwg_forensic.core.batch_processor - INFO - Batch processing complete: 153/153 successful in 8.53s
+2026-01-30 17:26:50,151 - __main__ - INFO - Batch analysis complete: 153/153 successful
+2026-01-30 17:26:50,153 - __main__ - INFO - Generating CSV export: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_FORENSIC_COMPLETE_ANALYSIS.csv
+2026-01-30 17:26:50,170 - __main__ - INFO - CSV export complete: 153 files
+2026-01-30 17:26:50,170 - __main__ - INFO - [OK] CSV export: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_FORENSIC_COMPLETE_ANALYSIS.csv
+2026-01-30 17:26:50,170 - __main__ - INFO - Generating tampering summary: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_TAMPERING_SUMMARY.txt
+2026-01-30 17:26:50,190 - __main__ - INFO - Tampering summary complete: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_TAMPERING_SUMMARY.txt
+2026-01-30 17:26:50,191 - __main__ - INFO - [OK] Tampering summary: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_TAMPERING_SUMMARY.txt
+2026-01-30 17:26:50,191 - __main__ - INFO - Generating top 10 smoking guns: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\TOP_10_SMOKING_GUN_DWG.txt
+2026-01-30 17:26:50,202 - __main__ - ERROR - Fatal error during forensic sweep: 'TamperingIndicator' object has no attribute 'severity'
+Traceback (most recent call last):
+  File "C:\Users\JordanEhrig\Documents\GitHub\DWG-forensic-tool\forensic_sweep_153_dwg.py", line 487, in main
+    top_10_path = generate_top_10_smoking_guns(batch_result, output_dir)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JordanEhrig\Documents\GitHub\DWG-forensic-tool\forensic_sweep_153_dwg.py", line 452, in generate_top_10_smoking_guns
+    f.write(f"      [{ind.severity.value}] {ind.indicator_type.value}\n")
+                      ^^^^^^^^^^^^
+  File "C:\Users\JordanEhrig\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pydantic\main.py", line 1026, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'TamperingIndicator' object has no attribute 'severity'
+2026-01-30 17:27:09,862 - __main__ - INFO - ================================================================================
+2026-01-30 17:27:09,862 - __main__ - INFO - FORENSIC DWG ANALYSIS: Complete 153-File Sweep
+2026-01-30 17:27:09,862 - __main__ - INFO - Case: 2026-001 Kara Murphy vs Danny Garcia
+2026-01-30 17:27:09,862 - __main__ - INFO - ================================================================================
+2026-01-30 17:27:09,872 - __main__ - INFO - Output directory: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT
+2026-01-30 17:27:09,872 - __main__ - INFO - Scanning for DWG files...
+2026-01-30 17:27:10,949 - __main__ - INFO - Found 153 DWG files
+2026-01-30 17:27:10,950 - __main__ - INFO - DWG files by folder:
+2026-01-30 17:27:10,950 - __main__ - INFO -   Caron - Produce to John Ehrig: 58 files
+2026-01-30 17:27:10,950 - __main__ - INFO -   Gansari: 47 files
+2026-01-30 17:27:10,950 - __main__ - INFO -   6075 English Oaks - Naples 2, 2022 Drawing Files: 38 files
+2026-01-30 17:27:10,950 - __main__ - INFO -   6075 English Oaks - Naples 2, 2021 Initial Permit: 9 files
+2026-01-30 17:27:10,950 - __main__ - INFO -   6075 Enlgish Oaks AutoCAD 092021mls.dwg: 1 files
+2026-01-30 17:27:10,950 - __main__ - INFO - Starting batch forensic analysis of 153 files...
+2026-01-30 17:27:10,950 - dwg_forensic.core.batch_processor - INFO - BatchProcessor initialized with 8 workers
+2026-01-30 17:27:11,619 - dwg_forensic.core.batch_processor - INFO - Found 153 files to process in \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia
+2026-01-30 17:27:12,466 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:12,466 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:12,479 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:12,479 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:12,483 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:12,483 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:12,496 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:12,497 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:12,705 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:12,705 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:12,705 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:12,705 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:12,741 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:12,741 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:12,766 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:12,766 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:12,766 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:12,766 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:12,871 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:12,871 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:13,007 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,007 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:13,035 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,036 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,070 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,070 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,113 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,113 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,131 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,131 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:13,193 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,193 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,202 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,202 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,291 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,291 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,311 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,311 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,360 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,360 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,392 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,392 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,405 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,405 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,444 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,444 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:13,460 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,460 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,484 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,485 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,519 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,519 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,574 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,574 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,588 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,588 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,604 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,605 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,605 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,605 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,687 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,687 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:13,695 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,695 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,699 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,699 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:13,711 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,711 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,757 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,757 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:13,786 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,786 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:13,816 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,816 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,827 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,827 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,828 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,828 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:13,837 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,837 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,886 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,886 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,910 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,910 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,975 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,975 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:13,998 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:13,998 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:14,000 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:14,000 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:14,006 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:14,006 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:14,116 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:14,116 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:14,130 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:14,130 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:14,139 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:14,139 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:14,244 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:14,244 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:14,247 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:14,247 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:14,315 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:14,315 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:14,462 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:14,462 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:14,722 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:14,723 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:14,758 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:14,758 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:14,837 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:14,838 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:14,928 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:14,929 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:15,001 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,002 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:15,006 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,007 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:15,049 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,050 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:15,059 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,059 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:15,145 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,145 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:15,187 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,187 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:15,339 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,339 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:15,369 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,369 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:15,370 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,370 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,397 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,397 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,442 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,442 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:15,532 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,532 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,533 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,533 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,599 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,599 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,614 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,614 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:15,658 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,658 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,678 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,678 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,678 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,678 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,683 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,683 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,736 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,736 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,795 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,795 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,825 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,825 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,851 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,851 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,855 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,855 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,857 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,857 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:15,860 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,860 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,860 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,860 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:15,914 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:15,914 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:16,024 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,024 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:16,030 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,030 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:16,046 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,046 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:16,059 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,059 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:16,097 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,097 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:16,119 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,119 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:16,181 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,181 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:16,337 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,337 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:16,365 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,365 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:16,375 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,375 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:16,399 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,399 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:16,414 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,414 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:16,552 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,553 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:16,565 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,565 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:16,600 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,601 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:16,725 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,725 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:16,725 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,725 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:16,776 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,776 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:16,953 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:16,954 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:17,043 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,043 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:17,063 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,064 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:17,064 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:17,079 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,079 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:17,145 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,145 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:17,321 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,321 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:17,339 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,339 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:17,478 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,479 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,497 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,497 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,518 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,518 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:17,572 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,572 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,581 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,581 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,616 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,617 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,693 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,693 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,693 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,693 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:17,694 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,694 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,717 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,717 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:17,739 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,739 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,756 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,756 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,798 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,798 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,800 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,800 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,836 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,836 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,888 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,888 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,925 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,925 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,925 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,925 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,925 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,925 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,925 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,925 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:17,970 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:17,970 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:18,080 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,080 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:18,082 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,082 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:18,115 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,115 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:18,134 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,134 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:18,148 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,148 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:18,148 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,148 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:18,184 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,184 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:18,292 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,292 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:18,292 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,292 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:18,309 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,309 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:18,318 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,318 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:18,353 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,353 - dwg_forensic.core.analyzer - INFO - Anomaly filtering disabled or no anomalies to filter
+2026-01-30 17:27:18,531 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,531 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:18,563 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,563 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,563 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:18,563 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:18,619 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,619 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:18,619 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,619 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:18,770 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,770 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:18,833 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,833 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:18,984 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:18,984 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:19,331 - dwg_forensic.llm.mode_manager - INFO - LLM enabled (AUTO mode - Ollama available)
+2026-01-30 17:27:19,331 - dwg_forensic.core.analyzer - ERROR - Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+2026-01-30 17:27:19,418 - dwg_forensic.core.batch_processor - INFO - Batch processing complete: 153/153 successful in 8.47s
+2026-01-30 17:27:19,418 - __main__ - INFO - Batch analysis complete: 153/153 successful
+2026-01-30 17:27:19,418 - __main__ - INFO - Generating CSV export: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_FORENSIC_COMPLETE_ANALYSIS.csv
+2026-01-30 17:27:19,431 - __main__ - INFO - CSV export complete: 153 files
+2026-01-30 17:27:19,431 - __main__ - INFO - [OK] CSV export: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_FORENSIC_COMPLETE_ANALYSIS.csv
+2026-01-30 17:27:19,431 - __main__ - INFO - Generating tampering summary: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_TAMPERING_SUMMARY.txt
+2026-01-30 17:27:19,439 - __main__ - INFO - Tampering summary complete: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_TAMPERING_SUMMARY.txt
+2026-01-30 17:27:19,439 - __main__ - INFO - [OK] Tampering summary: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_TAMPERING_SUMMARY.txt
+2026-01-30 17:27:19,440 - __main__ - INFO - Generating top 10 smoking guns: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\TOP_10_SMOKING_GUN_DWG.txt
+2026-01-30 17:27:19,450 - __main__ - INFO - Top 10 smoking guns complete: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\TOP_10_SMOKING_GUN_DWG.txt
+2026-01-30 17:27:19,451 - __main__ - INFO - [OK] Top 10 smoking guns: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\TOP_10_SMOKING_GUN_DWG.txt
+2026-01-30 17:27:19,451 - dwg_forensic.output.batch_report - INFO - Exporting batch results to JSON: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_FORENSIC_COMPLETE.json
+2026-01-30 17:27:19,465 - dwg_forensic.output.batch_report - INFO - Batch JSON export complete: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_FORENSIC_COMPLETE.json
+2026-01-30 17:27:19,465 - __main__ - INFO - [OK] JSON export: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_FORENSIC_COMPLETE.json
+2026-01-30 17:27:19,465 - forensic_specialized_reports - INFO - Generating handle gap analysis: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\HANDLE_GAP_ANALYSIS.txt
+2026-01-30 17:27:19,475 - forensic_specialized_reports - INFO - Handle gap analysis complete: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\HANDLE_GAP_ANALYSIS.txt
+2026-01-30 17:27:19,475 - __main__ - INFO - [OK] Handle gap analysis: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\HANDLE_GAP_ANALYSIS.txt
+2026-01-30 17:27:19,475 - forensic_specialized_reports - INFO - Generating application fingerprint report: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\APPLICATION_FINGERPRINT_REPORT.txt
+2026-01-30 17:27:19,482 - forensic_specialized_reports - INFO - Application fingerprint report complete: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\APPLICATION_FINGERPRINT_REPORT.txt
+2026-01-30 17:27:19,482 - __main__ - INFO - [OK] Application fingerprint: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\APPLICATION_FINGERPRINT_REPORT.txt
+2026-01-30 17:27:19,482 - forensic_specialized_reports - INFO - Generating DWG vs Revit timeline: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_vs_REVIT_TIMELINE.txt
+2026-01-30 17:27:20,575 - forensic_specialized_reports - INFO - Found 27 Revit files for correlation
+2026-01-30 17:27:20,789 - forensic_specialized_reports - INFO - DWG vs Revit timeline complete: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_vs_REVIT_TIMELINE.txt
+2026-01-30 17:27:20,789 - __main__ - INFO - [OK] DWG vs Revit timeline: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT\DWG_vs_REVIT_TIMELINE.txt
+2026-01-30 17:27:20,789 - __main__ - INFO - ================================================================================
+2026-01-30 17:27:20,789 - __main__ - INFO - FORENSIC SWEEP COMPLETE
+2026-01-30 17:27:20,789 - __main__ - INFO - ================================================================================
+2026-01-30 17:27:20,789 - __main__ - INFO - Files Analyzed: 153/153
+2026-01-30 17:27:20,789 - __main__ - INFO - Processing Time: 8.47s
+2026-01-30 17:27:20,789 - __main__ - INFO - Aggregated Risk Score: 2.95
+2026-01-30 17:27:20,789 - __main__ - INFO - 
+Risk Distribution:
+2026-01-30 17:27:20,789 - __main__ - INFO -   INFO      :   0 files
+2026-01-30 17:27:20,789 - __main__ - INFO -   LOW       :   0 files
+2026-01-30 17:27:20,789 - __main__ - INFO -   MEDIUM    :  79 files
+2026-01-30 17:27:20,789 - __main__ - INFO -   HIGH      :   2 files
+2026-01-30 17:27:20,789 - __main__ - INFO -   CRITICAL  :  72 files
+2026-01-30 17:27:20,789 - __main__ - INFO - 
+Deliverables:
+2026-01-30 17:27:20,789 - __main__ - INFO -   1. DWG_FORENSIC_COMPLETE_ANALYSIS.csv
+2026-01-30 17:27:20,789 - __main__ - INFO -   2. DWG_TAMPERING_SUMMARY.txt
+2026-01-30 17:27:20,789 - __main__ - INFO -   3. TOP_10_SMOKING_GUN_DWG.txt
+2026-01-30 17:27:20,789 - __main__ - INFO -   4. DWG_FORENSIC_COMPLETE.json
+2026-01-30 17:27:20,789 - __main__ - INFO -   5. HANDLE_GAP_ANALYSIS.txt
+2026-01-30 17:27:20,789 - __main__ - INFO -   6. APPLICATION_FINGERPRINT_REPORT.txt
+2026-01-30 17:27:20,789 - __main__ - INFO -   7. DWG_vs_REVIT_TIMELINE.txt
+2026-01-30 17:27:20,789 - __main__ - INFO - 
+All deliverables saved to: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\FORENSIC_ANALYSIS_OUTPUT

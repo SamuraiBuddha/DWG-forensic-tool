@@ -1,0 +1,383 @@
+================================================================================
+PHASE 3 BATCH INGESTION - QUICK START EXECUTION GUIDE
+================================================================================
+
+Case: Kara Murphy vs Danny Garcia
+Document: Phase 3 Execution Quick Start
+Version: 1.0
+Date: 2026-01-30
+Author: CasparCode-002 Orchestrator
+
+================================================================================
+OVERVIEW
+================================================================================
+
+This guide provides step-by-step instructions for executing Phase 3 CSV batch
+ingestion of 1,040 cataloged documents into the Neo4j litigation knowledge graph.
+
+Status: TEMPLATE READY - Pending Network CSV Access
+
+When network CSV becomes available:
+  Network Path: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\DOCUMENT_CATALOG\6075_ENGLISH_OAKS_DOCUMENTS.csv
+
+Current Demonstration:
+  Sample CSV: sample_100_documents.csv (100 documents)
+  Purpose: Validate batch processing architecture
+
+
+================================================================================
+PREREQUISITES
+================================================================================
+
+1. Phase 1 & 2 Complete
+   [X] Neo4j schema initialized (GRAPH_INITIALIZATION_SCRIPT.py)
+   [X] Phase 2 POC ingestion complete (5 core documents)
+   [X] Core graph entities created (Evidence, Party, Location, Timeline)
+
+2. Neo4j Running
+   Service: Neo4j Desktop or Community Edition
+   URI: bolt://localhost:7687
+   User: neo4j
+   Password: [required for execution]
+
+3. Python Environment
+   Python: 3.10+
+   Required packages:
+   - neo4j (pip install neo4j)
+   - No additional dependencies (uses standard library only)
+
+4. Document CSV
+   Format: UTF-8 encoded CSV
+   Required columns: file_name, file_path, file_type, category
+   Optional columns: created_date, modified_date, file_size_bytes, author,
+                     recipient, subject, forensic_findings, confidence_score
+
+
+================================================================================
+EXECUTION STEPS
+================================================================================
+
+STEP 1: Verify Prerequisites
+------------------------------------------------------------
+
+# Check Neo4j is running
+curl http://localhost:7474
+
+# Expected: Neo4j Browser loads successfully
+
+# Verify schema constraints exist
+# In Neo4j Browser, run:
+SHOW CONSTRAINTS;
+
+# Expected output: 7+ constraints including:
+# - document_uuid_unique
+# - evidence_uuid_unique
+# - party_uuid_unique
+
+
+STEP 2: Validate CSV File
+------------------------------------------------------------
+
+# Check CSV file exists and is accessible
+ls -lh sample_100_documents.csv
+
+# Expected: File size ~30-50 KB for 100 documents
+
+# Preview first 5 rows
+head -n 6 sample_100_documents.csv
+
+# Verify columns match required schema
+
+
+STEP 3: Test Run (100 Document Sample)
+------------------------------------------------------------
+
+# Execute batch ingestion with sample CSV
+python document_batch_ingestion.py \
+  --csv sample_100_documents.csv \
+  --password YOUR_NEO4J_PASSWORD \
+  --batch-size 100 \
+  --backup-json neo4j_sample_backup.json \
+  --validation-report SAMPLE_INGESTION_REPORT.txt \
+  --failed-csv SAMPLE_FAILED_DOCUMENTS.csv
+
+# Expected output:
+# [OK] Connected to Neo4j successfully
+# [->] Validating Neo4j schema constraints
+# [OK] Schema validation passed
+# [->] Parsing CSV file: sample_100_documents.csv
+# [OK] Parsed 100 valid documents
+# [Batch 1/1] Processing 100 documents
+# [Batch 1/1] COMPLETE (X.XX seconds)
+# [OK] Batch ingestion complete
+# Documents Created: 100
+# Relationships Created: 200-400 (depends on inference)
+
+
+STEP 4: Validate Ingestion Results
+------------------------------------------------------------
+
+# Check log file for errors
+cat PHASE_3_EXECUTION_LOG.txt | grep "FAIL"
+cat PHASE_3_EXECUTION_LOG.txt | grep "ERROR"
+
+# Expected: No FAIL or ERROR lines
+
+# Review validation report
+cat SAMPLE_INGESTION_REPORT.txt
+
+# Check failed documents (if any)
+wc -l SAMPLE_FAILED_DOCUMENTS.csv
+
+# Expected: 1 line (header only) - no failed rows
+
+
+STEP 5: Run Validation Queries
+------------------------------------------------------------
+
+# Open Neo4j Browser
+http://localhost:7474
+
+# Run smoke tests from BATCH_INGESTION_VALIDATION_QUERIES.txt
+
+# Test 1: Document count
+MATCH (d:Document) RETURN count(d) AS total_documents;
+# Expected: 100+ documents (includes Phase 2 POC documents)
+
+# Test 2: Relationship count
+MATCH ()-[r]->() RETURN count(r) AS total_relationships;
+# Expected: 200+ relationships
+
+# Test 3: Orphaned documents check
+MATCH (d:Document)
+WHERE NOT EXISTS { MATCH (d)-[:REFERENCES]->(:Evidence) }
+  AND NOT EXISTS { MATCH (d)-[:REFERENCES]->(:Party) }
+RETURN count(d) AS orphaned_count;
+# Expected: <10 orphaned documents (<10%)
+
+# Test 4: Location validation
+MATCH (d:Document)-[:LOCATED_IN]->(loc:Location)
+RETURN count(DISTINCT loc) AS location_count;
+# Expected: 30-50 unique locations
+
+
+STEP 6: Full CSV Ingestion (When Network Available)
+------------------------------------------------------------
+
+# IMPORTANT: Only execute when network CSV is accessible
+
+# Backup current database before full ingestion
+# In Neo4j Browser:
+CALL apoc.export.json.all("neo4j_pre_full_backup.json", {});
+
+# Execute full 1,040 document ingestion
+python document_batch_ingestion.py \
+  --csv "\\\\adam\\DataPool\\Projects\\2026-001_Kara_Murphy_vs_Danny_Garcia\\DOCUMENT_CATALOG\\6075_ENGLISH_OAKS_DOCUMENTS.csv" \
+  --password YOUR_NEO4J_PASSWORD \
+  --batch-size 100 \
+  --backup-json neo4j_full_backup.json \
+  --validation-report PHASE_3_BATCH_INGESTION_REPORT.txt \
+  --failed-csv FAILED_DOCUMENTS.csv
+
+# Expected duration: 5-15 minutes
+# Expected throughput: 50-200 documents/second
+
+
+STEP 7: Post-Ingestion Validation
+------------------------------------------------------------
+
+# Run full validation query suite
+# Open BATCH_INGESTION_VALIDATION_QUERIES.txt in Neo4j Browser
+# Execute all queries in sections 1-15
+
+# Critical validations:
+# 1. Total document count = 1,040+ (includes POC)
+# 2. Relationship count = 3,000+
+# 3. Orphaned documents <10%
+# 4. All documents have locations (100%)
+# 5. No duplicate UUIDs
+# 6. No temporal impossibilities
+
+
+STEP 8: Generate Final Reports
+------------------------------------------------------------
+
+# Validation report (automatically generated)
+cat PHASE_3_BATCH_INGESTION_REPORT.txt
+
+# Export graph backup (automatically generated)
+ls -lh neo4j_full_backup.json
+# Expected size: 20-100 MB JSON
+
+# Review failed documents (if any)
+cat FAILED_DOCUMENTS.csv
+
+# Document failures in execution log
+cat PHASE_3_EXECUTION_LOG.txt | grep "WARN" > warnings_summary.txt
+cat PHASE_3_EXECUTION_LOG.txt | grep "FAIL" > failures_summary.txt
+
+
+================================================================================
+COMMAND REFERENCE
+================================================================================
+
+Full Command Line Options:
+------------------------------------------------------------
+
+python document_batch_ingestion.py \
+  --csv PATH_TO_CSV \                    # REQUIRED: CSV file path
+  --password NEO4J_PASSWORD \            # REQUIRED: Neo4j password
+  [--uri bolt://localhost:7687] \        # Optional: Neo4j URI (default: localhost)
+  [--user neo4j] \                       # Optional: Username (default: neo4j)
+  [--batch-size 100] \                   # Optional: Docs per batch (default: 100)
+  [--backup-json neo4j_full_backup.json] \  # Optional: Backup file name
+  [--validation-report REPORT.txt] \     # Optional: Validation report name
+  [--failed-csv FAILED.csv]              # Optional: Failed rows CSV name
+
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Issue: "Connection refused" error
+Solution:
+  - Verify Neo4j is running: systemctl status neo4j (Linux) or Neo4j Desktop
+  - Check URI is correct: bolt://localhost:7687
+  - Verify firewall allows port 7687
+
+Issue: "Missing required CSV columns" error
+Solution:
+  - Open CSV in text editor
+  - Verify header row contains: file_name, file_path, file_type, category
+  - Check for UTF-8 BOM (may cause issues)
+  - Re-save CSV as UTF-8 without BOM
+
+Issue: "Schema validation failed" error
+Solution:
+  - Run Phase 1 initialization: python GRAPH_INITIALIZATION_SCRIPT.py
+  - Verify constraints exist: SHOW CONSTRAINTS in Neo4j Browser
+  - Check for constraint violations in existing data
+
+Issue: High percentage of orphaned documents (>20%)
+Solution:
+  - Review relationship inference rules in RelationshipInferenceEngine
+  - Ensure Evidence and Party nodes exist before document ingestion
+  - Check CSV data quality (author, file_name fields populated)
+  - Manually review orphaned documents and adjust inference logic
+
+Issue: Duplicate UUID constraint violation
+Solution:
+  - Should never occur (UUIDs are generated fresh)
+  - If occurs: Check for concurrent ingestion processes
+  - Clear database and re-ingest from backup
+
+Issue: Slow ingestion performance (<10 docs/sec)
+Solution:
+  - Increase batch size: --batch-size 200
+  - Check Neo4j heap size (dbms.memory.heap.max_size)
+  - Verify Neo4j is using local storage (not network)
+  - Disable relationship inference for initial load, add later
+
+Issue: CSV parsing errors (invalid dates, data types)
+Solution:
+  - Review PHASE_3_EXECUTION_LOG.txt for specific errors
+  - Check FAILED_DOCUMENTS.csv for problematic rows
+  - Manually correct CSV data and re-ingest failed rows
+  - Adjust date format parsing in CSVDocumentParser._normalize_date()
+
+
+================================================================================
+ROLLBACK PROCEDURE
+================================================================================
+
+If ingestion fails or produces incorrect results:
+
+Step 1: Stop ingestion process (Ctrl+C)
+
+Step 2: Identify last successful batch
+  grep "COMPLETE" PHASE_3_EXECUTION_LOG.txt | tail -n 1
+
+Step 3: Delete newly created documents
+  # In Neo4j Browser:
+  MATCH (d:Document)
+  WHERE d.created_at >= datetime("2026-01-30T12:00:00Z")  # Adjust timestamp
+  DETACH DELETE d;
+
+Step 4: Restore from backup (if needed)
+  # Stop Neo4j
+  # Delete current database
+  rm -rf data/databases/neo4j
+  # Restore from backup JSON using APOC or custom import
+  # Restart Neo4j
+
+Step 5: Resume from failed batch
+  # Adjust CSV to start from row N (where N = last successful batch * batch_size)
+  # Re-run ingestion with adjusted CSV
+
+
+================================================================================
+SUCCESS CRITERIA
+================================================================================
+
+Phase 3 batch ingestion is considered successful when:
+
+[X] All CSV rows parsed successfully (or <5% failed)
+[X] Document count matches expected (1,040+ for full CSV, 100 for sample)
+[X] Relationship count >= 2 * document count (on average)
+[X] Orphaned documents <10%
+[X] All documents have location relationships (100%)
+[X] No UUID constraint violations
+[X] No temporal impossibilities
+[X] Validation report generated
+[X] Graph backup exported successfully
+[X] All smoke tests pass
+[X] Ingestion completes in <15 minutes
+
+
+================================================================================
+NEXT STEPS AFTER SUCCESSFUL INGESTION
+================================================================================
+
+1. Generate litigation graph visualization
+   python GRAPH_VISUALIZATION_GENERATOR.py --output LITIGATION_GRAPH_FULL.png
+
+2. Run advanced forensic queries
+   Open BATCH_INGESTION_VALIDATION_QUERIES.txt Section 14: Litigation-Specific
+
+3. Export document catalog for legal team
+   # Generate CSV export of all documents with metadata
+
+4. Create timeline visualization
+   # Plot document creation dates on timeline
+
+5. Identify key evidence clusters
+   # Run community detection algorithms on graph
+
+6. Update case documentation
+   # Document findings in litigation strategy notes
+
+
+================================================================================
+CONTACT & SUPPORT
+================================================================================
+
+Phase Owner: CasparCode-002 Orchestrator
+Generated: 2026-01-30
+Status: Template Ready - Pending Network CSV Access
+
+Files Created:
+- document_batch_ingestion.py (main script)
+- sample_100_documents.csv (demonstration data)
+- BATCH_INGESTION_VALIDATION_QUERIES.txt (validation suite)
+- QUICK_START_EXECUTION_GUIDE.txt (this file)
+
+Next Action:
+When network CSV becomes available at:
+\\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\DOCUMENT_CATALOG\
+
+Execute Step 6 (Full CSV Ingestion) from this guide.
+
+
+================================================================================
+END OF QUICK START EXECUTION GUIDE
+================================================================================

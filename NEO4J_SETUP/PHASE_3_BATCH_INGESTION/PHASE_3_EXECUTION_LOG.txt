@@ -1,0 +1,15 @@
+[2026-01-30 17:36:31,472] INFO: ================================================================================
+[2026-01-30 17:36:31,472] INFO: PHASE 3: NEO4J CSV BATCH INGESTION
+[2026-01-30 17:36:31,472] INFO: ================================================================================
+[2026-01-30 17:36:31,472] INFO: [->] Parsing CSV file: sample_100_documents.csv
+[2026-01-30 17:36:31,473] INFO:   CSV columns: file_name, file_path, file_type, category, created_date, modified_date, file_size_bytes, author, subject, confidence_score
+[2026-01-30 17:36:31,474] INFO:   [OK] Parsed 95 valid documents
+[2026-01-30 17:36:31,474] INFO:   [WARN] Skipped 0 invalid rows
+[2026-01-30 17:36:31,474] INFO: [OK] No failed rows to export
+[2026-01-30 17:36:31,474] INFO: 
+CSV Validation Summary:
+[2026-01-30 17:36:31,474] INFO:   Total Rows: 95
+[2026-01-30 17:36:31,474] INFO:   Valid Rows: 95
+[2026-01-30 17:36:31,474] INFO:   Skipped Rows: 0
+[2026-01-30 17:36:31,474] INFO: Initializing connection to Neo4j at bolt://localhost:7687
+[2026-01-30 17:36:31,527] ERROR: [FAIL] Neo4j connection failed: {neo4j_code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.} {gql_status: 42NFF} {gql_status_description: error: syntax error or access rule violation - permission/access denied. Access denied, see the security logs for details.}

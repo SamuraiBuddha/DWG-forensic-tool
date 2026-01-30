@@ -1,0 +1,137 @@
+APPLICATION FINGERPRINT REPORT - CAD TOOL IDENTIFICATION
+================================================================================
+Case: 2026-001 - Kara Murphy vs Danny Garcia
+Generated: 2026-01-30 17:24:41
+Examiner: John Ehrig, P.E.
+================================================================================
+
+EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+Total Files Analyzed: 38
+
+Application Distribution:
+  unknown                        :  38 files (100.0%)
+
+
+FORENSIC SIGNIFICANCE
+--------------------------------------------------------------------------------
+Application fingerprinting reveals which CAD software created or modified
+each DWG file. This is forensically significant because:
+
+1. AutoCAD vs ODA/BricsCAD/NanoCAD:
+   - Genuine AutoCAD files have specific binary signatures
+   - ODA FileConverter and clone applications leave different signatures
+   - Use of converters may indicate file manipulation
+
+2. Version Consistency:
+   - Files from same project should use same application
+   - Mixed applications suggest post-processing or conversion
+
+3. Spoliation Indicators:
+   - Defendant claims 'original AutoCAD files'
+   - Detection of converter tools contradicts testimony
+
+
+DETAILED FINDINGS BY APPLICATION
+--------------------------------------------------------------------------------
+
+UNKNOWN (38 files)
+--------------------------------------------------------------------------------
+  - FDN detail.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2013-2017
+      Risk Level: CRITICAL
+  - M-1.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: CRITICAL
+  - E-1.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: CRITICAL
+  - P-1.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: CRITICAL
+  - print file.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: CRITICAL
+  - T-1.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: CRITICAL
+  - TIT48.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: CRITICAL
+  - - Section 3.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: MEDIUM
+  - 6075 English Oaks_0512.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: CRITICAL
+  - - Section 4.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: MEDIUM
+  - - Section 5.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: MEDIUM
+  - - Section 6.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: MEDIUM
+  - - Section 2.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: CRITICAL
+  - - Section 7.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: MEDIUM
+  - A1.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: CRITICAL
+  - - Section 9.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: MEDIUM
+  - 6075 English Oaks Ln_040722 - Elevation - East.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: MEDIUM
+  - - Section 8.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: MEDIUM
+  - 6075 English Oaks Ln_040722 - Elevation - North.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: MEDIUM
+  - 6075 English Oaks Ln_040722 - Elevation - South.dwg
+      Confidence: 0.20
+      DWG Version: AutoCAD 2018+
+      Risk Level: MEDIUM
+  ... and 18 more files
+
+
+LITIGATION RECOMMENDATIONS
+--------------------------------------------------------------------------------
+1. Deposition questions regarding CAD software:
+   - What CAD software did you use to create drawings?
+   - Did you use any file conversion tools?
+   - Did you use ODA FileConverter, BricsCAD, or NanoCAD?
+
+2. Compare fingerprints to defendant testimony:
+   - Defendant claims 'created in AutoCAD'
+   - Fingerprint reveals use of conversion tools
+
+3. Expert witness testimony:
+   - Application fingerprinting is forensically sound
+   - Detection of converters indicates file manipulation
+

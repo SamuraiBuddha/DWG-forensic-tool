@@ -1,0 +1,350 @@
+================================================================================
+EMAIL TIMELINE EXTRACTION - IMPLEMENTATION COMPLETE
+================================================================================
+
+PROJECT: Kara Murphy vs Danny Garcia (Case 2026-001)
+TASK: Parse 65 Outlook MSG emails from Naples project
+DATE: 2026-01-30
+STATUS: READY TO EXECUTE (pending network access)
+
+================================================================================
+DELIVERABLES CREATED
+================================================================================
+
+The following tools have been created and are ready for deployment:
+
+1. email_timeline_parser.py (PRIMARY TOOL)
+   - Comprehensive MSG file parser
+   - Extracts: sender, recipients, dates, subjects, bodies, attachments
+   - Scores emails by litigation relevance (smoking gun, amenities, files)
+   - Detects timestamp anomalies (forensic red flags)
+   - Generates all 7 litigation deliverables
+
+2. EMAIL_TIMELINE_README.txt (USER GUIDE)
+   - Installation instructions
+   - Network share access troubleshooting
+   - Usage workflow
+   - Output deliverable descriptions
+   - Forensic validation checklist
+
+3. verify_email_parser_setup.py (ENVIRONMENT CHECKER)
+   - Verifies Python version
+   - Checks extract-msg library installation
+   - Tests network share accessibility
+   - Counts MSG files in directory
+   - Provides troubleshooting guidance
+
+================================================================================
+CURRENT ENVIRONMENT STATUS
+================================================================================
+
+[OK] Python 3.11.9 installed
+[FAIL] extract-msg library NOT installed
+[FAIL] Network share \\adam\DataPool\ NOT accessible
+[PENDING] MSG file count verification (requires network access)
+
+================================================================================
+PRE-EXECUTION CHECKLIST
+================================================================================
+
+STEP 1: INSTALL PYTHON LIBRARY
+   [ ] Open Command Prompt or PowerShell
+   [ ] Run: pip install extract-msg
+   [ ] Verify: python -c "import extract_msg; print('OK')"
+
+STEP 2: MOUNT NETWORK SHARE
+   [ ] Open Windows Explorer
+   [ ] Navigate to: \\adam\DataPool\
+   [ ] If inaccessible, map drive: net use Z: \\adam\DataPool\ /persistent:yes
+   [ ] Browse to: Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\Gansari\Naples\emails\
+   [ ] Verify 65 .msg files are present
+
+STEP 3: VERIFY ENVIRONMENT
+   [ ] cd C:\Users\JordanEhrig\Documents\GitHub\DWG-forensic-tool
+   [ ] python verify_email_parser_setup.py
+   [ ] Confirm all checks pass [OK]
+
+STEP 4: RUN EMAIL PARSER
+   [ ] python email_timeline_parser.py
+   [ ] Monitor console output for errors
+   [ ] Verify 7 deliverables are generated
+
+STEP 5: REVIEW OUTPUT
+   [ ] Open: \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\EMAIL_TIMELINE_ANALYSIS\
+   [ ] Review: SMOKING_GUN_EMAILS.txt (top 10 critical emails)
+   [ ] Validate: EMAIL_TIMELINE_MASTER.csv (65 rows + header)
+
+================================================================================
+EXPECTED OUTPUT FILES
+================================================================================
+
+Output directory:
+   \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\EMAIL_TIMELINE_ANALYSIS\
+
+Files to be generated (7 total):
+
+1. EMAIL_TIMELINE_MASTER.csv
+   - Comprehensive CSV with all 65 emails chronologically sorted
+   - Columns: exhibit_id, sent_date, sender, recipients, subject, body_preview,
+     attachments, parties, scores, anomalies
+   - Size: Approximately 50-100 KB (depends on body preview length)
+
+2. EMAIL_PARTY_COMMUNICATION_MATRIX.txt
+   - Communication frequency map: who emailed whom
+   - Parties: Danny Garcia, Andy Ehrig, Kara Murphy, Caron, Beauchamp, Gansari
+   - Size: Approximately 5-10 KB
+
+3. EMAIL_KEYWORD_ANALYSIS.txt
+   - Keyword frequency analysis:
+     * Smoking gun terms (delete, tamper, fraud, backdated)
+     * Amenity references (pool, bbq, waterfall, outdoor kitchen)
+     * File references (Lane.rvt, .dwg, updated drawing)
+   - Size: Approximately 10-20 KB
+
+4. SMOKING_GUN_EMAILS.txt
+   - Top 10 most relevant emails by litigation score
+   - Full metadata: sender, recipients, subject, body preview, attachments
+   - Scoring breakdown and party mentions
+   - Size: Approximately 20-30 KB
+
+5. EMAIL_TIMELINE_VISUALIZATION.txt
+   - ASCII timeline grouped by month
+   - Flags smoking gun emails with [!]
+   - Chronological flow visualization
+   - Size: Approximately 15-25 KB
+
+6. EMAIL_METADATA_FORENSICS.txt
+   - Timestamp anomaly detection
+   - Date range analysis (earliest to latest)
+   - Forensic red flags (sent before received, excessive delays)
+   - Size: Approximately 10-15 KB
+
+7. DEPOSITION_EXHIBIT_CROSS_REFERENCE.txt
+   - Exhibit numbering: Email-001 through Email-065
+   - Cross-reference by date, sender, subject, attachments
+   - Ready for deposition exhibit labeling
+   - Size: Approximately 20-30 KB
+
+TOTAL SIZE: Approximately 130-230 KB (text files)
+
+================================================================================
+SCORING METHODOLOGY
+================================================================================
+
+The email parser uses a weighted scoring system to identify litigation-critical
+emails:
+
+SMOKING GUN KEYWORDS (Tampering/Fraud Indicators):
+   delete: 5 points
+   remove: 5 points
+   destroy: 10 points
+   backdated: 10 points
+   tamper: 10 points
+   modified after: 8 points
+   change the date: 8 points
+   hide: 7 points
+   conceal: 7 points
+   fraud: 10 points
+
+AMENITY KEYWORDS (Subject Matter Relevance):
+   amenities: 3 points
+   pool: 2 points
+   outdoor kitchen: 4 points
+   bbq: 2 points
+   waterfall: 3 points
+   fireplace: 3 points
+   retaining wall: 3 points
+   landscape: 2 points
+
+FILE REFERENCE KEYWORDS (Design Document References):
+   lane.rvt: 5 points
+   .dwg: 3 points
+   .rvt: 3 points
+   updated drawing: 4 points
+   revised drawing: 4 points
+   new version: 3 points
+   attached file: 2 points
+
+TOTAL SCORE = Smoking Gun + Amenity + File Reference
+
+Emails are ranked by total score for SMOKING_GUN_EMAILS.txt report.
+
+================================================================================
+FORENSIC METADATA ANALYSIS
+================================================================================
+
+The parser performs automated timestamp forensic analysis:
+
+TIMESTAMP ANOMALY DETECTION:
+   1. Received before sent (impossible - indicates backdating)
+   2. Delay > 72 hours (unusual - may indicate hold/release manipulation)
+   3. Date range analysis (earliest to latest email)
+
+RED FLAGS:
+   - Email received timestamp precedes sent timestamp
+   - Excessive delay between sent and received (> 72 hours)
+   - Emails with modified headers (if detected by extract-msg)
+
+VALIDATION:
+   - All emails checked for timestamp consistency
+   - Anomalies flagged in EMAIL_METADATA_FORENSICS.txt
+   - CSV includes timestamp_anomaly column (YES/NO)
+
+================================================================================
+PARTY IDENTIFICATION
+================================================================================
+
+The parser automatically detects mentions of known parties:
+
+PARTIES TRACKED:
+   - Danny Garcia (Defendant)
+   - Andy Ehrig (Architect)
+   - Kara Murphy (Plaintiff)
+   - Caron (Related Party)
+   - Beauchamp (Related Party)
+   - Gansari (Firm/Entity)
+
+DETECTION METHOD:
+   - Case-insensitive keyword search in subject + body
+   - Tracks: 'garcia', 'andy', 'murphy', 'kara', 'caron', 'beauchamp', 'gansari'
+
+OUTPUT:
+   - parties_mentioned column in EMAIL_TIMELINE_MASTER.csv
+   - PARTIES MENTIONED section in EMAIL_PARTY_COMMUNICATION_MATRIX.txt
+
+================================================================================
+EXHIBIT NUMBERING SCHEME
+================================================================================
+
+Format: Email-XXX (where XXX = chronological order 001-065)
+
+EXAMPLE:
+   Email-001: Earliest email by sent_date
+   Email-065: Latest email by sent_date
+
+BENEFITS:
+   - Chronological ordering for timeline reconstruction
+   - Consistent numbering for deposition exhibits
+   - Cross-reference with deposition transcripts
+
+USAGE IN DEPOSITION:
+   "Referring to Exhibit Email-023, dated [DATE], from [SENDER] to [RECIPIENT],
+    subject '[SUBJECT]', do you recall receiving this communication?"
+
+================================================================================
+NEXT ACTIONS REQUIRED
+================================================================================
+
+IMMEDIATE (Before Running Parser):
+   1. Install extract-msg library: pip install extract-msg
+   2. Verify network share access to \\adam\DataPool\
+   3. Confirm 65 MSG files present in emails directory
+
+EXECUTION (Running Parser):
+   1. Run: python verify_email_parser_setup.py
+   2. Confirm all checks pass [OK]
+   3. Run: python email_timeline_parser.py
+   4. Monitor console output for completion
+
+POST-EXECUTION (After Parsing):
+   1. Review SMOKING_GUN_EMAILS.txt for top 10 critical emails
+   2. Check EMAIL_KEYWORD_ANALYSIS.txt for fraud indicators
+   3. Validate EMAIL_TIMELINE_MASTER.csv has 65 rows
+   4. Use DEPOSITION_EXHIBIT_CROSS_REFERENCE.txt for exhibit prep
+
+LITIGATION WORKFLOW:
+   1. Privilege review (check for attorney-client communications)
+   2. Redaction planning (identify sensitive information)
+   3. Deposition exhibit preparation (Email-001 to Email-065)
+   4. Expert witness report integration (cite timeline findings)
+
+================================================================================
+TROUBLESHOOTING REFERENCE
+================================================================================
+
+ISSUE: "extract-msg library not found"
+   FIX: pip install extract-msg
+
+ISSUE: "Email directory not found"
+   FIX: Verify network share mounted
+   TEST: dir \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\Gansari\Naples\emails\
+
+ISSUE: "Failed to parse MSG file"
+   CAUSE: Corrupted MSG format
+   FIX: Note error and manually review problematic file
+
+ISSUE: "No emails parsed"
+   CAUSE: No .msg files in directory or all failed
+   FIX: Verify directory contains .msg files
+
+ISSUE: "Permission denied"
+   CAUSE: Insufficient network permissions
+   FIX: Contact IT for read access to case files
+
+================================================================================
+FILE LOCATIONS
+================================================================================
+
+TOOL FILES (Local Repository):
+   C:\Users\JordanEhrig\Documents\GitHub\DWG-forensic-tool\email_timeline_parser.py
+   C:\Users\JordanEhrig\Documents\GitHub\DWG-forensic-tool\verify_email_parser_setup.py
+   C:\Users\JordanEhrig\Documents\GitHub\DWG-forensic-tool\EMAIL_TIMELINE_README.txt
+   C:\Users\JordanEhrig\Documents\GitHub\DWG-forensic-tool\EMAIL_TIMELINE_DELIVERABLES.txt
+
+EMAIL SOURCE (Network Share - PENDING ACCESS):
+   \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\Gansari\Naples\emails\
+   Expected: 65 .msg files
+
+OUTPUT DIRECTORY (Network Share - WILL BE CREATED):
+   \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\EMAIL_TIMELINE_ANALYSIS\
+   Will contain: 7 litigation deliverable files
+
+================================================================================
+SUMMARY
+================================================================================
+
+TASK RESTATEMENT:
+   Parse 65 Outlook MSG email files to extract sent/received dates, sender/
+   recipient, subject matter for litigation timeline in Kara Murphy vs Danny
+   Garcia case.
+
+IMPLEMENTATION STATUS:
+   [COMPLETE] Email parser tool created (email_timeline_parser.py)
+   [COMPLETE] User documentation created (EMAIL_TIMELINE_README.txt)
+   [COMPLETE] Environment verification script created (verify_email_parser_setup.py)
+   [COMPLETE] Deliverables specification documented (this file)
+
+BLOCKING ISSUES:
+   [BLOCKED] Network share \\adam\DataPool\ not currently accessible
+   [BLOCKED] extract-msg library not installed
+
+RESOLUTION REQUIRED:
+   1. Install library: pip install extract-msg
+   2. Mount network share or verify connectivity
+   3. Run verification script to confirm environment ready
+   4. Execute email_timeline_parser.py
+
+TIME ESTIMATE (Once Unblocked):
+   - Library installation: 1 minute
+   - Network share verification: 2-5 minutes
+   - Parser execution: 2-5 minutes (65 emails)
+   - Output review: 10-15 minutes
+   TOTAL: Approximately 15-30 minutes
+
+DELIVERABLES COUNT:
+   7 litigation-ready output files (all formats specified above)
+
+FORENSIC QUALITY ASSURANCE:
+   - Chronological sorting validation
+   - Timestamp anomaly detection
+   - Party mention tracking
+   - Keyword scoring system
+   - Exhibit numbering scheme (Email-001 to Email-065)
+
+NEXT IMMEDIATE ACTION:
+   Run: pip install extract-msg
+   Then: Verify network share access to \\adam\DataPool\
+
+================================================================================
+END OF DELIVERABLES DOCUMENT
+================================================================================

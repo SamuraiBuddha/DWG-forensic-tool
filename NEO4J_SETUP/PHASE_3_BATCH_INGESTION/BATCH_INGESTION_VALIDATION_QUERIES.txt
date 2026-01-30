@@ -1,0 +1,583 @@
+================================================================================
+PHASE 3 BATCH INGESTION VALIDATION QUERIES
+================================================================================
+
+Case: Kara Murphy vs Danny Garcia
+Document: Neo4j Validation Query Suite
+Version: 1.0
+Date: 2026-01-30
+Author: CasparCode-002 Orchestrator
+
+================================================================================
+1. DOCUMENT COUNT VALIDATION
+================================================================================
+
+// Total document count
+MATCH (d:Document)
+RETURN count(d) AS total_documents;
+
+// Expected: 1,040+ documents after full CSV ingestion
+// Sample run: 100 documents
+
+
+// Document count by category
+MATCH (d:Document)
+RETURN d.evidence_category AS category, count(d) AS count
+ORDER BY count DESC;
+
+
+// Document count by file type
+MATCH (d:Document)
+RETURN d.file_type AS file_type, count(d) AS count
+ORDER BY count DESC;
+
+
+================================================================================
+2. RELATIONSHIP VALIDATION
+================================================================================
+
+// Total relationship count
+MATCH ()-[r]->()
+RETURN type(r) AS relationship_type, count(r) AS count
+ORDER BY count DESC;
+
+
+// Document relationships breakdown
+MATCH (d:Document)-[r]->()
+RETURN type(r) AS rel_type, count(r) AS count
+ORDER BY count DESC;
+
+
+// Documents with Evidence relationships
+MATCH (d:Document)-[:REFERENCES]->(ev:Evidence)
+RETURN count(DISTINCT d) AS docs_with_evidence;
+
+
+// Documents with Party relationships
+MATCH (d:Document)-[:REFERENCES]->(p:Party)
+RETURN count(DISTINCT d) AS docs_with_parties;
+
+
+// Documents with Location relationships
+MATCH (d:Document)-[:LOCATED_IN]->(loc:Location)
+RETURN count(DISTINCT d) AS docs_with_locations;
+
+
+================================================================================
+3. DATA QUALITY CHECKS
+================================================================================
+
+// Orphaned documents (no Evidence OR Party links)
+MATCH (d:Document)
+WHERE NOT EXISTS {
+    MATCH (d)-[:REFERENCES]->(:Evidence)
+}
+AND NOT EXISTS {
+    MATCH (d)-[:REFERENCES]->(:Party)
+}
+RETURN d.file_name AS orphaned_document,
+       d.evidence_category AS category,
+       d.file_type AS type
+LIMIT 20;
+
+// Expected: <10% orphaned for quality data
+
+
+// Documents without location
+MATCH (d:Document)
+WHERE NOT EXISTS {
+    MATCH (d)-[:LOCATED_IN]->(:Location)
+}
+RETURN d.file_name AS document,
+       d.file_path AS path
+LIMIT 10;
+
+// Expected: 0 (all documents should have location)
+
+
+// Duplicate file names
+MATCH (d:Document)
+WITH d.file_name AS name, collect(d) AS docs
+WHERE size(docs) > 1
+RETURN name, size(docs) AS duplicate_count,
+       [doc IN docs | doc.file_path][0..2] AS sample_paths
+LIMIT 10;
+
+// Expected: Few duplicates (different locations)
+
+
+// Documents with duplicate SHA-256 hashes
+MATCH (d:Document)
+WHERE d.sha256 IS NOT NULL
+WITH d.sha256 AS hash, collect(d) AS docs
+WHERE size(docs) > 1
+RETURN hash, size(docs) AS duplicate_count,
+       [doc IN docs | doc.file_name][0..3] AS files
+LIMIT 10;
+
+// Indicates: File copying or renaming
+
+
+// Documents missing required properties
+MATCH (d:Document)
+WHERE d.uuid IS NULL
+   OR d.file_name IS NULL
+   OR d.file_path IS NULL
+   OR d.file_type IS NULL
+   OR d.evidence_category IS NULL
+RETURN count(d) AS documents_with_missing_properties;
+
+// Expected: 0 (all required properties set)
+
+
+================================================================================
+4. CONFIDENCE SCORE ANALYSIS
+================================================================================
+
+// Confidence score distribution
+MATCH (d:Document)
+RETURN d.confidence_score AS score, count(d) AS count
+ORDER BY score DESC;
+
+
+// Average confidence by category
+MATCH (d:Document)
+RETURN d.evidence_category AS category,
+       avg(d.confidence_score) AS avg_confidence,
+       min(d.confidence_score) AS min_confidence,
+       max(d.confidence_score) AS max_confidence,
+       count(d) AS count
+ORDER BY avg_confidence DESC;
+
+
+// Relationship confidence distribution
+MATCH ()-[r:REFERENCES]->()
+WHERE r.confidence IS NOT NULL
+RETURN r.confidence AS confidence, count(r) AS count
+ORDER BY confidence DESC;
+
+
+// High confidence document-evidence links (95%+)
+MATCH (d:Document)-[r:REFERENCES]->(ev:Evidence)
+WHERE r.confidence >= 95
+RETURN d.file_name AS document,
+       ev.name AS evidence,
+       r.confidence AS confidence,
+       r.context AS context
+LIMIT 20;
+
+
+================================================================================
+5. TIMELINE VALIDATION
+================================================================================
+
+// Documents by creation year
+MATCH (d:Document)
+WHERE d.created_date IS NOT NULL
+RETURN substring(d.created_date, 0, 4) AS year, count(d) AS count
+ORDER BY year;
+
+
+// Document creation timeline (first to last)
+MATCH (d:Document)
+WHERE d.created_date IS NOT NULL
+RETURN min(d.created_date) AS earliest_document,
+       max(d.created_date) AS latest_document;
+
+
+// Documents created in critical period (September 2021)
+MATCH (d:Document)
+WHERE d.created_date >= "2021-09-01T00:00:00Z"
+  AND d.created_date < "2021-10-01T00:00:00Z"
+RETURN d.file_name AS document,
+       d.created_date AS created,
+       d.evidence_category AS category
+ORDER BY d.created_date;
+
+
+// Modification anachronisms (modified before created)
+MATCH (d:Document)
+WHERE d.created_date IS NOT NULL
+  AND d.modified_date IS NOT NULL
+  AND d.modified_date < d.created_date
+RETURN d.file_name AS document,
+       d.created_date AS created,
+       d.modified_date AS modified
+LIMIT 10;
+
+// Expected: 0 (temporal impossibility)
+
+
+================================================================================
+6. EVIDENCE CORRELATION
+================================================================================
+
+// Documents referencing Lane.rvt
+MATCH (d:Document)-[r:REFERENCES]->(ev:Evidence {name: "Lane.rvt"})
+RETURN d.file_name AS document,
+       d.evidence_category AS category,
+       r.confidence AS confidence,
+       r.context AS context
+ORDER BY r.confidence DESC;
+
+
+// Documents referencing Lane.0024.rvt
+MATCH (d:Document)-[r:REFERENCES]->(ev:Evidence {name: "Lane.0024.rvt"})
+RETURN d.file_name AS document,
+       d.evidence_category AS category,
+       r.confidence AS confidence
+ORDER BY r.confidence DESC;
+
+
+// Documents referencing DWG file
+MATCH (d:Document)-[r:REFERENCES]->(ev:Evidence)
+WHERE ev.name CONTAINS ".dwg"
+RETURN d.file_name AS document,
+       ev.name AS evidence,
+       r.confidence AS confidence
+ORDER BY r.confidence DESC;
+
+
+// Cross-reference: Documents mentioning multiple evidence files
+MATCH (d:Document)-[:REFERENCES]->(ev:Evidence)
+WITH d, collect(DISTINCT ev.name) AS evidence_files
+WHERE size(evidence_files) >= 2
+RETURN d.file_name AS document,
+       d.evidence_category AS category,
+       evidence_files
+ORDER BY size(evidence_files) DESC
+LIMIT 10;
+
+
+================================================================================
+7. PARTY ANALYSIS
+================================================================================
+
+// Documents per party
+MATCH (p:Party)<-[:REFERENCES]-(d:Document)
+RETURN p.name AS party,
+       count(d) AS document_count
+ORDER BY document_count DESC;
+
+
+// Documents authored by Andy Garcia
+MATCH (d:Document)
+WHERE d.author CONTAINS "Andy Garcia"
+RETURN d.file_name AS document,
+       d.evidence_category AS category,
+       d.created_date AS created
+ORDER BY d.created_date;
+
+
+// Email correspondence timeline
+MATCH (d:Document)
+WHERE d.file_type = "MSG"
+RETURN d.file_name AS email,
+       d.author AS from,
+       d.recipient AS to,
+       d.subject AS subject,
+       d.created_date AS sent_date
+ORDER BY d.created_date;
+
+
+// Documents mentioning both Murphy and Garcia
+MATCH (d:Document)-[:REFERENCES]->(p1:Party {name: "Kara Murphy"})
+MATCH (d)-[:REFERENCES]->(p2:Party {name: "Andy Garcia"})
+RETURN d.file_name AS document,
+       d.evidence_category AS category,
+       d.subject AS subject
+LIMIT 20;
+
+
+================================================================================
+8. LOCATION ANALYSIS
+================================================================================
+
+// Documents per location
+MATCH (loc:Location)<-[:LOCATED_IN]-(d:Document)
+RETURN loc.path AS location,
+       loc.location_type AS type,
+       count(d) AS document_count
+ORDER BY document_count DESC
+LIMIT 20;
+
+
+// New locations created during ingestion
+MATCH (loc:Location)
+WHERE loc.created_at IS NOT NULL
+RETURN loc.path AS location,
+       loc.location_type AS type,
+       loc.created_at AS created
+ORDER BY loc.created_at DESC
+LIMIT 20;
+
+
+// Documents in critical evidence folders
+MATCH (d:Document)-[:LOCATED_IN]->(loc:Location)
+WHERE loc.path CONTAINS "2022 Drawing Files"
+   OR loc.path CONTAINS "FORENSIC_REPORTS"
+   OR loc.path CONTAINS "DEPOSITIONS"
+RETURN d.file_name AS document,
+       loc.path AS location,
+       d.evidence_category AS category
+ORDER BY loc.path, d.file_name;
+
+
+================================================================================
+9. FORENSIC CATEGORY ANALYSIS
+================================================================================
+
+// Design files (RVT, DWG)
+MATCH (d:Document)
+WHERE d.evidence_category = "design_file"
+RETURN d.file_name AS design_file,
+       d.file_type AS type,
+       d.created_date AS created,
+       d.file_size_bytes AS size_bytes
+ORDER BY d.created_date;
+
+
+// Forensic reports
+MATCH (d:Document)
+WHERE d.evidence_category = "forensic_report"
+RETURN d.file_name AS report,
+       d.created_date AS created,
+       d.forensic_findings AS findings
+ORDER BY d.created_date;
+
+
+// Deposition transcripts
+MATCH (d:Document)
+WHERE d.evidence_category = "deposition"
+RETURN d.file_name AS deposition,
+       d.created_date AS deposition_date,
+       d.subject AS subject
+ORDER BY d.created_date;
+
+
+// Email evidence
+MATCH (d:Document)
+WHERE d.evidence_category = "email"
+RETURN d.file_name AS email,
+       d.author AS from,
+       d.subject AS subject,
+       d.created_date AS sent_date
+ORDER BY d.created_date
+LIMIT 50;
+
+
+================================================================================
+10. GRAPH INTEGRITY VALIDATION
+================================================================================
+
+// Constraint verification
+SHOW CONSTRAINTS;
+
+// Expected constraints:
+// - document_uuid_unique
+// - evidence_uuid_unique
+// - party_uuid_unique
+// - location_uuid_unique (if created)
+
+
+// Index verification
+SHOW INDEXES;
+
+// Expected indexes on:
+// - Document(uuid)
+// - Document(file_name)
+// - Document(evidence_category)
+// - Document(created_date)
+// - Evidence(name)
+// - Party(name)
+// - Location(path)
+
+
+// UUID uniqueness validation
+MATCH (d:Document)
+WITH d.uuid AS uuid, count(*) AS count
+WHERE count > 1
+RETURN uuid, count;
+
+// Expected: 0 rows (all UUIDs unique)
+
+
+// Node label validation
+CALL db.labels() YIELD label
+RETURN label
+ORDER BY label;
+
+// Expected labels: Claim, Document, Event, Evidence, Location, Party, Timeline
+
+
+// Relationship type validation
+CALL db.relationshipTypes() YIELD relationshipType
+RETURN relationshipType
+ORDER BY relationshipType;
+
+
+================================================================================
+11. PERFORMANCE VALIDATION
+================================================================================
+
+// Query performance test: Find documents by UUID
+PROFILE
+MATCH (d:Document {uuid: "test-uuid-here"})
+RETURN d;
+
+// Should use index scan
+
+
+// Query performance test: Find documents by category
+PROFILE
+MATCH (d:Document {evidence_category: "design_file"})
+RETURN count(d);
+
+// Should use index scan or label scan
+
+
+// Query performance test: Complex relationship query
+PROFILE
+MATCH (d:Document)-[:REFERENCES]->(ev:Evidence)-[:SUPPORTS_CLAIM]->(c:Claim)
+WHERE c.severity = "Critical"
+RETURN d.file_name, ev.name, c.claim_text
+LIMIT 10;
+
+
+================================================================================
+12. EXPORT VALIDATION
+================================================================================
+
+// Export document summary to JSON
+MATCH (d:Document)
+RETURN {
+    file_name: d.file_name,
+    category: d.evidence_category,
+    type: d.file_type,
+    created: d.created_date,
+    confidence: d.confidence_score
+} AS document
+ORDER BY d.created_date
+LIMIT 100;
+
+
+// Export relationship summary
+MATCH (d:Document)-[r:REFERENCES]->(target)
+RETURN {
+    document: d.file_name,
+    relationship: type(r),
+    target_label: labels(target)[0],
+    target_name: COALESCE(target.name, target.path),
+    confidence: r.confidence
+} AS relationship
+LIMIT 200;
+
+
+================================================================================
+13. SMOKE TEST SUITE (Quick Validation)
+================================================================================
+
+// Smoke Test 1: Documents ingested
+MATCH (d:Document) RETURN count(d) > 0 AS documents_exist;
+
+// Smoke Test 2: Relationships created
+MATCH ()-[r]->() RETURN count(r) > 0 AS relationships_exist;
+
+// Smoke Test 3: No orphaned documents (>90% connected)
+MATCH (d:Document)
+WITH count(d) AS total
+MATCH (d2:Document)-[:REFERENCES]->()
+WITH total, count(DISTINCT d2) AS connected
+RETURN (connected * 100.0 / total) > 90 AS quality_pass;
+
+// Smoke Test 4: All documents have UUIDs
+MATCH (d:Document) WHERE d.uuid IS NULL RETURN count(d) = 0 AS uuid_pass;
+
+// Smoke Test 5: All documents have locations
+MATCH (d:Document)-[:LOCATED_IN]->(:Location)
+WITH count(DISTINCT d) AS with_location
+MATCH (d2:Document)
+RETURN with_location = count(d2) AS location_pass;
+
+
+================================================================================
+14. LITIGATION-SPECIFIC QUERIES
+================================================================================
+
+// Critical evidence files
+MATCH (d:Document)-[:REFERENCES]->(ev:Evidence)
+WHERE ev.name IN ["Lane.rvt", "Lane.0024.rvt", "6075 Enlgish Oaks AutoCAD 092021mls.dwg"]
+RETURN d.file_name AS document,
+       d.evidence_category AS category,
+       ev.name AS critical_evidence,
+       d.created_date AS created
+ORDER BY ev.name, d.created_date;
+
+
+// September 2021 activity (critical period)
+MATCH (d:Document)
+WHERE d.created_date >= "2021-09-01T00:00:00Z"
+  AND d.created_date < "2021-10-01T00:00:00Z"
+RETURN d.file_name AS document,
+       d.created_date AS created,
+       d.evidence_category AS category,
+       d.author AS author
+ORDER BY d.created_date;
+
+
+// Forensic findings containing "timestamp" or "manipulation"
+MATCH (d:Document)
+WHERE d.forensic_findings IS NOT NULL
+  AND (toLower(d.forensic_findings) CONTAINS "timestamp"
+    OR toLower(d.forensic_findings) CONTAINS "manipulation"
+    OR toLower(d.forensic_findings) CONTAINS "spoliation"
+    OR toLower(d.forensic_findings) CONTAINS "anachronism")
+RETURN d.file_name AS document,
+       d.forensic_findings AS findings,
+       d.confidence_score AS confidence
+ORDER BY d.confidence_score DESC;
+
+
+// Document chain for Lane.rvt
+MATCH path = (d:Document)-[:REFERENCES]->(ev:Evidence {name: "Lane.rvt"})-[:SUPPORTS_CLAIM]->(c:Claim)
+RETURN d.file_name AS document,
+       c.claim_text AS claim,
+       c.severity AS severity
+ORDER BY c.severity DESC;
+
+
+================================================================================
+15. DATA COMPLETENESS REPORT
+================================================================================
+
+// Property completeness analysis
+MATCH (d:Document)
+RETURN
+    count(d) AS total_documents,
+    count(d.uuid) AS have_uuid,
+    count(d.file_name) AS have_file_name,
+    count(d.file_path) AS have_file_path,
+    count(d.file_type) AS have_file_type,
+    count(d.evidence_category) AS have_category,
+    count(d.created_date) AS have_created_date,
+    count(d.modified_date) AS have_modified_date,
+    count(d.file_size_bytes) AS have_file_size,
+    count(d.sha256) AS have_hash,
+    count(d.author) AS have_author,
+    count(d.subject) AS have_subject,
+    count(d.forensic_findings) AS have_findings;
+
+
+================================================================================
+END OF VALIDATION QUERIES
+================================================================================
+
+Usage:
+1. Copy queries into Neo4j Browser (http://localhost:7474)
+2. Execute individually or as batch
+3. Compare results against expected values
+4. Document any anomalies in validation report
+
+Generated by: CasparCode-002 Orchestrator
+Date: 2026-01-30
+Status: Ready for Phase 3 Validation
