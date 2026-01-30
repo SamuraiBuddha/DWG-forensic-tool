@@ -408,6 +408,15 @@ class ForensicAnalysis(BaseModel):
         None,
         description="LLM forensic reasoning about evidence significance (smoking guns vs red herrings)"
     )
+    # Phase 4.2: Filtered anomalies from LLM/heuristic reasoner
+    filtered_anomalies: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Anomaly filtering results (kept vs filtered, reasoning, confidence)"
+    )
+    anomaly_filter_method: str = Field(
+        default="none",
+        description="Method used for anomaly filtering: 'llm', 'heuristic', or 'none'"
+    )
     # Forensic error tracking - ALL errors are potential evidence in forensic analysis
     analysis_errors: Optional[List[Dict[str, Any]]] = Field(
         None,

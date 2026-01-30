@@ -13,6 +13,7 @@ Key Principles:
 """
 
 import json
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -24,6 +25,17 @@ try:
 except ImportError:
     LLM_AVAILABLE = False
     OllamaClient = None  # type: ignore
+
+# Phase 4.2: Import anomaly models and prompts
+from dwg_forensic.llm.anomaly_models import (
+    Anomaly,
+    ProvenanceInfo,
+    FilteredAnomalies,
+    SmokingGunRule,
+)
+from dwg_forensic.llm.reasoner_prompts import format_filter_prompt
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -112,7 +124,7 @@ class ForensicReasoner:
         self._client: Optional[Any] = None
 
         if LLM_AVAILABLE:
-            self._client = OllamaClient(host=ollama_host)
+            self._client = OllamaClient(base_url=ollama_host, model=llm_model)
 
     def _format_evidence(self, analysis_data: Dict[str, Any]) -> str:
         """Format analysis data for LLM consumption."""
@@ -371,6 +383,223 @@ Be rigorous. If there are no TRUE smoking guns, say so clearly. Do not inflate f
             confidence=1.0 if smoking_guns else 0.0,
             model_used="algorithmic_fallback",
         )
+
+    async def filter_anomalies(
+        self,
+        anomalies: List[Anomaly],
+        provenance: ProvenanceInfo,
+        dwg_version: str = "Unknown",
+        batch_mode: bool = False,
+    ) -> FilteredAnomalies:
+        """
+        Filter anomalies using LLM reasoning based on provenance context.
+
+        This is the core Phase 4.2 integration point. The LLM evaluates whether
+        detected anomalies are expected red herrings for the file's provenance
+        (Revit export, ODA tool, file transfer) or represent true smoking guns.
+
+        Args:
+            anomalies: List of Anomaly objects from rule engine
+            provenance: ProvenanceInfo describing file origin and context
+            dwg_version: DWG version string (e.g., "AC1032")
+            batch_mode: Use simplified prompt for faster batch processing
+
+        Returns:
+            FilteredAnomalies with kept/filtered lists, reasoning, and confidence
+        """
+        if not anomalies:
+            return FilteredAnomalies(
+                kept_anomalies=[],
+                filtered_anomalies=[],
+                reasoning="No anomalies detected",
+                llm_confidence=1.0,
+                method="none",
+            )
+
+        # Instantiate smoking gun validator
+        smoking_gun_rules = SmokingGunRule()
+
+        # If LLM unavailable, fall back to heuristic filtering
+        if not self._client:
+            logger.warning("LLM client unavailable, using heuristic fallback")
+            return self._heuristic_filter_anomalies(anomalies, provenance, smoking_gun_rules)
+
+        try:
+            # Build prompt with file context
+            prompt = format_filter_prompt(
+                anomalies=anomalies,
+                provenance=provenance.__dict__,
+                dwg_version=dwg_version,
+                batch_mode=batch_mode,
+            )
+
+            # Query LLM
+            response = await self._client.generate(prompt, model=self._model)
+
+            # Parse JSON response
+            json_start = response.find("{")
+            json_end = response.rfind("}") + 1
+            if json_start < 0 or json_end <= json_start:
+                logger.warning("LLM response missing JSON, falling back to heuristic")
+                return self._heuristic_filter_anomalies(anomalies, provenance, smoking_gun_rules)
+
+            result = json.loads(response[json_start:json_end])
+
+            # Extract filtering decisions
+            keep_ids = set(result.get("keep", []))
+            filter_ids = set(result.get("filter", []))
+            reasoning_text = result.get("reasoning", "LLM reasoning not provided")
+            llm_confidence = float(result.get("confidence", 0.7))
+
+            # Separate anomalies into kept and filtered
+            kept = []
+            filtered = []
+
+            for anomaly in anomalies:
+                # CRITICAL: Never filter smoking guns
+                if smoking_gun_rules.is_smoking_gun(anomaly.rule_id):
+                    kept.append(anomaly)
+                    if anomaly.rule_id in filter_ids:
+                        logger.error(
+                            f"LLM attempted to filter smoking gun {anomaly.rule_id}, overriding"
+                        )
+                elif anomaly.rule_id in filter_ids:
+                    filtered.append(anomaly)
+                else:
+                    # If not explicitly filtered, keep it (conservative approach)
+                    kept.append(anomaly)
+
+            filtered_result = FilteredAnomalies(
+                kept_anomalies=kept,
+                filtered_anomalies=filtered,
+                reasoning=reasoning_text,
+                llm_confidence=llm_confidence,
+                method="llm",
+            )
+
+            # Validate no smoking guns were filtered
+            validation_error = smoking_gun_rules.validate_filtering(filtered)
+            if validation_error:
+                logger.critical(validation_error)
+                # Move filtered smoking guns back to kept
+                smoking_guns_filtered = [
+                    a for a in filtered if smoking_gun_rules.is_smoking_gun(a.rule_id)
+                ]
+                for sg in smoking_guns_filtered:
+                    filtered_result.filtered_anomalies.remove(sg)
+                    filtered_result.kept_anomalies.append(sg)
+
+            logger.info(
+                f"LLM filtered {len(filtered)} of {len(anomalies)} anomalies "
+                f"(confidence: {llm_confidence:.1%})"
+            )
+
+            return filtered_result
+
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse LLM JSON response: {e}, using heuristic fallback")
+            return self._heuristic_filter_anomalies(anomalies, provenance, smoking_gun_rules)
+        except Exception as e:
+            logger.error(f"LLM filtering failed: {e}, using heuristic fallback")
+            return self._heuristic_filter_anomalies(anomalies, provenance, smoking_gun_rules)
+
+    def _heuristic_filter_anomalies(
+        self,
+        anomalies: List[Anomaly],
+        provenance: ProvenanceInfo,
+        smoking_gun_rules: SmokingGunRule,
+    ) -> FilteredAnomalies:
+        """
+        Fallback heuristic filtering when LLM is unavailable.
+
+        Uses static rule-based logic to filter expected anomalies based on
+        provenance patterns. This provides conservative filtering without LLM.
+        """
+        kept = []
+        filtered = []
+        reasoning_parts = []
+
+        # Revit export filtering
+        if provenance.is_revit_export:
+            revit_filter_rules = {
+                "TAMPER-013",  # TDINDWG zero (Revit normal)
+                "TAMPER-006",  # Zero firmware version
+                "TAMPER-003",  # TrustedDWG missing
+                "TAMPER-004",  # Watermark missing
+                "TAMPER-029",  # Third-party origin
+            }
+            reasoning_parts.append("Revit export detected: Filtering expected anomalies")
+        else:
+            revit_filter_rules = set()
+
+        # ODA tool filtering
+        if provenance.is_oda_tool:
+            oda_filter_rules = {
+                "TAMPER-003",  # TrustedDWG missing
+                "TAMPER-029",  # Third-party origin
+                "TAMPER-030",  # Missing GUIDs
+            }
+            reasoning_parts.append("ODA SDK tool detected: Filtering application-specific patterns")
+        else:
+            oda_filter_rules = set()
+
+        # File transfer filtering
+        if provenance.is_file_transfer:
+            transfer_filter_rules = {
+                "TAMPER-020",  # NTFS creation after modification (normal for copy)
+            }
+            reasoning_parts.append("File transfer detected: Filtering copy-related patterns")
+        else:
+            transfer_filter_rules = set()
+
+        # Combine all filter rules
+        all_filter_rules = revit_filter_rules | oda_filter_rules | transfer_filter_rules
+
+        # Apply filtering
+        for anomaly in anomalies:
+            # CRITICAL: Never filter smoking guns
+            if smoking_gun_rules.is_smoking_gun(anomaly.rule_id):
+                kept.append(anomaly)
+            elif anomaly.rule_id in all_filter_rules:
+                filtered.append(anomaly)
+                reasoning_parts.append(f"Filtered {anomaly.rule_id}: Expected for {provenance.provenance_path}")
+            else:
+                kept.append(anomaly)
+
+        reasoning_text = ". ".join(reasoning_parts) if reasoning_parts else "Heuristic filtering applied"
+
+        # Conservative confidence (heuristics are less nuanced than LLM)
+        confidence = 0.7 if provenance.confidence > 0.7 else 0.5
+
+        logger.info(
+            f"Heuristic filtered {len(filtered)} of {len(anomalies)} anomalies "
+            f"(provenance: {provenance.provenance_path})"
+        )
+
+        return FilteredAnomalies(
+            kept_anomalies=kept,
+            filtered_anomalies=filtered,
+            reasoning=reasoning_text,
+            llm_confidence=confidence,
+            method="heuristic",
+        )
+
+    def get_llm_confidence(self) -> float:
+        """
+        Get LLM confidence level (0-1).
+
+        Returns:
+            1.0 if LLM available and healthy
+            0.0 if LLM unavailable (falls back to heuristic)
+        """
+        if not self._client:
+            return 0.0
+
+        try:
+            # Simple health check - could be enhanced with actual ping
+            return 1.0 if LLM_AVAILABLE else 0.0
+        except Exception:
+            return 0.0
 
     def generate_expert_report(self, reasoning: ForensicReasoning) -> str:
         """Generate a plain-text expert report from reasoning results."""

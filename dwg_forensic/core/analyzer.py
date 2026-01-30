@@ -73,6 +73,12 @@ from dwg_forensic.knowledge import KnowledgeEnricher, Neo4jKnowledgeClient
 # LLM integration (optional - gracefully degrades if unavailable)
 try:
     from dwg_forensic.llm import ForensicNarrator, ForensicReasoner, LLMModeManager, LLMMode
+    # Phase 4.2: Import anomaly filtering models
+    from dwg_forensic.llm.anomaly_models import (
+        Anomaly as LLMAnomaly,
+        ProvenanceInfo,
+        FilteredAnomalies,
+    )
     LLM_AVAILABLE = True
 except ImportError:
     LLM_AVAILABLE = False
@@ -80,6 +86,9 @@ except ImportError:
     ForensicReasoner = None  # type: ignore
     LLMModeManager = None  # type: ignore
     LLMMode = None  # type: ignore
+    LLMAnomaly = None  # type: ignore
+    ProvenanceInfo = None  # type: ignore
+    FilteredAnomalies = None  # type: ignore
 
 # Smoking gun synthesis for definitive proof filtering
 try:
@@ -603,10 +612,150 @@ class ForensicAnalyzer:
         failed_rules = self.rule_engine.get_failed_rules(rule_results)
         self._report_progress("rules", "complete", f"Rules triggered: {len(failed_rules)}")
 
-        # Phase 4.1: Log LLM reasoning status (Phase 4.2+ will hook actual reasoning here)
+        # Phase 4.2: LLM/Heuristic anomaly filtering
         import logging
         logger = logging.getLogger(__name__)
-        logger.info(f"LLM reasoning: {'enabled' if self.llm_enabled else 'disabled'}")
+
+        filtered_anomalies_result: Optional[Any] = None
+        anomaly_filter_method = "none"
+
+        if self.llm_enabled and self._reasoner and LLM_AVAILABLE and failed_rules:
+            self._report_progress("filtering", "start", "Filtering anomalies with LLM reasoner")
+            try:
+                # Convert failed rules to LLM Anomaly objects
+                llm_anomalies = []
+                for rule in failed_rules:
+                    llm_anomalies.append(LLMAnomaly.from_rule_result({
+                        "rule_id": rule.rule_id,
+                        "description": rule.description,
+                        "severity": rule.severity.value if hasattr(rule.severity, 'value') else str(rule.severity),
+                        "evidence_strength": getattr(rule, 'evidence_strength', 'CIRCUMSTANTIAL'),
+                        "details": {
+                            "expected": getattr(rule, 'expected', None),
+                            "found": getattr(rule, 'found', None),
+                        },
+                    }))
+
+                # Build provenance info
+                if file_provenance and ProvenanceInfo:
+                    provenance_info = ProvenanceInfo.from_provenance_result({
+                        "source_application": file_provenance.source_application,
+                        "version": getattr(file_provenance, 'version', None),
+                        "confidence": file_provenance.confidence,
+                        "is_revit_export": file_provenance.is_revit_export,
+                        "is_oda_tool": file_provenance.is_oda_tool,
+                        "is_transferred": file_provenance.is_transferred,
+                        "is_native_autocad": file_provenance.is_native_autocad,
+                        "rules_to_skip": file_provenance.rules_to_skip,
+                        "detection_notes": file_provenance.detection_notes,
+                    })
+                else:
+                    # Default provenance if detector not available
+                    provenance_info = ProvenanceInfo(
+                        cad_app="Unknown",
+                        provenance_path="Unknown Origin",
+                        confidence=0.0,
+                    )
+
+                # Run async filtering in sync context
+                import asyncio
+                loop = asyncio.new_event_loop()
+                try:
+                    filtered_result = loop.run_until_complete(
+                        self._reasoner.filter_anomalies(
+                            anomalies=llm_anomalies,
+                            provenance=provenance_info,
+                            dwg_version=version_string,
+                            batch_mode=False,
+                        )
+                    )
+                finally:
+                    loop.close()
+
+                # Replace failed_rules with kept anomalies
+                kept_rule_ids = {a.rule_id for a in filtered_result.kept_anomalies}
+                original_count = len(failed_rules)
+                failed_rules = [r for r in failed_rules if r.rule_id in kept_rule_ids]
+                filtered_count = original_count - len(failed_rules)
+
+                filtered_anomalies_result = filtered_result.to_dict()
+                anomaly_filter_method = filtered_result.method
+
+                logger.info(
+                    f"LLM filtered {filtered_count} of {original_count} anomalies "
+                    f"(method: {filtered_result.method}, confidence: {filtered_result.llm_confidence:.1%})"
+                )
+
+                if filtered_result.low_confidence_warning:
+                    logger.warning(
+                        f"Low confidence ({filtered_result.llm_confidence:.1%}) in filtering - manual review recommended"
+                    )
+
+                self._report_progress("filtering", "complete", f"Filtered {filtered_count} anomalies")
+
+            except Exception as e:
+                logger.error(f"LLM anomaly filtering failed: {e}, keeping all anomalies")
+                anomaly_filter_method = "error"
+        elif failed_rules and file_provenance:
+            # Fallback: Use heuristic filter without LLM
+            self._report_progress("filtering", "start", "Filtering anomalies with heuristic rules")
+            try:
+                from dwg_forensic.llm.heuristic_filter import HeuristicAnomalyFilter
+                from dwg_forensic.llm.anomaly_models import Anomaly as LLMAnomaly, ProvenanceInfo
+
+                heuristic_filter = HeuristicAnomalyFilter()
+
+                # Convert failed rules to LLM Anomaly objects
+                llm_anomalies = []
+                for rule in failed_rules:
+                    llm_anomalies.append(LLMAnomaly.from_rule_result({
+                        "rule_id": rule.rule_id,
+                        "description": rule.description,
+                        "severity": rule.severity.value if hasattr(rule.severity, 'value') else str(rule.severity),
+                        "evidence_strength": getattr(rule, 'evidence_strength', 'CIRCUMSTANTIAL'),
+                        "details": {
+                            "expected": getattr(rule, 'expected', None),
+                            "found": getattr(rule, 'found', None),
+                        },
+                    }))
+
+                # Build provenance info
+                provenance_info = ProvenanceInfo.from_provenance_result({
+                    "source_application": file_provenance.source_application,
+                    "version": getattr(file_provenance, 'version', None),
+                    "confidence": file_provenance.confidence,
+                    "is_revit_export": file_provenance.is_revit_export,
+                    "is_oda_tool": file_provenance.is_oda_tool,
+                    "is_transferred": file_provenance.is_transferred,
+                    "is_native_autocad": file_provenance.is_native_autocad,
+                    "rules_to_skip": file_provenance.rules_to_skip,
+                    "detection_notes": file_provenance.detection_notes,
+                })
+
+                # Apply heuristic filtering
+                filtered_result = heuristic_filter.filter_anomalies(llm_anomalies, provenance_info)
+
+                # Replace failed_rules with kept anomalies
+                kept_rule_ids = {a.rule_id for a in filtered_result.kept_anomalies}
+                original_count = len(failed_rules)
+                failed_rules = [r for r in failed_rules if r.rule_id in kept_rule_ids]
+                filtered_count = original_count - len(failed_rules)
+
+                filtered_anomalies_result = filtered_result.to_dict()
+                anomaly_filter_method = filtered_result.method
+
+                logger.info(
+                    f"Heuristic filtered {filtered_count} of {original_count} anomalies "
+                    f"(confidence: {filtered_result.llm_confidence:.1%})"
+                )
+
+                self._report_progress("filtering", "complete", f"Filtered {filtered_count} anomalies")
+
+            except Exception as e:
+                logger.error(f"Heuristic anomaly filtering failed: {e}, keeping all anomalies")
+                anomaly_filter_method = "error"
+        else:
+            logger.info("Anomaly filtering disabled or no anomalies to filter")
 
         # Phase 3: Detect tampering indicators (version-aware, with NTFS cross-validation)
         self._report_progress("tampering", "start", "Analyzing tampering indicators")
@@ -922,6 +1071,8 @@ class ForensicAnalyzer:
             smoking_gun_report=smoking_gun_report_dict,
             has_definitive_proof=has_definitive_proof,
             llm_reasoning=llm_reasoning_dict,
+            filtered_anomalies=filtered_anomalies_result,
+            anomaly_filter_method=anomaly_filter_method,
             analysis_errors=self._analysis_errors if self._analysis_errors else None,
             analysis_timestamp=datetime.now(),
             analyzer_version=__version__,
