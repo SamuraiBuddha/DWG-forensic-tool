@@ -61,6 +61,8 @@ class BatchAnalysisResult:
         aggregated_risk_score: Average risk score across all successful analyses
         risk_distribution: Count of files by risk level
         processing_time_seconds: Total processing time
+        llm_result: Optional BatchLLMResult if LLM processing was enabled
+        llm_enabled: Whether LLM processing was requested
     """
     total_files: int
     successful: int
@@ -70,6 +72,8 @@ class BatchAnalysisResult:
     aggregated_risk_score: float = 0.0
     risk_distribution: Dict[str, int] = field(default_factory=dict)
     processing_time_seconds: float = 0.0
+    llm_result: Optional[Any] = None  # BatchLLMResult (avoid circular import)
+    llm_enabled: bool = False
 
 
 def _analyze_single_file(file_path: Path) -> BatchFileResult:
@@ -140,6 +144,9 @@ class BatchProcessor:
         output_dir: Optional[Path] = None,
         recursive: bool = False,
         pattern: str = "*.dwg",
+        with_llm: bool = False,
+        llm_model: str = "mistral",
+        risk_threshold: float = 0.3,
     ) -> BatchAnalysisResult:
         """Process all DWG files in a directory.
 
@@ -148,6 +155,9 @@ class BatchProcessor:
             output_dir: Optional directory for individual JSON reports (not yet implemented)
             recursive: Whether to search subdirectories
             pattern: Glob pattern for finding DWG files (default: "*.dwg")
+            with_llm: Enable LLM narrative generation (requires Ollama)
+            llm_model: Model name for LLM generation (default: "mistral")
+            risk_threshold: Minimum risk score for LLM processing (default: 0.3)
 
         Returns:
             BatchAnalysisResult with aggregated results
@@ -224,6 +234,23 @@ class BatchProcessor:
         # Aggregate results
         processing_time = time.time() - start_time
         batch_result = self._aggregate_results(results, processing_time)
+
+        # Phase 4.4: LLM batch processing
+        if with_llm and batch_result.successful > 0:
+            logger.info("Starting LLM batch processing...")
+            llm_result = self._process_llm_batch(
+                batch_result.results,
+                files,
+                llm_model,
+                risk_threshold,
+            )
+            batch_result.llm_result = llm_result
+            batch_result.llm_enabled = True
+
+            logger.info(
+                f"LLM processing: {llm_result.processed_files} narratives "
+                f"in {llm_result.processing_time_seconds:.2f}s"
+            )
 
         logger.info(
             f"Batch processing complete: {batch_result.successful}/{batch_result.total_files} "
@@ -322,12 +349,80 @@ class BatchProcessor:
 
         return distribution
 
+    def _process_llm_batch(
+        self,
+        analyses: List[ForensicAnalysis],
+        file_paths: List[Path],
+        llm_model: str,
+        risk_threshold: float,
+    ) -> Any:  # Returns BatchLLMResult
+        """Process batch with LLM narrative generation.
+
+        Args:
+            analyses: List of ForensicAnalysis results
+            file_paths: List of file paths
+            llm_model: Model name for generation
+            risk_threshold: Minimum risk score for processing
+
+        Returns:
+            BatchLLMResult with narratives
+        """
+        # Import here to avoid circular dependency
+        from dwg_forensic.llm.batch_processor import BatchLLMProcessor
+
+        # Progress tracking
+        from tqdm import tqdm
+
+        logger.info(
+            f"Processing LLM narratives: model={llm_model}, "
+            f"risk_threshold={risk_threshold}"
+        )
+
+        # Create processor
+        processor = BatchLLMProcessor(model=llm_model)
+
+        # Build file_paths list matching analyses order
+        # Map successful analyses back to their original file paths
+        analysis_paths = []
+        for analysis in analyses:
+            # Find matching file path by filename
+            matching_path = next(
+                (p for p in file_paths if p.name == analysis.file_info.filename),
+                None
+            )
+            if matching_path:
+                analysis_paths.append(matching_path)
+            else:
+                # Fallback: create Path from filename
+                analysis_paths.append(Path(analysis.file_info.filename))
+
+        # Process with progress bar
+        with tqdm(
+            total=len(analyses),
+            desc="Processing LLM narratives",
+            unit="file"
+        ) as pbar:
+            # Note: BatchLLMProcessor handles its own concurrency
+            result = processor.process_batch(
+                analyses,
+                analysis_paths,
+                risk_threshold,
+            )
+
+            # Update progress bar to completion
+            pbar.update(len(analyses))
+
+        return result
+
 
 def process_batch(
     directory: Path,
     output_dir: Optional[Path] = None,
     num_workers: Optional[int] = None,
     recursive: bool = False,
+    with_llm: bool = False,
+    llm_model: str = "mistral",
+    risk_threshold: float = 0.3,
 ) -> BatchAnalysisResult:
     """Convenience function to process a batch of DWG files.
 
@@ -336,6 +431,9 @@ def process_batch(
         output_dir: Optional directory for individual JSON reports
         num_workers: Number of parallel workers (default: CPU count)
         recursive: Whether to search subdirectories
+        with_llm: Enable LLM narrative generation (requires Ollama)
+        llm_model: Model name for LLM generation (default: "mistral")
+        risk_threshold: Minimum risk score for LLM processing (default: 0.3)
 
     Returns:
         BatchAnalysisResult with aggregated results
@@ -345,4 +443,7 @@ def process_batch(
         directory=directory,
         output_dir=output_dir,
         recursive=recursive,
+        with_llm=with_llm,
+        llm_model=llm_model,
+        risk_threshold=risk_threshold,
     )

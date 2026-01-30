@@ -1,0 +1,87 @@
+================================================================================
+REVIT PARTITION FORENSIC ANALYSIS REPORT
+================================================================================
+
+Analysis Date: 2026-01-30T13:42:09.672418
+File A (Original): 6075 English Oaks Lane.rvt
+File B (Variant): 6075 English Oaks Lane.0024.rvt
+
+--------------------------------------------------------------------------------
+FILE-LEVEL STATISTICS
+--------------------------------------------------------------------------------
+File A Size: 97,685,504 bytes (93.16 MB)
+File B Size: 97,644,544 bytes (93.12 MB)
+Size Difference: -40,960 bytes (-0.04 MB)
+
+--------------------------------------------------------------------------------
+PARTITION-LEVEL STATISTICS
+--------------------------------------------------------------------------------
+Total Partitions in File A: 765
+Total Partitions in File B: 765
+Deleted Partitions (in B): 1
+Added Partitions (in B): 1
+Identical Partitions: 753
+Modified Partitions: 11
+Estimated % of File Changed: 6.68%
+
+--------------------------------------------------------------------------------
+DELETED PARTITIONS (Present in File A, Absent in File B)
+--------------------------------------------------------------------------------
+Total Data Deleted: 3,272,932 bytes (3196.22 KB)
+
+  - Partitions/2158
+    Partition ID: 2158
+    Size: 3,272,932 bytes (3196.22 KB)
+    SHA-256: 4e399ce597be1d47b32ac919764d5458d3048d616d9070f08b7c35c2eada505f
+
+--------------------------------------------------------------------------------
+MODIFIED PARTITIONS (Size Changes)
+--------------------------------------------------------------------------------
+
+  - Partitions/2152
+    Partition ID: 2152
+    Size File A: 39,661 bytes (38.73 KB)
+    Size File B: 3,222,533 bytes (3147.00 KB)
+    Difference: +3,182,872 bytes (+3108.27 KB)
+    Expansion Factor: 81.25x
+
+  - Partitions/2145
+    Partition ID: 2145
+    Size File A: 959 bytes (0.94 KB)
+    Size File B: 45,290 bytes (44.23 KB)
+    Difference: +44,331 bytes (+43.29 KB)
+    Expansion Factor: 47.23x
+
+--------------------------------------------------------------------------------
+EXPERT INTERPRETATION
+--------------------------------------------------------------------------------
+
+[CRITICAL FINDING] Deleted Partitions Detected
+
+The variant file (File B: 6075 English Oaks Lane.0024.rvt) is MISSING 1 partition(s) that exist in the original file (File A: 6075 English Oaks Lane.rvt). This indicates potential data deletion between versions.
+
+FORENSIC SIGNIFICANCE:
+- Partition deletion suggests intentional removal of Revit elements/data
+- Deleted partitions may contain design elements, families, or parameters
+- Recommended: Perform keyword analysis on deleted partition data
+
+[FINDING] Large Partition Expansions Detected
+
+Detected 1 partition(s) with significant size increases (>1 MB). This may indicate:
+- Addition of new design elements
+- Data reorganization/consolidation
+- Migration of data from deleted partitions
+
+--------------------------------------------------------------------------------
+CONFIDENCE ASSESSMENT
+--------------------------------------------------------------------------------
+
+Partition-level Similarity: 98.43%
+(753 of 765 partitions bit-for-bit identical)
+
+Confidence Level: HIGH
+
+INTERPRETATION:
+- File B is highly derived from File A (>80% identical partitions)
+- Changes are localized to specific partitions
+- Deleted/modified partitions are primary areas of interest

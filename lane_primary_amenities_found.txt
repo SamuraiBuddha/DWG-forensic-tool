@@ -1,0 +1,1 @@
+No amenity-related keywords (pool, cabana, kitchen, grill, spa, patio, outdoor, swimming, amenity) found in BasicFileInfo or OLE2 metadata streams.

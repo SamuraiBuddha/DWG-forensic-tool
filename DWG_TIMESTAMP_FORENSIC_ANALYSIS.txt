@@ -1,0 +1,234 @@
+================================================================================
+DWG TIMESTAMP FORENSIC ANALYSIS REPORT
+================================================================================
+
+EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+
+Analysis Date: 2026-01-30 15:14:46 UTC
+Analyst: DWG Forensic Tool v2.0 (Phase 2)
+Case: English Oaks Naples 2 - DWG Timestamp Authenticity
+
+Files Analyzed: 8
+Successful Extractions: 8
+Files with Backdating Evidence: 0
+Files with Smoking Gun Evidence: 0
+
+VERDICT: Insufficient evidence for pattern determination
+
+================================================================================
+
+METHODOLOGY
+--------------------------------------------------------------------------------
+
+This analysis extracts internal DWG timestamps ($TDCREATE, $TDUPDATE, $TDINDWG)
+from AutoCAD DWG files and cross-correlates with established RVT timeline:
+
+Phase 1 Established Timeline:
+  - RVT files last modified: 2026-01-09 13:08:41-44 UTC
+  - DWG files NTFS created: 2026-01-09 18:08:42-51 UTC
+  - Export window: Approximately 5 hours after RVT modification
+
+Hypothesis Tested:
+  Files were batch-exported from RVT sources at 18:08:42-51 on 2026-01-09.
+  If DWG internal timestamps predate RVT modification (13:08:41),
+  this constitutes DEFINITIVE PROOF of timestamp manipulation.
+
+================================================================================
+
+DETAILED RESULTS
+--------------------------------------------------------------------------------
+
+File: A1.dwg
+Case: 2022
+DWG Version: AC1032
+Extraction Method: TimestampParser
+
+  DWG Internal Timestamps:
+    $TDCREATE:  N/A
+    $TDUPDATE:  N/A
+    $TDINDWG:   0.0000 hours
+
+  NTFS Timestamps:
+    Created:    2026-01-30 14:52:20
+    Modified:   2026-01-09 18:08:44
+
+  Timeline Analysis:
+    Match: No DWG timestamps available
+    Verdict: Inconclusive - Missing data
+    Confidence: 0.0%
+
+--------------------------------------------------------------------------------
+
+File: E-1.dwg
+Case: 2022
+DWG Version: AC1032
+Extraction Method: TimestampParser
+
+  DWG Internal Timestamps:
+    $TDCREATE:  N/A
+    $TDUPDATE:  N/A
+    $TDINDWG:   0.0000 hours
+
+  NTFS Timestamps:
+    Created:    2026-01-30 14:52:27
+    Modified:   2026-01-09 18:08:51
+
+  Timeline Analysis:
+    Match: No DWG timestamps available
+    Verdict: Inconclusive - Missing data
+    Confidence: 0.0%
+
+--------------------------------------------------------------------------------
+
+File: FDN detail.dwg
+Case: 2022
+DWG Version: AC1027
+Extraction Method: TimestampParser
+
+  DWG Internal Timestamps:
+    $TDCREATE:  N/A
+    $TDUPDATE:  N/A
+    $TDINDWG:   0.0000 hours
+
+  NTFS Timestamps:
+    Created:    2026-01-30 14:52:27
+    Modified:   2026-01-09 18:08:51
+
+  Timeline Analysis:
+    Match: No DWG timestamps available
+    Verdict: Inconclusive - Missing data
+    Confidence: 0.0%
+
+--------------------------------------------------------------------------------
+
+File: M-1.dwg
+Case: 2022
+DWG Version: AC1032
+Extraction Method: TimestampParser
+
+  DWG Internal Timestamps:
+    $TDCREATE:  N/A
+    $TDUPDATE:  N/A
+    $TDINDWG:   0.0000 hours
+
+  NTFS Timestamps:
+    Created:    2026-01-30 14:52:27
+    Modified:   2026-01-09 18:08:51
+
+  Timeline Analysis:
+    Match: No DWG timestamps available
+    Verdict: Inconclusive - Missing data
+    Confidence: 0.0%
+
+--------------------------------------------------------------------------------
+
+File: P-1.dwg
+Case: 2022
+DWG Version: AC1032
+Extraction Method: TimestampParser
+
+  DWG Internal Timestamps:
+    $TDCREATE:  N/A
+    $TDUPDATE:  N/A
+    $TDINDWG:   0.0000 hours
+
+  NTFS Timestamps:
+    Created:    2026-01-30 14:52:27
+    Modified:   2026-01-09 18:08:51
+
+  Timeline Analysis:
+    Match: No DWG timestamps available
+    Verdict: Inconclusive - Missing data
+    Confidence: 0.0%
+
+--------------------------------------------------------------------------------
+
+File: print file.dwg
+Case: 2022
+DWG Version: AC1032
+Extraction Method: TimestampParser
+
+  DWG Internal Timestamps:
+    $TDCREATE:  N/A
+    $TDUPDATE:  N/A
+    $TDINDWG:   0.0000 hours
+
+  NTFS Timestamps:
+    Created:    2026-01-30 14:52:27
+    Modified:   2026-01-09 18:08:51
+
+  Timeline Analysis:
+    Match: No DWG timestamps available
+    Verdict: Inconclusive - Missing data
+    Confidence: 0.0%
+
+--------------------------------------------------------------------------------
+
+File: T-1.dwg
+Case: 2022
+DWG Version: AC1032
+Extraction Method: TimestampParser
+
+  DWG Internal Timestamps:
+    $TDCREATE:  N/A
+    $TDUPDATE:  N/A
+    $TDINDWG:   0.0000 hours
+
+  NTFS Timestamps:
+    Created:    2026-01-30 14:52:27
+    Modified:   2026-01-09 18:08:51
+
+  Timeline Analysis:
+    Match: No DWG timestamps available
+    Verdict: Inconclusive - Missing data
+    Confidence: 0.0%
+
+--------------------------------------------------------------------------------
+
+File: TIT48.dwg
+Case: 2022
+DWG Version: AC1032
+Extraction Method: TimestampParser
+
+  DWG Internal Timestamps:
+    $TDCREATE:  N/A
+    $TDUPDATE:  N/A
+    $TDINDWG:   0.0000 hours
+
+  NTFS Timestamps:
+    Created:    2026-01-30 14:52:27
+    Modified:   2026-01-09 18:08:51
+
+  Timeline Analysis:
+    Match: No DWG timestamps available
+    Verdict: Inconclusive - Missing data
+    Confidence: 0.0%
+
+--------------------------------------------------------------------------------
+
+================================================================================
+
+BATCH PATTERN ANALYSIS
+--------------------------------------------------------------------------------
+
+Unique $TDCREATE Timestamps: 0
+Unique $TDUPDATE Timestamps: 0
+Files with Backdating Evidence: 0
+Files with Smoking Gun Evidence: 0
+
+OVERALL VERDICT: Insufficient evidence for pattern determination
+
+================================================================================
+
+EXPERT WITNESS CONCLUSIONS
+--------------------------------------------------------------------------------
+
+This analysis yields inconclusive results.
+
+Insufficient timestamp data was extracted to definitively establish
+manipulation or legitimacy. Additional forensic methods recommended.
+
+================================================================================
+END OF REPORT
+================================================================================

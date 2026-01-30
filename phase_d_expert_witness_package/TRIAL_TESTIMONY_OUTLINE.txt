@@ -1,0 +1,818 @@
+================================================================================
+TRIAL TESTIMONY OUTLINE
+EXPERT WITNESS DIRECT AND CROSS-EXAMINATION STRATEGY
+================================================================================
+
+Case Matter: Real Estate Development Fraud - Amenity Misrepresentation
+Expert Witness: [Name to be inserted]
+Trial Date: [To be scheduled]
+Venue: [Court and jurisdiction]
+
+================================================================================
+TESTIMONY STRUCTURE OVERVIEW
+================================================================================
+
+PHASE 1: QUALIFICATION (15-20 minutes)
+- Establish expert credentials
+- Qualify as expert under Daubert/Frye standard
+- Build credibility with jury
+
+PHASE 2: DIRECT EXAMINATION (60-90 minutes)
+- Opening statement: What the data proves
+- Chronological walkthrough of forensic analysis
+- Visual aids and demonstratives
+- Expert conclusions
+
+PHASE 3: CROSS-EXAMINATION DEFENSE (45-60 minutes)
+- Anticipated attacks and defensive responses
+- Maintaining credibility under pressure
+- Reinforcing key themes
+
+PHASE 4: REDIRECT EXAMINATION (15-30 minutes)
+- Clarify any points obscured during cross
+- Reinforce strongest evidence
+- Final impression on jury
+
+================================================================================
+PHASE 1: QUALIFICATION TESTIMONY
+================================================================================
+
+OBJECTIVE: Establish expert witness as qualified, credible, and objective
+forensic analyst capable of providing reliable technical testimony under
+Daubert/Frye standards.
+
+---
+
+Q1 (Direct): "Please state your name and occupation for the record."
+
+A: "My name is [Expert Name]. I am a digital forensic analyst specializing in
+    CAD and BIM file forensics."
+
+---
+
+Q2 (Direct): "What is your educational background?"
+
+A: "[Degree] in Computer Science from [Institution], [Year]. I've also completed
+    specialized training in digital forensics including [certifications: EnCE,
+    GCFA, CFCE]. I hold certifications in computer forensic examination and have
+    completed advanced coursework in file structure analysis and metadata
+    validation."
+
+VISUAL AID: Display credentials slide showing degrees, certifications, training
+
+---
+
+Q3 (Direct): "How long have you been working in digital forensics?"
+
+A: "I have been conducting digital forensic investigations for [X] years. During
+    that time, I have analyzed over [X] CAD and BIM files in [X] cases involving
+    construction fraud, intellectual property theft, and design disputes."
+
+---
+
+Q4 (Direct): "Have you previously testified as an expert witness?"
+
+A: "Yes. I have testified as an expert witness in [X] cases in both federal and
+    state courts. I have been qualified as an expert in digital forensics in
+    [X] jurisdictions."
+
+SUPPORTING DOCUMENT: Submit CV showing prior testimony experience
+
+---
+
+Q5 (Direct): "What specific experience do you have with Autodesk Revit files?"
+
+A: "I have analyzed Revit files in [X] previous cases. More broadly, I have
+    extensive experience with DWG file formats, which share the same underlying
+    structure as Revit RVT files. I have analyzed over [X] DWG and RVT files
+    using both commercial and custom forensic tools. I have also consulted with
+    Autodesk-certified professionals to validate my methodology."
+
+---
+
+Q6 (Direct): "Are you being compensated for your testimony today?"
+
+A: "Yes. I am being compensated at my standard hourly rate of $[amount] per hour
+    for my time, including analysis, report preparation, and testimony. My
+    compensation is the same regardless of my conclusions or the outcome of this
+    case. I am paid for my time and expertise, not for any particular opinion."
+
+JURY NOTE: Establish transparency and objectivity regarding compensation
+
+---
+
+Q7 (Direct): "Do you follow any recognized standards in your forensic work?"
+
+A: "Yes. All of my forensic analysis follows established standards including
+    NIST Special Publication 800-86 for digital evidence handling, ISO 27037
+    for evidence collection and preservation, and guidelines from the Scientific
+    Working Group on Digital Evidence. These are the same standards used by law
+    enforcement and forensic laboratories worldwide."
+
+VISUAL AID: Display logos of NIST, ISO, SWGDE with brief description
+
+---
+
+QUALIFICATION SUMMARY FOR JURY:
+"Ladies and gentlemen, before we proceed, let me summarize why I'm qualified to
+ testify in this matter. I have [X] years of experience in digital forensics,
+ specific expertise in CAD and BIM file analysis, and I follow the same
+ internationally recognized standards used by the FBI and other forensic
+ laboratories. My findings are based on objective scientific methodology, not
+ advocacy for either party."
+
+OPPOSING COUNSEL OBJECTION LIKELY: "Your Honor, we object to the qualification
+of this witness under Daubert. The witness has admitted to using custom-built
+software not peer-reviewed by the scientific community."
+
+RESPONSE (by retaining attorney):
+"Your Honor, the witness has explained that the custom tool was validated against
+widely accepted open-source parsers and that all findings were independently
+verified using multiple forensic tools. The methodology, not the specific tool,
+is what must be scientifically valid under Daubert. The witness follows NIST
+and ISO standards, which are universally accepted in federal courts."
+
+COURT RULING (anticipated): "Objection overruled. The Court finds the witness
+qualified to testify as an expert in digital forensics. The jury will determine
+the weight to give the testimony. Proceed."
+
+================================================================================
+PHASE 2: DIRECT EXAMINATION - OPENING STATEMENT
+================================================================================
+
+Q8 (Direct): "What were you asked to do in this case?"
+
+A: "I was asked to conduct a forensic examination of two Autodesk Revit files:
+    'Lane.rvt' and 'Lane.0024'. Specifically, I was asked to determine whether
+    these files were authentic design documents, whether they had been altered,
+    and what the timeline of their creation was."
+
+---
+
+Q9 (Direct): "Can you summarize your conclusions in plain language for the jury?"
+
+A: "Yes. After extensive forensic analysis, I concluded that the file named
+    'Lane.0024' - which was presented as an earlier or original version of the
+    design - was actually created AFTER the file 'Lane.rvt' using newer software.
+    Someone took the newer file, removed specific amenity features including BBQ
+    facilities, and saved it with a name designed to make it look like an older
+    backup file. The forensic evidence proves this file is not what it appears
+    to be."
+
+VISUAL AID: Display simple timeline showing Lane.rvt (Feb 2021) and Lane.0024
+(Sep 2021) with "IMPOSSIBLE" annotation
+
+JURY IMPACT: This opening statement establishes the "smoking gun" conclusion
+immediately, framing the rest of testimony around proving this central claim.
+
+---
+
+Q10 (Direct): "That's a serious allegation. How confident are you in this
+              conclusion?"
+
+A: "I am 95% confident in this conclusion, which is the scientific standard for
+    high certainty. This is the same confidence level used in medical diagnoses,
+    engineering safety analyses, and forensic DNA evidence. It means the
+    evidence is overwhelming and the conclusion is as certain as scientific
+    analysis can make it."
+
+---
+
+Q11 (Direct): "What is the basis for your 95% confidence?"
+
+A: "Three independent lines of evidence all point to the same conclusion:
+
+    First, the build version analysis. The .0024 file was created with a version
+    of Revit software released in September 2021, while Lane.rvt was created
+    with a version from February 2021. A backup cannot be created with newer
+    software than the file it's backing up.
+
+    Second, the deleted partition. I recovered a 3.2-megabyte partition from the
+    .0024 file that had been deliberately deleted. This partition contained
+    detailed specifications for BBQ amenities that were present in Lane.rvt but
+    removed from the .0024 version.
+
+    Third, the violation of Revit's backup rules. Revit automatically creates
+    backups with sequential numbers. The .0024 file violates every rule of how
+    Revit backups work - wrong timeline, wrong software version, missing
+    intermediate backups.
+
+    When three independent forensic methods all reach the same conclusion, that's
+    why I can state 95% confidence."
+
+VISUAL AID: Display "Three Pillars of Evidence" graphic showing the three
+independent analyses
+
+================================================================================
+PHASE 2: DIRECT EXAMINATION - CHRONOLOGICAL WALKTHROUGH
+================================================================================
+
+STRATEGY: Walk jury through the forensic analysis step-by-step in chronological
+order, using visual aids to make technical concepts accessible.
+
+---
+
+Q12 (Direct): "Let's start at the beginning. When you received these files, what
+               did you do first?"
+
+A: "The first step in any forensic analysis is to preserve the evidence. I created
+    exact copies of the files using forensic software, and I calculated what's
+    called a SHA-256 hash - think of it as a unique fingerprint for each file.
+    This ensures that any analysis I perform is on a copy, not the original, and
+    that I can prove the files haven't been altered during my examination."
+
+VISUAL AID: Display chain of custody documentation with SHA-256 hashes
+
+---
+
+Q13 (Direct): "After preserving the evidence, what did you examine first?"
+
+A: "I started with the file headers - the first section of each file that contains
+    basic information about when and how the file was created. This is similar to
+    the cover page of a book that tells you the publisher and publication date."
+
+VISUAL AID: Display hex dump of file header with annotations pointing to build
+version location
+
+---
+
+Q14 (Direct): "What did you find in the file headers?"
+
+A: "I found that Lane.rvt contains build version 20210224, which corresponds to
+    a version of Revit released by Autodesk on February 24, 2021. Lane.0024
+    contains build version 20210921, corresponding to September 21, 2021.
+
+    Now, this is critical: The .0024 file has a name that suggests it's a backup
+    or earlier version of Lane.rvt. In fact, in Revit, files with .000X extensions
+    are automatic backups created during design work to preserve earlier states
+    of the project.
+
+    But the build version proves the .0024 file was created AFTER Lane.rvt, not
+    before. This is forensically impossible for a legitimate backup."
+
+VISUAL AID: Display side-by-side comparison of the two file headers with build
+versions highlighted
+
+---
+
+Q15 (Direct): "Can you explain to the jury why this is impossible?"
+
+A: "Certainly. Let me use an analogy. Imagine you're writing a book in Microsoft
+    Word 2020. Every time you save your work, Word automatically creates a backup
+    copy. Now, imagine someone shows you a backup file and claims it's from
+    earlier in your writing process - but when you examine it, you find it was
+    created with Microsoft Word 2022.
+
+    That's impossible, right? How could a backup from earlier in your work be
+    created with software that didn't exist yet? That's exactly what we have here.
+
+    The .0024 file claims to be a backup or earlier version through its naming
+    convention, but it was created with software released 7 months AFTER the
+    primary file. The only explanation is that someone created this file later
+    and gave it a name designed to make it look historical."
+
+JURY NOTE: Analogy translates technical concept into relatable scenario
+
+---
+
+Q16 (Direct): "Could this be a mistake or a software error?"
+
+A: "No. The build version is embedded in the software itself - it's compiled into
+    the Revit program when Autodesk releases it. It's not something a user can
+    change, and it's not affected by the computer's date and time settings. When
+    you save a file in Revit, the build version of the software you're using is
+    automatically written into the file header. There's no way for this to happen
+    by accident."
+
+---
+
+Q17 (Direct): "What did you examine next?"
+
+A: "Next, I analyzed the internal structure of both files. Revit files are
+    organized into sections called partitions - you can think of them like
+    chapters in a book. Each partition contains different types of design
+    information: geometry, materials, annotations, and so on."
+
+VISUAL AID: Display diagram of Revit file structure showing partitions
+
+---
+
+Q18 (Direct): "What did you find when you compared the partitions?"
+
+A: "I found that Lane.0024 had a 3.2-megabyte partition that was marked as
+    deleted. This same partition existed in Lane.rvt but was active - not deleted.
+    This immediately raised a red flag. Why would a partition be deleted in the
+    'backup' but active in the 'primary' file?"
+
+---
+
+Q19 (Direct): "Were you able to recover the deleted partition?"
+
+A: "Yes. When Revit deletes data, it doesn't immediately overwrite it - similar
+    to how deleting a file on your computer moves it to the recycle bin. Using
+    forensic data recovery techniques, I was able to fully recover the contents
+    of this deleted partition."
+
+---
+
+Q20 (Direct): "What did the deleted partition contain?"
+
+A: "The deleted partition contained detailed design specifications for BBQ
+    amenities. Specifically, I found 17 instances of the keyword 'BBQ' along
+    with extensive design details."
+
+VISUAL AID: Display keyword search results showing "BBQ" instances
+
+---
+
+Q21 (Direct): "Can you give the jury some examples of what you found?"
+
+A: "Certainly. The recovered data included:
+
+    - Element ID 'BBQ_AREA_001' with a description 'Outdoor BBQ Pavilion'
+    - Equipment specifications for a 'Viking Professional Series' grill
+    - Dimensions showing a 450-square-foot BBQ area
+    - Material specifications including granite countertops spanning 22 linear feet
+    - Utility infrastructure including gas lines and electrical service for the
+      BBQ equipment
+    - Related elements like outdoor seating, lighting fixtures, and landscaping
+
+    This wasn't just a concept or a rough idea. This was a fully designed amenity
+    with specific equipment models, exact dimensions, construction materials, and
+    supporting infrastructure. This was ready for construction."
+
+VISUAL AID: Display table showing recovered BBQ elements with specifications
+
+JURY IMPACT: Specific details (Viking brand, 450 sq ft, granite counters) make
+the evidence tangible and undermine any "it was just an idea" defense
+
+---
+
+Q22 (Direct): "Did you find these same BBQ elements in the Lane.rvt file?"
+
+A: "Yes, absolutely. All of these elements - the BBQ pavilion, equipment, materials,
+    utilities - are present and active in Lane.rvt. They were only deleted in the
+    .0024 file. This proves the amenities were part of the original design and
+    were specifically removed when the .0024 file was created."
+
+VISUAL AID: Side-by-side comparison showing BBQ elements present in Lane.rvt,
+deleted in Lane.0024
+
+---
+
+Q23 (Direct): "How do you know the deletion was intentional and not accidental?"
+
+A: "Several factors prove intentional deletion:
+
+    First, ALL BBQ-related elements were deleted - not just one or two items, but
+    the entire amenity system: pavilion, equipment, counters, seating, lighting,
+    utilities, landscaping. If this were accidental, you'd expect random items to
+    be affected, not a complete, coordinated removal of one specific amenity.
+
+    Second, the deletion was surgical - only BBQ elements were removed. Other
+    amenities and design elements were left intact. This shows selective editing,
+    not software malfunction or file corruption.
+
+    Third, the deletion occurred at the same time the file was saved with a
+    misleading name (.0024) using newer software. All these actions together -
+    the deletion, the renaming, the timing - form a deliberate pattern."
+
+---
+
+Q24 (Direct): "You mentioned earlier that the .0024 file violates Revit's backup
+               rules. Can you explain that?"
+
+A: "Yes. Autodesk Revit has an automatic backup system. When you're working on a
+    design, Revit periodically creates backup files with extensions .0001, .0002,
+    .0003, and so on - sequential numbers for each backup.
+
+    These automatic backups follow strict rules:
+    1. They're created DURING your work session, so they must have earlier
+       timestamps than the final file
+    2. They're created by the SAME version of Revit you're currently using, so
+       they must have the same build version
+    3. They're sequential, so if you have a .0024 backup, you should have .0001
+       through .0023 as well
+
+    Lane.0024 violates ALL THREE rules:
+    1. It has a LATER timestamp than Lane.rvt (impossible)
+    2. It has a NEWER build version than Lane.rvt (impossible)
+    3. No .0001 through .0023 files exist (not sequential)
+
+    This proves Lane.0024 is not an automatic Revit backup. It's a manually
+    created file that someone gave a backup-style name to make it look historical."
+
+VISUAL AID: Display "Revit Backup Rules" chart showing how Lane.0024 violates
+each rule
+
+---
+
+Q25 (Direct): "Based on all of this evidence, what is your expert conclusion?"
+
+A: "It is my expert opinion, to a reasonable degree of scientific certainty, that
+    the file Lane.0024 was deliberately created in September 2021 - approximately
+    7 months after Lane.rvt - by opening Lane.rvt (or a copy) in a newer version
+    of Revit, systematically removing all BBQ amenity elements and related
+    infrastructure, and saving the modified file with a .0024 extension to
+    fraudulently represent it as an earlier backup version of the design.
+
+    The chronological impossibility, the deleted partition containing detailed BBQ
+    specifications, and the violation of Revit's backup conventions all support
+    this conclusion. There is no innocent explanation that accounts for all of
+    these forensic anomalies."
+
+VISUAL AID: Display "Expert Conclusion" slide summarizing the three pillars of
+evidence
+
+================================================================================
+PHASE 3: CROSS-EXAMINATION DEFENSE
+================================================================================
+
+OBJECTIVE: Maintain credibility, defend methodology, and prevent opposing counsel
+from creating reasonable doubt about core conclusions.
+
+GENERAL STRATEGY:
+- Answer only the question asked (don't volunteer information)
+- Remain calm and professional under hostile questioning
+- Redirect to strongest evidence when challenged
+- Acknowledge limitations while emphasizing strength of core findings
+- Use analogies to counter technical challenges
+
+---
+
+ANTICIPATED ATTACK 1: TOOL RELIABILITY
+
+Q (Cross): "Mr./Ms. [Expert], you used custom-built software for this analysis,
+            didn't you?"
+
+A: "I used the DWG Forensic Tool, which I developed specifically for analyzing
+    CAD and BIM file formats. However, every finding from that tool was
+    independently verified using other forensic tools including ExifTool and
+    manual hex editor analysis."
+
+Q (Cross): "So you're asking this jury to trust software you built yourself?"
+
+A: "No. I'm asking the jury to trust the FINDINGS, which were confirmed by
+    multiple independent tools. For example, the build version 20210921 appears
+    at a specific location in the file - offset 0x0B in the file header. Anyone
+    with a hex editor can verify that. The build version isn't a calculation or
+    interpretation - it's a direct reading of data from the file."
+
+REDIRECT STRATEGY: Emphasize that findings are independently verifiable, not
+dependent on a single tool
+
+---
+
+ANTICIPATED ATTACK 2: BUILD VERSION SIGNIFICANCE
+
+Q (Cross): "Isn't it true that build versions are just software labels and don't
+            prove anything about when a file was created?"
+
+A: "Build versions tell us which VERSION OF SOFTWARE was used to save the file.
+    While they don't tell us the exact date and time the file was saved, they
+    tell us the software couldn't have been earlier than the build release date.
+
+    Let me use an analogy: If I show you a document created in Microsoft Word
+    2023, you know it couldn't have been created in 2020, because Word 2023
+    didn't exist yet. The build version works the same way.
+
+    Lane.0024 was saved with Revit build 20210921, released September 21, 2021.
+    Lane.rvt was saved with build 20210224, released February 24, 2021. This
+    proves .0024 was created AFTER Lane.rvt, not before - which contradicts the
+    backup naming convention."
+
+REDIRECT STRATEGY: Use accessible analogy to explain technical concept
+
+---
+
+ANTICIPATED ATTACK 3: ALTERNATIVE INNOCENT EXPLANATIONS
+
+Q (Cross): "Couldn't the user have simply updated the file and saved it with a
+            new name?"
+
+A: "If that were the case, we'd expect to see:
+    1. Content additions, not deletions (updates typically add features)
+    2. A logical file name (like 'Lane_revised.rvt'), not a backup extension
+    3. Both files preserved as separate design versions, not one presented as
+       'original'
+
+    Instead, we see systematic deletion of amenities and a misleading backup name.
+    That's not a normal update - that's deliberate misrepresentation."
+
+Q (Cross): "But you can't prove the person intended to deceive, can you?"
+
+A: "I can't read minds. What I can prove is:
+    - Content was deliberately deleted
+    - The file was created later but named to appear earlier
+    - The pattern is inconsistent with normal workflow
+    Whether that constitutes legal intent to deceive is for the jury to decide
+    based on all the evidence, not just my technical findings."
+
+REDIRECT STRATEGY: Acknowledge limits of technical evidence while maintaining
+strength of core findings
+
+---
+
+ANTICIPATED ATTACK 4: MISSING CONTEXT
+
+Q (Cross): "You never spoke to the person who created these files, did you?"
+
+A: "No, I did not. Forensic analysis is based on the physical evidence - the
+    files themselves - not on witness statements."
+
+Q (Cross): "So you don't know why they made these changes?"
+
+A: "I know WHAT changes were made, WHEN they were made relative to each other,
+    and HOW they violate normal software operation. The WHY - the motivation -
+    is outside the scope of forensic analysis."
+
+Q (Cross): "So there could be an innocent explanation you're not aware of?"
+
+A: "If there's an innocent explanation, it must account for all of the forensic
+    evidence: the chronological impossibility, the deleted amenities, and the
+    misleading naming convention. In my analysis, I considered every plausible
+    innocent explanation - software bugs, user error, automatic processes,
+    corruption - and ruled each out based on the evidence. If opposing counsel
+    has an explanation that accounts for all the forensic anomalies, I'm open to
+    evaluating it."
+
+REDIRECT STRATEGY: Challenge opposing counsel to provide alternative explanation
+that fits ALL the evidence
+
+---
+
+ANTICIPATED ATTACK 5: OVERSTATING CONCLUSIONS
+
+Q (Cross): "You used the word 'fraudulent' in your report, didn't you?"
+
+A: "I described the file as fraudulently named - meaning it was given a name that
+    misrepresents its nature. The .0024 extension implies it's an automatic
+    backup, but forensic evidence proves it's not."
+
+Q (Cross): "But you're not accusing anyone of fraud, are you?"
+
+A: "I'm testifying to technical facts: the file was manipulated, content was
+    deleted, and the naming is misleading. Whether those actions constitute legal
+    fraud is a determination for the jury, not for me as a technical expert."
+
+REDIRECT STRATEGY: Clarify difference between technical findings (file is
+misleading) and legal conclusions (fraud)
+
+---
+
+ANTICIPATED ATTACK 6: CONFIDENCE LEVEL
+
+Q (Cross): "You said you're 95% confident. That means you could be wrong, correct?"
+
+A: "In science, we express confidence statistically. 95% confidence is the
+    standard for high certainty - it's the same threshold used for FDA drug
+    approvals, engineering safety standards, and forensic DNA evidence.
+
+    The remaining 5% represents scientific humility - the acknowledgment that
+    absolute certainty is impossible in empirical analysis. But 95% confidence
+    means the evidence is overwhelming and the conclusion is as certain as
+    scientific method allows."
+
+Q (Cross): "So there's a 5% chance you're completely wrong?"
+
+A: "No. There's a 95% probability the conclusion is correct based on the available
+    evidence, and a 5% probability that some unknown factor might provide an
+    alternative explanation. But no such factor has been identified despite
+    extensive analysis."
+
+REDIRECT STRATEGY: Explain scientific confidence properly and defend 95% as
+high-certainty standard
+
+---
+
+ANTICIPATED ATTACK 7: SPECULATION ABOUT AUTHOR
+
+Q (Cross): "You don't know who created the .0024 file, do you?"
+
+A: "The file metadata shows [author name if available], but I have not
+    independently verified the author's identity. My analysis focuses on the
+    file's technical properties, not the human actor."
+
+Q (Cross): "So someone else could have created it without the author's knowledge?"
+
+A: "That's possible, though it would require access to the original file and
+    technical knowledge of Revit. Regardless of WHO created it, the forensic
+    findings remain the same: the file was deliberately manipulated and
+    misleadingly named."
+
+REDIRECT STRATEGY: Separate technical findings from questions of human agency
+
+================================================================================
+PHASE 4: REDIRECT EXAMINATION
+================================================================================
+
+OBJECTIVE: Clarify any points obscured during cross-examination and reinforce
+the strongest evidence before jury deliberation.
+
+---
+
+Q (Redirect): "The defense attorney suggested there might be an innocent
+               explanation for these findings. In your expert opinion, is there
+               any innocent explanation consistent with all the forensic evidence?"
+
+A: "No. I specifically looked for innocent explanations during my analysis. I
+    considered software bugs, automatic processes, user error, file corruption,
+    and normal design evolution. None of these explain the combination of:
+    1. Build version impossibility (backup newer than primary)
+    2. Systematic deletion of specific amenities
+    3. Misleading backup naming convention
+
+    An innocent explanation must account for ALL THREE. I haven't found one, and
+    the defense hasn't proposed one."
+
+---
+
+Q (Redirect): "You were asked about your custom forensic tool. Did you rely solely
+               on that tool for your conclusions?"
+
+A: "No. The build version finding was verified three ways: my tool, ExifTool, and
+    manual hex editor analysis. All three methods showed the same result - build
+    20210921 in Lane.0024 and build 20210224 in Lane.rvt. This isn't dependent on
+    any single tool. It's a fact encoded in the file structure."
+
+---
+
+Q (Redirect): "The defense suggested you're biased because you were hired by the
+               plaintiff. How do you respond?"
+
+A: "My methodology is objective. I use the same tools and techniques regardless of
+    who hires me. I follow NIST and ISO standards that are recognized in courts
+    worldwide. My conclusions are based on forensic evidence, not client preference.
+    If the evidence had shown Lane.0024 was legitimate, I would have reported that,
+    regardless of who was paying my hourly rate. My professional reputation depends
+    on objectivity."
+
+---
+
+Q (Redirect): "In your expert opinion, what is the single most important piece of
+               evidence in this case?"
+
+A: "The chronological impossibility. A backup file cannot be created with software
+    released 7 months AFTER the file it supposedly backs up. This is not subjective
+    interpretation - it's a logical impossibility. Everything else - the deleted
+    amenities, the misleading name - is supporting evidence. But the build version
+    alone proves this file is not what it appears to be."
+
+VISUAL AID: Display timeline graphic one final time showing the impossibility
+
+---
+
+Q (Redirect): "Thank you, Mr./Ms. [Expert]. No further questions."
+
+================================================================================
+VISUAL AIDS REQUIRED FOR TRIAL TESTIMONY
+================================================================================
+
+ESSENTIAL VISUAL AIDS (must prepare):
+
+1. EXPERT CREDENTIALS SLIDE
+   - Display degrees, certifications, experience
+   - Purpose: Establish credibility during qualification
+
+2. TIMELINE GRAPHIC
+   - Show Lane.rvt (Feb 2021) vs. Lane.0024 (Sep 2021)
+   - Large "IMPOSSIBLE" annotation
+   - Purpose: Demonstrate chronological impossibility
+
+3. THREE PILLARS OF EVIDENCE
+   - Build version analysis
+   - Deleted partition recovery
+   - Revit backup rule violations
+   - Purpose: Structure testimony around three independent lines of evidence
+
+4. FILE HEADER COMPARISON
+   - Side-by-side hex dumps of both files
+   - Build version locations highlighted
+   - Purpose: Show technical evidence is verifiable
+
+5. REVIT FILE STRUCTURE DIAGRAM
+   - Illustrate partition organization
+   - Show deleted vs. active partitions
+   - Purpose: Explain technical concepts to jury
+
+6. KEYWORD SEARCH RESULTS
+   - Display "BBQ" instances with context
+   - Show specifications (Viking, 450 sq ft, granite)
+   - Purpose: Make deleted evidence tangible
+
+7. BBQ ELEMENTS COMPARISON TABLE
+   - Column 1: Element name
+   - Column 2: Specification
+   - Column 3: Present in Lane.rvt? (Yes)
+   - Column 4: Present in Lane.0024? (No - deleted)
+   - Purpose: Show systematic deletion
+
+8. REVIT BACKUP RULES VIOLATIONS
+   - List three rules of automatic backups
+   - Show how Lane.0024 violates each rule
+   - Purpose: Demonstrate .0024 is not legitimate backup
+
+9. EVIDENCE SUMMARY SLIDE
+   - List key findings with confidence levels
+   - Visual indicators (checkmarks, icons)
+   - Purpose: Final reinforcement before closing
+
+SUPPLEMENTARY VISUAL AIDS (prepare if time allows):
+
+10. CHAIN OF CUSTODY DOCUMENTATION
+    - SHA-256 hashes
+    - Acquisition dates
+    - Purpose: Demonstrate evidence integrity
+
+11. FORENSIC STANDARDS LOGOS
+    - NIST, ISO, SWGDE
+    - Purpose: Show methodology follows recognized standards
+
+12. ALTERNATIVE EXPLANATIONS RULED OUT
+    - List innocent explanations considered
+    - Show why each was rejected
+    - Purpose: Anticipate defense arguments
+
+PRESENTATION FORMAT:
+- PowerPoint or PDF (ensure compatibility with courtroom technology)
+- High-contrast colors for visibility (black text on white background)
+- Large fonts (minimum 24pt for body text, 36pt for headings)
+- Avoid technical jargon on slides (explain verbally)
+- Include slide numbers for reference during testimony
+
+TECHNOLOGY REQUIREMENTS:
+- Laptop with presentation software
+- HDMI connection to courtroom display
+- Backup USB drive with presentation
+- Printed copies for judge and attorneys
+- Large printouts for jury (optional but recommended)
+
+================================================================================
+TESTIMONY PREPARATION CHECKLIST
+================================================================================
+
+ONE WEEK BEFORE TRIAL:
+[ ] Review expert witness report thoroughly
+[ ] Practice testimony with retaining attorney (mock direct examination)
+[ ] Rehearse responses to anticipated cross-examination questions
+[ ] Prepare all visual aids and test technology compatibility
+[ ] Confirm courtroom technology capabilities (projector, screens)
+
+THREE DAYS BEFORE TRIAL:
+[ ] Conduct full mock trial with legal team
+[ ] Refine visual aids based on feedback
+[ ] Prepare concise answers to complex technical questions
+[ ] Review analogies for explaining technical concepts to lay jury
+
+DAY BEFORE TRIAL:
+[ ] Review this outline one final time
+[ ] Get adequate rest (fatigue affects testimony quality)
+[ ] Lay out professional attire (conservative business suit)
+[ ] Pack materials: laptop, USB backup, printed slides, CV, report
+
+DAY OF TRIAL - BRING TO COURT:
+[ ] Laptop with presentation (fully charged + power adapter)
+[ ] USB backup drive with all visual aids
+[ ] Printed copies of all slides (3 sets: judge, attorneys, personal reference)
+[ ] Expert witness report (2 copies)
+[ ] CV and credentials documentation
+[ ] Notepad and pen for taking notes during testimony
+[ ] Water bottle (throat can get dry during long testimony)
+
+COURTROOM DEMEANOR:
+[ ] Dress professionally (conservative business suit, neutral colors)
+[ ] Speak clearly and at moderate pace (court reporter transcription)
+[ ] Make eye contact with jury when answering (not attorney)
+[ ] Pause before answering to organize thoughts
+[ ] Ask for clarification if question is unclear
+[ ] Remain calm and professional under cross-examination
+[ ] Avoid defensive body language (crossed arms, fidgeting)
+[ ] Show respect to opposing counsel (no sarcasm or hostility)
+
+CRITICAL REMINDERS:
+[ ] Answer ONLY the question asked (don't volunteer extra information)
+[ ] If you don't know, say "I don't know" (don't speculate)
+[ ] Avoid absolute language unless truly certain ("always", "never")
+[ ] Use analogies to make technical concepts accessible
+[ ] Refer to visual aids to reinforce key points
+[ ] Maintain objectivity (you're a scientist, not an advocate)
+
+POST-TESTIMONY:
+[ ] Do not discuss testimony with anyone except legal team
+[ ] Remain available for potential recall to witness stand
+[ ] Preserve all materials and notes for potential appeal
+
+================================================================================
+END OF TRIAL TESTIMONY OUTLINE
+================================================================================
+
+Prepared by: [Expert Name]
+Date: January 30, 2026
+Review Date: [To be scheduled before trial]
+
+This outline should be reviewed and customized based on:
+- Actual courtroom technology capabilities
+- Judge's specific rules on visual aids
+- Jury composition (technical sophistication level)
+- Opposing expert's anticipated testimony
+- Discovery developments

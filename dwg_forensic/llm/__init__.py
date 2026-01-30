@@ -13,12 +13,18 @@ Phase 4.2: Anomaly Filtering Integration
 - Heuristic filter fallback for when LLM is unavailable
 - LLM prompts for forensic reasoning
 
+Phase 4.4: Batch LLM Optimization
+- BatchLLMProcessor: Efficient batch processing with risk-based sampling
+- Async inference pooling for 100+ file batches
+- Risk-based file filtering to optimize performance
+
 The ForensicReasoner is the key innovation - it uses the LLM to REASON about
 evidence rather than just running algorithms. This allows it to:
 1. Filter red herrings like TrustedDWG watermark absence
 2. Identify true smoking guns through logical reasoning
 3. Provide expert-level analysis that understands context
 4. (Phase 4.2) Filter anomalies based on provenance context
+5. (Phase 4.4) Process large batches efficiently (<60s for 100 files)
 """
 
 from dwg_forensic.llm.ollama_client import OllamaClient
@@ -34,6 +40,12 @@ from dwg_forensic.llm.anomaly_models import (
     SmokingGunRule,
 )
 from dwg_forensic.llm.heuristic_filter import HeuristicAnomalyFilter
+# Phase 4.4 exports
+from dwg_forensic.llm.batch_processor import (
+    BatchLLMProcessor,
+    BatchLLMResult,
+    process_batch_llm,
+)
 
 __all__ = [
     "OllamaClient",
@@ -49,4 +61,8 @@ __all__ = [
     "FilteredAnomalies",
     "SmokingGunRule",
     "HeuristicAnomalyFilter",
+    # Phase 4.4
+    "BatchLLMProcessor",
+    "BatchLLMResult",
+    "process_batch_llm",
 ]

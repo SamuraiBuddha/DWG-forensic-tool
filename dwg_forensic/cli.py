@@ -1192,8 +1192,11 @@ def compare(file1: str, file2: str, output_report: str, output_format: str, case
 @click.option("--parallel", type=int, help="Number of parallel workers (default: auto-detect CPU count)")
 @click.option("-f", "--format", "output_format", type=click.Choice(["table", "json"]), default="table")
 @click.option("-v", "--verbose", count=True, help="Verbosity level")
+@click.option("--with-llm", is_flag=True, help="Enable LLM narrative generation (requires Ollama)")
+@click.option("--llm-model", default="mistral", help="Ollama model for LLM narration (default: mistral)")
+@click.option("--risk-threshold", type=float, default=0.3, help="Minimum risk score for LLM processing (default: 0.3)")
 def batch(directory: str, recursive: bool, output_dir: str, baseline: str, generate_deltas: bool,
-          parallel: int, output_format: str, verbose: int):
+          parallel: int, output_format: str, verbose: int, with_llm: bool, llm_model: str, risk_threshold: float):
     """Batch analyze multiple DWG files in a directory.
 
     DIRECTORY is the path to the directory containing DWG files.
@@ -1220,7 +1223,10 @@ def batch(directory: str, recursive: bool, output_dir: str, baseline: str, gener
         f"Recursive: {'Yes' if recursive else 'No'}\n"
         f"Baseline: {Path(baseline).name if baseline else 'None'}\n"
         f"Generate Deltas: {'Yes' if generate_deltas else 'No'}\n"
-        f"Workers: {parallel if parallel else 'Auto'}",
+        f"Workers: {parallel if parallel else 'Auto'}\n"
+        f"LLM Enabled: {'Yes' if with_llm else 'No'}\n"
+        f"LLM Model: {llm_model if with_llm else 'N/A'}\n"
+        f"Risk Threshold: {risk_threshold if with_llm else 'N/A'}",
         style="blue"
     ))
 
@@ -1243,6 +1249,9 @@ def batch(directory: str, recursive: bool, output_dir: str, baseline: str, gener
             directory=dir_path,
             output_dir=Path(output_dir) if output_dir else None,
             recursive=recursive,
+            with_llm=with_llm,
+            llm_model=llm_model,
+            risk_threshold=risk_threshold,
         )
 
         # Phase 3.3: Generate comparison reports vs baseline
@@ -1300,6 +1309,36 @@ def batch(directory: str, recursive: bool, output_dir: str, baseline: str, gener
                     logger.warning(f"Failed to generate comparison report for {analysis.file_info.filename}: {e}")
 
             print_status("[OK]", f"Generated {delta_count} comparison reports in {output_dir_path}")
+
+        # Phase 4.4: Generate batch report if output directory specified
+        if output_dir and result.successful > 0:
+            from dwg_forensic.output.batch_report import generate_batch_report, export_batch_json
+
+            output_dir_path = Path(output_dir)
+            output_dir_path.mkdir(parents=True, exist_ok=True)
+
+            # Generate PDF report
+            pdf_path = output_dir_path / "batch_summary.pdf"
+            print_status("[INFO]", f"Generating batch report: {pdf_path}")
+            try:
+                generate_batch_report(
+                    batch_result=result,
+                    output_path=pdf_path,
+                )
+                print_status("[OK]", f"Batch PDF report generated: {pdf_path}")
+            except Exception as e:
+                print_status("[WARN]", f"Failed to generate PDF report: {e}")
+
+            # Generate JSON export
+            json_path = output_dir_path / "batch_summary.json"
+            try:
+                export_batch_json(
+                    batch_result=result,
+                    output_path=json_path,
+                )
+                print_status("[OK]", f"Batch JSON export generated: {json_path}")
+            except Exception as e:
+                print_status("[WARN]", f"Failed to generate JSON export: {e}")
 
         # Display results
         console.print()

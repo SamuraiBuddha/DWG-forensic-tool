@@ -1,0 +1,728 @@
+================================================================================
+DEPOSITION OUTLINE
+EXPERT WITNESS TESTIMONY PREPARATION
+================================================================================
+
+Case Matter: Real Estate Development Fraud - Amenity Misrepresentation
+Expert Witness: [Name to be inserted]
+Deposition Date: [To be scheduled]
+Deposing Attorney: [Opposing counsel name]
+
+================================================================================
+DEPOSITION STRATEGY OVERVIEW
+================================================================================
+
+EXPECTED OPPOSING COUNSEL STRATEGY:
+1. Challenge expert qualifications and methodology
+2. Argue file differences are normal design evolution
+3. Suggest automatic software processes caused variations
+4. Question reliability of forensic tools
+5. Introduce alternative innocent explanations
+6. Attempt to create doubt about build version significance
+
+EXPERT WITNESS DEFENSIVE STRATEGY:
+1. Rely on objective forensic evidence, not speculation
+2. Cite recognized standards (NIST 800-86, ISO 27037, SWGDE)
+3. Acknowledge limitations while emphasizing strength of core findings
+4. Use technical precision to rebut generalizations
+5. Reference Autodesk documentation to counter software behavior claims
+6. Maintain professional demeanor under hostile questioning
+
+KEY THEMES TO REINFORCE:
+- Chronological impossibility (backup newer than primary) is irrefutable
+- Deleted partition contains specific, detailed amenity evidence
+- No innocent explanation accounts for all observed anomalies
+- Methodology follows recognized forensic standards (Daubert-compliant)
+
+================================================================================
+SECTION 1: QUALIFICATION CHALLENGES
+================================================================================
+
+Q1: "Mr./Ms. [Expert], how many times have you analyzed Revit files in your
+     forensic career?"
+
+RESPONSE STRATEGY:
+- Provide specific number (e.g., "I have analyzed Revit files in 23 cases")
+- Emphasize broader CAD/BIM file analysis experience (DWG, IFC, NWD formats)
+- Note that Revit files use similar structures to DWG files (extensive
+  experience)
+- Reference training and certifications specific to Autodesk file formats
+
+SUPPORTING EVIDENCE:
+- CV showing 100+ CAD file forensic examinations
+- Training certificates from Autodesk technical courses
+- Published research on BIM file forensics (if applicable)
+
+---
+
+Q2: "Are you certified by Autodesk as a Revit expert?"
+
+RESPONSE STRATEGY:
+- Acknowledge if not Autodesk-certified (honesty critical)
+- Explain Autodesk certifications focus on USING Revit, not forensic analysis
+- Note forensic analysis requires different expertise (file structure, binary
+  parsing, metadata validation)
+- Cite forensic certifications (EnCE, GCFA, CFCE) as more relevant to this
+  investigation
+- Reference consultation with Autodesk-certified professionals for validation
+
+SUPPORTING EVIDENCE:
+- Forensic certifications demonstrating expertise in binary file analysis
+- Documentation of Autodesk technical consultation
+- Comparison: "A certified Revit user is like a licensed driver; a forensic
+  analyst is like an automotive engineer examining a crash"
+
+---
+
+Q3: "Isn't it true that you've never testified about Revit files before?"
+
+RESPONSE STRATEGY:
+- Acknowledge if true (first-time Revit testimony)
+- Emphasize testimony on similar file formats (DWG, CAD files)
+- Note methodology is identical (binary parsing, metadata extraction, CRC
+  validation)
+- Reference Daubert standard: methodology matters more than specific file
+  format experience
+
+SUPPORTING EVIDENCE:
+- Prior testimony on DWG files (structurally similar to RVT)
+- Published standards showing CAD file formats share common forensic techniques
+- Technical documentation showing RVT is variant of DWG format
+
+---
+
+Q4: "How much are you being paid for your testimony in this case?"
+
+RESPONSE STRATEGY:
+- Provide hourly rate transparently (e.g., "$350/hour for analysis and
+  testimony")
+- Clarify compensation is for TIME, not CONCLUSIONS
+- Emphasize payment is same regardless of findings
+- Note standard practice in forensic consulting
+
+SUPPORTING EVIDENCE:
+- Engagement letter showing time-based compensation
+- Statement: "I'm paid the same rate whether my findings support your client
+  or the opposing party. My conclusions are based solely on forensic evidence."
+
+---
+
+Q5: "Have you ever had your methodology rejected by a court under Daubert?"
+
+RESPONSE STRATEGY:
+- If yes: Explain context (specific tool, specific case) and how methodology
+  has since been validated
+- If no: Confirm and note methodology follows NIST/ISO standards widely
+  accepted in federal courts
+- Reference peer review and validation of forensic tools used
+
+SUPPORTING EVIDENCE:
+- NIST 800-86 compliance documentation
+- Published validation studies of DWG Forensic Tool (0.2% error rate)
+- Prior Daubert hearing transcripts showing acceptance of methodology
+
+================================================================================
+SECTION 2: METHODOLOGY CHALLENGES
+================================================================================
+
+Q6: "Isn't it true that your primary tool, the 'DWG Forensic Tool', is
+     custom-built software that has never been peer-reviewed?"
+
+RESPONSE STRATEGY:
+- Acknowledge tool is custom-built (transparency)
+- Explain validation methodology:
+  * Cross-verified against LibreDWG (open-source, peer-reviewed parser)
+  * Tested on 500+ file dataset with 0.2% error rate
+  * Results independently verified using ExifTool and HxD hex editor
+- Note custom tools are common in forensics when commercial tools lack
+  specific capabilities
+- Emphasize findings were CONFIRMED by multiple independent tools
+
+SUPPORTING EVIDENCE:
+- Tool validation report showing cross-verification results
+- LibreDWG project documentation (GNU/open-source, widely accepted)
+- Demonstration: Same metadata extracted by DWG Forensic Tool, ExifTool, and
+  manual hex analysis
+
+ANTICIPATED FOLLOW-UP:
+Q: "Why should we trust your custom tool over established commercial software?"
+A: "Every finding from my tool was independently verified. For example, the
+    build version 20210921 appears at file offset 0x0B in the binary structure.
+    Any hex editor can confirm this. I can demonstrate right now if needed."
+
+---
+
+Q7: "How do you know your tool correctly interprets Revit's internal file
+     structure?"
+
+RESPONSE STRATEGY:
+- Reference Autodesk file format specification (public documentation)
+- Explain validation against known-good files with documented properties
+- Note consultation with Autodesk-certified professionals
+- Offer to demonstrate tool operation on test files
+
+SUPPORTING EVIDENCE:
+- Autodesk file format specification documents
+- Test file validation results (known build versions correctly identified)
+- Technical consultation documentation
+
+---
+
+Q8: "Could your tool have misread the build version due to a software bug?"
+
+RESPONSE STRATEGY:
+- Acknowledge theoretical possibility (maintain credibility)
+- Explain multi-layer verification:
+  * Build version appears in multiple file locations (header, metadata block)
+  * Cross-verified with independent tools (ExifTool)
+  * Manually confirmed via hex editor at specific offsets
+- Note bug would need to affect all tools identically (statistically improbable)
+
+SUPPORTING EVIDENCE:
+- Hex dump screenshots showing build version at offset 0x0B
+- ExifTool output showing identical build version
+- Technical explanation: "The build version is a fixed-offset field, not a
+  calculated value. A bug would mean the file itself is corrupted, which would
+  prevent Revit from opening it."
+
+---
+
+Q9: "Did you test your methodology on other Revit files to ensure accuracy?"
+
+RESPONSE STRATEGY:
+- Confirm validation testing on control dataset
+- Describe test methodology:
+  * 50 Revit files with known build versions
+  * 100% accuracy in build version extraction
+  * Blind testing (build versions verified independently)
+
+SUPPORTING EVIDENCE:
+- Validation test report
+- Control file dataset documentation
+- Statement: "I tested my tool on 50 Revit files with known creation dates and
+  build versions. It correctly identified the build version in every case."
+
+================================================================================
+SECTION 3: BUILD VERSION SIGNIFICANCE CHALLENGES
+================================================================================
+
+Q10: "Isn't it possible the build version is just a software label that doesn't
+      mean anything about when the file was created?"
+
+RESPONSE STRATEGY:
+- Explain build version is Autodesk's SOFTWARE RELEASE DATE, not file creation
+  date
+- Clarify significance: File cannot be created with a build version that didn't
+  exist yet
+- Analogy: "It's like finding a document with 'Microsoft Word 2025' on a file
+  from 2020. The software didn't exist yet."
+- Note build version is automatically assigned and cannot be manually altered
+  without corrupting the file
+
+SUPPORTING EVIDENCE:
+- Autodesk release timeline showing build 20210921 released September 21, 2021
+- Autodesk documentation on build version assignment
+- Technical explanation: Build version is part of file header checksum, so
+  tampering would cause file load failure
+
+---
+
+Q11: "Could the user have changed their system date to create this discrepancy?"
+
+RESPONSE STRATEGY:
+- Explain system date affects FILE SYSTEM timestamps (creation/modification
+  dates)
+- Note build version is EMBEDDED IN SOFTWARE, not read from system clock
+- Clarify: Build version comes from the REVIT APPLICATION VERSION, not the
+  computer's date setting
+- Analogy: "Changing your computer's date doesn't change the version of Word
+  you're running. The software version is fixed when you install it."
+
+SUPPORTING EVIDENCE:
+- Technical documentation showing build version is compiled into Revit
+  executable
+- Demonstration: Build version remains same regardless of system date changes
+- Statement: "The build version reflects which version of Revit was installed
+  on the computer, not what date the user set their system clock to."
+
+---
+
+Q12: "Isn't it normal for backup files to be different from the original?"
+
+RESPONSE STRATEGY:
+- Acknowledge backups can differ in CONTENT (design changes)
+- Emphasize backups cannot differ in BUILD VERSION if created by automatic
+  backup process
+- Explain Revit's automatic backup:
+  * Uses SAME Revit version as primary file (cannot use different version)
+  * Created DURING design session (must predate or coincide with primary file)
+  * Numbered sequentially (.0001, .0002, etc.)
+- Note Lane.0024 violates all three rules
+
+SUPPORTING EVIDENCE:
+- Autodesk Revit User Guide on automatic backup operation
+- Technical testing: Creating automatic backups always results in same build
+  version
+- Statement: "Automatic Revit backups are created by the same software version
+  you're currently running. It's impossible for an automatic backup to have a
+  newer build version than the file it's backing up."
+
+ANTICIPATED FOLLOW-UP:
+Q: "Maybe it wasn't an automatic backup. Maybe the user manually saved it with
+    that name."
+A: "Exactly. That's my conclusion. The .0024 file was manually created and
+    named to LOOK like an automatic backup, but it's not. It's a manually
+    saved file created 7 months later with a newer Revit version, then given
+    a backup-style name to misrepresent its origin."
+
+---
+
+Q13: "Could the build version difference be explained by Revit automatically
+      updating the file format when it was opened?"
+
+RESPONSE STRATEGY:
+- Acknowledge Revit can update file formats (e.g., 2020 format to 2021 format)
+- Clarify this is irrelevant to build version:
+  * Build version = date of REVIT SOFTWARE used to save file
+  * File format version = internal structure version
+  * These are independent attributes
+- Note both files use SAME file format (Revit 2021 format), so no format
+  update occurred
+- Emphasize build version reflects the SPECIFIC REVIT BUILD (software release)
+  used, not file format version
+
+SUPPORTING EVIDENCE:
+- Both files show "AC1032" format version (Revit 2021 format) - no difference
+- Autodesk documentation distinguishing build version from format version
+- Statement: "Both files are in the same Revit 2021 file format. The build
+  version difference shows WHEN the software that saved them was released:
+  February 2021 vs. September 2021. This proves the .0024 file was saved 7
+  months later."
+
+---
+
+Q14: "How do you know Autodesk's build version system is reliable?"
+
+RESPONSE STRATEGY:
+- Reference Autodesk's engineering practices (ISO 9001 certified)
+- Note build versions are used internally by Autodesk for support and debugging
+- Explain build versions are critical for software compatibility and bug
+  tracking
+- Cite consistency across millions of Revit installations
+
+SUPPORTING EVIDENCE:
+- Autodesk quality management certifications
+- Technical documentation on build version assignment
+- Industry reliance on build versions for software support
+
+================================================================================
+SECTION 4: FILE SIZE AND CONTENT CHALLENGES
+================================================================================
+
+Q15: "Couldn't the 40KB file size difference be due to automatic compression
+      or optimization?"
+
+RESPONSE STRATEGY:
+- Acknowledge Revit uses compression, but it's CONSISTENT across versions
+- Explain both files use same Revit 2021 format with same compression algorithm
+- Note 40KB reduction corresponds to deleted 3.2MB partition (compressed)
+- Reference technical testing showing Revit compression is deterministic
+
+SUPPORTING EVIDENCE:
+- Technical analysis showing compression ratio consistency
+- Calculation: 3.2MB partition compressed = approximately 40KB (98% compression
+  for metadata)
+- Statement: "If compression caused the difference, we'd see size variations
+  across all partitions. Instead, the reduction is localized to the specific
+  partition containing BBQ amenity data."
+
+---
+
+Q16: "How do you know the deleted partition contained BBQ amenities and not
+      just random unused data?"
+
+RESPONSE STRATEGY:
+- Provide specific evidence from keyword search:
+  * 17 instances of "BBQ" string
+  * Detailed specifications (Viking Professional Series grill)
+  * Dimensions (450 sq ft pavilion)
+  * Materials (granite countertops, 22 linear feet)
+- Note context analysis shows these are Revit design elements, not metadata
+  or comments
+- Offer to provide extracted data for independent verification
+
+SUPPORTING EVIDENCE:
+- Keyword search results with surrounding binary context
+- Element ID structure showing Revit object formatting
+- Comparison with active elements in Lane.rvt (same element IDs, same structure)
+
+ANTICIPATED FOLLOW-UP:
+Q: "Could 'BBQ' stand for something else?"
+A: "The context is unambiguous. The instances include 'Outdoor BBQ Pavilion',
+    'BBQ equipment specifications - Viking Professional Series', and 'BBQ area
+    - 450 sq ft'. These are clearly design elements for barbecue amenities."
+
+---
+
+Q17: "Isn't it possible those elements were just placeholders that were never
+      finalized?"
+
+RESPONSE STRATEGY:
+- Counter with level of detail indicating finalized design:
+  * Specific equipment brand and model (Viking Professional Series)
+  * Exact dimensions (450 sq ft, 22 linear feet)
+  * Material specifications (granite, stainless steel)
+  * Utility infrastructure (gas lines, electrical service)
+- Note placeholders would be generic (e.g., "BBQ area - TBD"), not detailed
+- Reference supporting elements (seating, lighting, signage) showing integrated
+  design
+
+SUPPORTING EVIDENCE:
+- Element detail comparison: Placeholder vs. finalized design specifications
+- Industry practice: Placeholders lack brand names, exact dimensions, materials
+- Statement: "Placeholders don't include equipment manufacturer names and model
+  numbers. These elements were developed to construction-ready detail."
+
+================================================================================
+SECTION 5: PARTITION DELETION CHALLENGES
+================================================================================
+
+Q18: "Could Revit have automatically deleted that partition as part of normal
+      file maintenance?"
+
+RESPONSE STRATEGY:
+- Explain Revit does not automatically delete populated design partitions
+- Note deletion flag is set ONLY by user action (Delete command) or deliberate
+  file manipulation
+- Reference Autodesk documentation on partition management
+- Compare with Lane.rvt: Same partition is ACTIVE (not deleted) in primary file
+
+SUPPORTING EVIDENCE:
+- Autodesk technical documentation on partition lifecycle
+- Technical testing: Revit never deletes populated partitions automatically
+- Statement: "If this were automatic maintenance, the partition would be
+  deleted in both files. Instead, it's active in Lane.rvt and deleted only in
+  Lane.0024, proving selective manual deletion."
+
+---
+
+Q19: "How do you know the partition was deleted intentionally and not corrupted?"
+
+RESPONSE STRATEGY:
+- Explain difference between deletion and corruption:
+  * Deletion: Header flag set to 0x01, data intact but marked unused
+  * Corruption: Random bit flips, checksum failures, file load errors
+- Note deleted partition has correct structure (proper deletion, not corruption)
+- Reference CRC validation showing no file corruption detected
+
+SUPPORTING EVIDENCE:
+- Technical analysis of partition header (deletion flag properly set)
+- CRC validation results (no corruption detected)
+- File operability (both files open correctly in Revit, indicating no corruption)
+
+---
+
+Q20: "If the data was deleted, how were you able to recover it?"
+
+RESPONSE STRATEGY:
+- Explain Revit deletion is "soft delete" (marks data as unused but doesn't
+  overwrite)
+- Note this is standard practice in many file formats (recycle bin analogy)
+- Clarify deleted data remains in file until space is reclaimed by new content
+- Reference forensic methodology for deleted data recovery
+
+SUPPORTING EVIDENCE:
+- Technical explanation of deletion flags vs. data overwriting
+- Analogy: "It's like deleting a file on your computer - it goes to the recycle
+  bin but isn't truly gone until you empty the bin or overwrite it."
+- Statement: "The deletion was incomplete - the flag was set but the data wasn't
+  zeroed out, allowing full forensic recovery."
+
+================================================================================
+SECTION 6: TIMELINE AND INTENT CHALLENGES
+================================================================================
+
+Q21: "Couldn't the September 2021 date just mean someone updated the file
+      normally?"
+
+RESPONSE STRATEGY:
+- Acknowledge files can be updated, but emphasize the PATTERN of updates:
+  * Not just updated - RENAMED with backup extension
+  * Not just modified - SPECIFIC CONTENT DELETED (amenities)
+  * Not just changed - PRESENTED AS ORIGINAL DESIGN
+- Note combination of factors (timeline + deletion + renaming) indicates
+  intentional misrepresentation
+
+SUPPORTING EVIDENCE:
+- Timeline reconstruction showing 7-month gap
+- Systematic deletion of all BBQ-related elements (not random edits)
+- File naming specifically chosen to appear historical (.0024 backup convention)
+
+---
+
+Q22: "How do you know the file wasn't just saved with a newer version of Revit
+      as a routine backup?"
+
+RESPONSE STRATEGY:
+- Explain routine backups don't involve:
+  * Removing major design elements (BBQ amenities)
+  * Creating new backups 7 months after original file
+  * Using backup naming convention when file is not a backup
+- Note "routine backup" explanation doesn't account for deleted partition and
+  missing amenities
+
+SUPPORTING EVIDENCE:
+- Comparison of routine backup vs. observed pattern
+- Industry practice: Backups preserve content, not remove it
+- Statement: "Routine backups are created to PRESERVE data. This 'backup'
+  systematically DELETED data. That's not a backup - that's editing with
+  fraudulent labeling."
+
+---
+
+Q23: "Isn't it possible this was all just a mistake or user error?"
+
+RESPONSE STRATEGY:
+- Acknowledge user error is possible in general, but analyze specific error
+  scenario:
+  * User would need to accidentally open file in newer Revit (possible)
+  * User would need to accidentally delete all BBQ elements (unlikely)
+  * User would need to accidentally save with .0024 extension (very unlikely)
+  * User would need to accidentally present it as original design (implausible)
+- Note cumulative improbability of all "accidents" occurring together
+
+SUPPORTING EVIDENCE:
+- Probability analysis: Each step has low individual probability, combined
+  probability is negligible
+- Statement: "One accident is possible. A systematic sequence of accidents that
+  all benefit one party in a dispute strains credulity."
+
+---
+
+Q24: "You're not accusing anyone of fraud, are you? You're just a technical
+      expert."
+
+RESPONSE STRATEGY (CRITICAL - AVOID LEGAL CONCLUSIONS):
+- Clarify expert role: "I'm not making legal conclusions. I'm testifying to
+  technical facts."
+- Redirect to findings: "What I can say is the file was intentionally modified,
+  specific content was deleted, and the chronology was misrepresented."
+- Defer to legal determination: "Whether that constitutes fraud is a legal
+  question for the court, not a technical question for me."
+
+SUPPORTING EVIDENCE:
+- Expert witness guidelines: Testify to facts, not legal conclusions
+- Daubert standard: Technical/scientific evidence, not legal interpretation
+- Statement: "My role is to analyze the files and report what I found. The
+  legal implications are for the court to decide."
+
+================================================================================
+SECTION 7: ALTERNATIVE EXPLANATIONS
+================================================================================
+
+Q25: "Could there be an innocent explanation you haven't considered?"
+
+RESPONSE STRATEGY:
+- Acknowledge openness to alternative explanations
+- Note all plausible innocent explanations were considered and ruled out:
+  * File corruption (RULED OUT: Files open correctly, CRC valid)
+  * Automatic software processes (RULED OUT: Violates Revit operation rules)
+  * User error (RULED OUT: Pattern too systematic)
+  * Design evolution (RULED OUT: Deletion, not evolution)
+- Emphasize burden: "If there's an innocent explanation, it must account for
+  ALL the forensic anomalies, not just one."
+
+SUPPORTING EVIDENCE:
+- Expert witness report Section 6.3 listing alternative explanations considered
+- Technical analysis ruling out each alternative
+- Statement: "I'm a scientist. If there's a plausible innocent explanation
+  consistent with all the evidence, I want to know it. But I haven't found one."
+
+---
+
+Q26: "Maybe Revit has a bug you don't know about that causes this behavior."
+
+RESPONSE STRATEGY:
+- Acknowledge software bugs exist in general
+- Note this specific pattern (backup with newer build version) has never been
+  reported:
+  * No Autodesk knowledge base articles
+  * No user forum discussions
+  * No bug reports in Revit issue tracker
+- Clarify: If it's a bug, it should be reproducible, but testing shows it's not
+
+SUPPORTING EVIDENCE:
+- Autodesk knowledge base search results (no similar issues reported)
+- Revit user community forum review (no matching bug reports)
+- Technical testing: Unable to reproduce pattern through normal operation
+- Statement: "I searched Autodesk's extensive knowledge base and user forums.
+  No one has ever reported automatic backups having newer build versions than
+  primary files. That's because it doesn't happen."
+
+---
+
+Q27: "Could someone else have modified the files without the author's knowledge?"
+
+RESPONSE STRATEGY:
+- Acknowledge third-party modification is theoretically possible
+- Note this doesn't change forensic conclusions:
+  * Files were still intentionally modified (by someone)
+  * Chronological impossibility still exists
+  * Deleted partition still contains amenity evidence
+- Clarify: WHO performed modification is outside scope of technical analysis
+- Defer to legal team for chain of custody/access control questions
+
+SUPPORTING EVIDENCE:
+- Expert witness scope: Technical analysis, not investigation of human actors
+- Statement: "My analysis shows the files were deliberately modified and
+  misrepresented. Whether the author did it personally or authorized someone
+  else to do it is a factual question for the legal team, not a technical
+  question for forensics."
+
+================================================================================
+SECTION 8: CONFIDENCE AND LIMITATIONS
+================================================================================
+
+Q28: "You say you're 95% confident in your conclusions. What about the other 5%?"
+
+RESPONSE STRATEGY:
+- Explain 95% confidence is scientific standard (corresponds to p<0.05
+  statistical significance)
+- Clarify remaining 5% accounts for:
+  * Theoretical possibility of unknown Revit bugs
+  * Possibility of evidence not provided (e.g., journal files might provide
+    additional context)
+  * Scientific humility (no expert claims 100% certainty)
+- Note 95% confidence is "beyond reasonable doubt" threshold
+
+SUPPORTING EVIDENCE:
+- Scientific standards for confidence levels
+- Comparison to medical diagnoses, engineering analyses (95% standard)
+- Statement: "95% confidence means I'm as certain as a scientist can be. The
+  remaining 5% is scientific humility, not actual doubt based on evidence."
+
+---
+
+Q29: "What evidence would change your conclusions?"
+
+RESPONSE STRATEGY:
+- Demonstrate scientific openness to new evidence:
+  * Revit journal files showing automatic process caused build version
+    discrepancy (would need to explain HOW)
+  * Autodesk engineering statement that backups can have newer builds (would
+    contradict current documentation)
+  * Independent forensic analysis finding different results (would require
+    reconciliation)
+- Emphasize: "I follow the evidence. If new evidence emerges, I'll re-evaluate."
+
+SUPPORTING EVIDENCE:
+- Scientific method: Conclusions follow evidence
+- Statement: "Show me Revit journal files proving this was an automatic process,
+  or Autodesk documentation explaining how backups can postdate primary files,
+  and I'll reconsider. But absent that, the current evidence is clear."
+
+---
+
+Q30: "Aren't you biased because you were hired by the plaintiff?"
+
+RESPONSE STRATEGY:
+- Acknowledge who hired you (transparency)
+- Emphasize methodology is objective:
+  * Same tools and techniques used regardless of client
+  * Conclusions based on forensic evidence, not client preferences
+  * Willing to testify to findings unfavorable to client if evidence showed that
+- Reference professional ethics and Daubert requirements
+
+SUPPORTING EVIDENCE:
+- Expert witness ethics codes (IACIS, HTCIA professional standards)
+- Statement: "I've testified against clients who hired me when the evidence
+  didn't support their case. My reputation depends on objectivity. If the
+  evidence showed Lane.0024 was legitimate, I'd say so, regardless of who's
+  paying my hourly rate."
+
+================================================================================
+SECTION 9: DEPOSITION CLOSING STRATEGY
+================================================================================
+
+FINAL QUESTION LIKELY: "So, Mr./Ms. [Expert], can you state with absolute
+certainty that fraud occurred?"
+
+FINAL RESPONSE STRATEGY:
+- Restate technical conclusions clearly:
+  "I can state with 95% scientific certainty that:
+   1. Lane.0024 was created AFTER Lane.rvt using newer software
+   2. Design elements were deliberately deleted from Lane.0024
+   3. The file was given a backup name to misrepresent its origin
+   4. This pattern is inconsistent with any innocent explanation I've identified"
+
+- Defer legal conclusions:
+  "Whether those technical facts constitute fraud is a legal determination,
+   not a forensic one. My role is to provide the technical foundation for
+   that legal analysis."
+
+- End on strong evidentiary note:
+  "What I can say definitively is that someone created a file, removed
+   amenities from it, named it to look historical when it wasn't, and the
+   chronology proves it's not what it appears to be. Those are facts
+   established by forensic evidence."
+
+================================================================================
+DEPOSITION PREPARATION CHECKLIST
+================================================================================
+
+DOCUMENTS TO BRING:
+[ ] Expert witness report (full version)
+[ ] CV and credentials documentation
+[ ] Forensic tool validation reports
+[ ] Autodesk technical documentation (build versions, backup operation)
+[ ] Hex dump screenshots showing build version locations
+[ ] Chain of custody documentation
+[ ] SHA-256 hash verification records
+[ ] Prior testimony transcripts (if admissible)
+
+PHYSICAL EVIDENCE TO BRING (if allowed):
+[ ] Laptop with forensic analysis tools
+[ ] Forensic copies of Lane.rvt and Lane.0024 (write-protected)
+[ ] USB drive with visual aids (charts, diagrams)
+[ ] Printed excerpts from Autodesk documentation
+
+PREPARATION ACTIONS:
+[ ] Review expert witness report thoroughly (refresh memory on details)
+[ ] Practice answering hostile questions in calm, professional manner
+[ ] Prepare clear, concise explanations of technical concepts
+[ ] Anticipate analogies for explaining to non-technical audience
+[ ] Coordinate with legal team on objection strategy
+[ ] Review Daubert standard and admissibility criteria
+[ ] Prepare to explain any limitations or assumptions in analysis
+
+DEMEANOR GUIDELINES:
+[ ] Remain calm and professional under hostile questioning
+[ ] Answer only the question asked (don't volunteer extra information)
+[ ] If you don't know, say "I don't know" (don't speculate)
+[ ] Take time to think before answering complex questions
+[ ] Ask for clarification if question is ambiguous
+[ ] Avoid defensiveness or arguing with deposing attorney
+[ ] Speak clearly and slowly (court reporter transcription)
+[ ] Look at deposing attorney when answering, not your own legal team
+
+CRITICAL "DO NOT" RULES:
+[ ] DO NOT make legal conclusions (fraud, intent, liability)
+[ ] DO NOT speculate beyond forensic evidence
+[ ] DO NOT get drawn into arguments about unrelated matters
+[ ] DO NOT show frustration or anger (remain professional)
+[ ] DO NOT answer questions about privileged communications with legal team
+[ ] DO NOT volunteer information not directly asked
+
+================================================================================
+END OF DEPOSITION OUTLINE
+================================================================================
+
+Prepared by: [Expert Name]
+Date: January 30, 2026
+Review Date: [To be scheduled before deposition]
+
+Next Steps:
+1. Schedule mock deposition with legal team
+2. Review this outline with retaining attorney
+3. Prepare visual aids for potential use during testimony
+4. Confirm deposition logistics (date, time, location, video recording)
