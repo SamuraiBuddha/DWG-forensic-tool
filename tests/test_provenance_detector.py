@@ -130,24 +130,23 @@ class TestProvenanceDetector:
 
     def test_oda_tool_detection(self, detector, mock_autocad_file):
         """Test detection of ODA SDK-based tool."""
-        with patch('dwg_forensic.analysis.provenance_detector.CADFingerprinter') as MockFingerprinter:
-            # Mock ODA tool fingerprint
-            mock_fingerprint = Mock()
-            mock_fingerprint.detected_application = CADApplication.BRICSCAD
-            mock_fingerprint.confidence = 0.85
-            mock_fingerprint.is_oda_based = True
+        # Mock ODA tool fingerprint
+        mock_fingerprint = Mock()
+        mock_fingerprint.detected_application = CADApplication.BRICSCAD
+        mock_fingerprint.confidence = 0.85
+        mock_fingerprint.is_oda_based = True
 
-            mock_fingerprinter_instance = MockFingerprinter.return_value
-            mock_fingerprinter_instance.fingerprint.return_value = mock_fingerprint
+        # Mock Revit detector to return negative result
+        mock_revit_result = Mock()
+        mock_revit_result.is_revit_export = False
+        mock_revit_result.confidence_score = 0.1
 
-            # Mock Revit detector to return negative result
-            with patch('dwg_forensic.analysis.provenance_detector.RevitDetector') as MockRevitDetector:
-                mock_revit_result = Mock()
-                mock_revit_result.is_revit_export = False
-                mock_revit_result.confidence_score = 0.1
+        # Patch the detector's instances directly
+        with patch.object(detector, 'cad_fingerprinter') as mock_fingerprinter:
+            mock_fingerprinter.fingerprint.return_value = mock_fingerprint
 
-                mock_revit_instance = MockRevitDetector.return_value
-                mock_revit_instance.detect.return_value = mock_revit_result
+            with patch.object(detector, 'revit_detector') as mock_revit_detector:
+                mock_revit_detector.detect.return_value = mock_revit_result
 
                 provenance = detector.detect(mock_autocad_file)
 
@@ -237,11 +236,12 @@ class TestProvenanceDetector:
 
     def test_confidence_calculation_revit(self, detector, mock_revit_file):
         """Test confidence score calculation for Revit export."""
-        with patch('dwg_forensic.analysis.provenance_detector.RevitDetector') as MockRevitDetector:
-            mock_revit_result = Mock()
-            mock_revit_result.is_revit_export = True
-            mock_revit_result.confidence_score = 0.95
-            MockRevitDetector.return_value.detect.return_value = mock_revit_result
+        mock_revit_result = Mock()
+        mock_revit_result.is_revit_export = True
+        mock_revit_result.confidence_score = 0.95
+
+        with patch.object(detector, 'revit_detector') as mock_revit_detector:
+            mock_revit_detector.detect.return_value = mock_revit_result
 
             provenance = detector.detect(mock_revit_file)
 
@@ -250,18 +250,20 @@ class TestProvenanceDetector:
 
     def test_confidence_calculation_oda_tool(self, detector, mock_autocad_file):
         """Test confidence score calculation for ODA tool."""
-        with patch('dwg_forensic.analysis.provenance_detector.RevitDetector') as MockRevitDetector:
-            mock_revit_result = Mock()
-            mock_revit_result.is_revit_export = False
-            mock_revit_result.confidence_score = 0.0
-            MockRevitDetector.return_value.detect.return_value = mock_revit_result
+        mock_revit_result = Mock()
+        mock_revit_result.is_revit_export = False
+        mock_revit_result.confidence_score = 0.0
 
-            with patch('dwg_forensic.analysis.provenance_detector.CADFingerprinter') as MockFingerprinter:
-                mock_fingerprint = Mock()
-                mock_fingerprint.detected_application = CADApplication.BRICSCAD
-                mock_fingerprint.confidence = 0.80
-                mock_fingerprint.is_oda_based = True
-                MockFingerprinter.return_value.fingerprint.return_value = mock_fingerprint
+        mock_fingerprint = Mock()
+        mock_fingerprint.detected_application = CADApplication.BRICSCAD
+        mock_fingerprint.confidence = 0.80
+        mock_fingerprint.is_oda_based = True
+
+        with patch.object(detector, 'revit_detector') as mock_revit_detector:
+            mock_revit_detector.detect.return_value = mock_revit_result
+
+            with patch.object(detector, 'cad_fingerprinter') as mock_fingerprinter:
+                mock_fingerprinter.fingerprint.return_value = mock_fingerprint
 
                 provenance = detector.detect(mock_autocad_file)
 
@@ -270,24 +272,30 @@ class TestProvenanceDetector:
 
     def test_confidence_calculation_file_transfer(self, detector, mock_autocad_file):
         """Test confidence score calculation for file transfer."""
-        with patch('dwg_forensic.analysis.provenance_detector.RevitDetector') as MockRevitDetector:
-            mock_revit_result = Mock()
-            mock_revit_result.is_revit_export = False
-            mock_revit_result.confidence_score = 0.0
-            MockRevitDetector.return_value.detect.return_value = mock_revit_result
+        mock_revit_result = Mock()
+        mock_revit_result.is_revit_export = False
+        mock_revit_result.confidence_score = 0.0
 
-            with patch('dwg_forensic.analysis.provenance_detector.CADFingerprinter') as MockFingerprinter:
-                mock_fingerprint = Mock()
-                mock_fingerprint.confidence = 0.2  # Below threshold
-                MockFingerprinter.return_value.fingerprint.return_value = mock_fingerprint
+        mock_fingerprint = Mock()
+        mock_fingerprint.confidence = 0.2  # Below threshold
+
+        now = datetime.now()
+        mock_ntfs_data = Mock()
+        mock_ntfs_data.si_timestamps = {
+            "created": now,
+            "modified": now - timedelta(hours=1),
+        }
+        mock_ntfs_data.fn_timestamps = {
+            "created": now - timedelta(hours=1),
+        }
+
+        with patch.object(detector, 'revit_detector') as mock_revit_detector:
+            mock_revit_detector.detect.return_value = mock_revit_result
+
+            with patch.object(detector, 'cad_fingerprinter') as mock_fingerprinter:
+                mock_fingerprinter.fingerprint.return_value = mock_fingerprint
 
                 with patch('dwg_forensic.analysis.provenance_detector.NTFSTimestampParser') as MockNTFSParser:
-                    now = datetime.now()
-                    mock_ntfs_data = Mock()
-                    mock_ntfs_data.si_timestamps = {
-                        "created": now,
-                        "modified": now - timedelta(hours=1),
-                    }
                     MockNTFSParser.return_value.parse.return_value = mock_ntfs_data
 
                     provenance = detector.detect(mock_autocad_file)
@@ -322,6 +330,7 @@ class TestProvenanceIntegration:
     def test_provenance_in_analyzer_workflow(self, tmp_path):
         """Test that provenance detection is integrated into analyzer.py."""
         from dwg_forensic.core.analyzer import ForensicAnalyzer
+        from dwg_forensic.models import HeaderAnalysis, CRCValidation
 
         # Create a mock DWG file
         file_path = tmp_path / "test.dwg"
@@ -341,10 +350,22 @@ class TestProvenanceIntegration:
             )
             MockProvenanceDetector.return_value.detect.return_value = mock_provenance
 
+            # Create proper model instances for mocks
+            mock_header = HeaderAnalysis(
+                version_string="AC1032",
+                version_name="AutoCAD 2018+",
+                is_supported=True
+            )
+            mock_crc = CRCValidation(
+                header_crc_stored="0x12345678",
+                header_crc_calculated="0x12345678",
+                is_valid=True
+            )
+
             # Mock other components to avoid full analysis
-            with patch.object(analyzer, '_parse_header'):
-                with patch.object(analyzer, '_validate_crc'):
-                    with patch.object(analyzer, '_detect_anomalies'):
+            with patch.object(analyzer.header_parser, 'parse', return_value=mock_header):
+                with patch.object(analyzer.crc_validator, 'validate_header_crc', return_value=mock_crc):
+                    with patch.object(analyzer.anomaly_detector, 'detect_all', return_value=[]):
                         with patch.object(analyzer, 'rule_engine') as mock_rule_engine:
                             mock_rule_engine.evaluate_all.return_value = []
 
@@ -360,6 +381,7 @@ class TestProvenanceIntegration:
     def test_skip_rules_passed_to_engine(self, tmp_path):
         """Test that skip_rules are passed to rule engine."""
         from dwg_forensic.core.analyzer import ForensicAnalyzer
+        from dwg_forensic.models import HeaderAnalysis, CRCValidation
 
         file_path = tmp_path / "test.dwg"
         header = b"AC1032" + b"\x00" * 200
@@ -375,9 +397,21 @@ class TestProvenanceIntegration:
             )
             MockProvenanceDetector.return_value.detect.return_value = mock_provenance
 
-            with patch.object(analyzer, '_parse_header'):
-                with patch.object(analyzer, '_validate_crc'):
-                    with patch.object(analyzer, '_detect_anomalies'):
+            # Create proper model instances for mocks
+            mock_header = HeaderAnalysis(
+                version_string="AC1032",
+                version_name="AutoCAD 2018+",
+                is_supported=True
+            )
+            mock_crc = CRCValidation(
+                header_crc_stored="0x12345678",
+                header_crc_calculated="0x12345678",
+                is_valid=True
+            )
+
+            with patch.object(analyzer.header_parser, 'parse', return_value=mock_header):
+                with patch.object(analyzer.crc_validator, 'validate_header_crc', return_value=mock_crc):
+                    with patch.object(analyzer.anomaly_detector, 'detect_all', return_value=[]):
                         with patch.object(analyzer, 'rule_engine') as mock_rule_engine:
                             mock_rule_engine.evaluate_all.return_value = []
 
@@ -418,6 +452,7 @@ class TestProvenanceIntegration:
     def test_error_handling_in_provenance_detection(self, tmp_path):
         """Test error handling when provenance detection fails."""
         from dwg_forensic.core.analyzer import ForensicAnalyzer
+        from dwg_forensic.models import HeaderAnalysis, CRCValidation
 
         file_path = tmp_path / "test.dwg"
         header = b"AC1032" + b"\x00" * 200
@@ -429,9 +464,21 @@ class TestProvenanceIntegration:
         with patch('dwg_forensic.core.analyzer.ProvenanceDetector') as MockProvenanceDetector:
             MockProvenanceDetector.return_value.detect.side_effect = Exception("Test error")
 
-            with patch.object(analyzer, '_parse_header'):
-                with patch.object(analyzer, '_validate_crc'):
-                    with patch.object(analyzer, '_detect_anomalies'):
+            # Create proper model instances for mocks
+            mock_header = HeaderAnalysis(
+                version_string="AC1032",
+                version_name="AutoCAD 2018+",
+                is_supported=True
+            )
+            mock_crc = CRCValidation(
+                header_crc_stored="0x12345678",
+                header_crc_calculated="0x12345678",
+                is_valid=True
+            )
+
+            with patch.object(analyzer.header_parser, 'parse', return_value=mock_header):
+                with patch.object(analyzer.crc_validator, 'validate_header_crc', return_value=mock_crc):
+                    with patch.object(analyzer.anomaly_detector, 'detect_all', return_value=[]):
                         with patch.object(analyzer, 'rule_engine') as mock_rule_engine:
                             mock_rule_engine.evaluate_all.return_value = []
 

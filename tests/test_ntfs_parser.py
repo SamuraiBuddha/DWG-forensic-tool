@@ -711,19 +711,19 @@ class TestWindowsAPIIntegration:
 
             mock_windows.assert_called_once()
 
-    @patch('os.name', 'posix')
     def test_windows_api_not_called_on_unix(self, tmp_path):
         """Test Windows API is not called on Unix."""
         test_file = tmp_path / "test.dwg"
         test_file.write_bytes(b"test")
 
-        with patch.object(
-            NTFSTimestampParser, '_parse_windows_timestamps'
-        ) as mock_windows:
-            parser = NTFSTimestampParser()
-            parser._is_windows = False  # Force Unix mode
+        # Create parser and manually set to Unix mode to test cross-platform behavior
+        parser = NTFSTimestampParser()
+        parser._is_windows = False  # Force Unix mode
+
+        with patch.object(parser, '_parse_windows_timestamps') as mock_windows:
             parser.parse(test_file)
 
+            # Verify Windows API was not called in Unix mode
             mock_windows.assert_not_called()
 
 

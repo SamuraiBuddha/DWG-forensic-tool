@@ -29,6 +29,11 @@ from dwg_forensic.analysis.smoking_gun import (
     SmokingGunReport,
     SmokingGunSynthesizer,
 )
+from dwg_forensic.analysis.comparator import (
+    DWGComparator,
+    ComparisonResult,
+    compare_dwg_files,
+)
 
 __all__ = [
     "AnomalyDetector",
@@ -43,4 +48,7 @@ __all__ = [
     "SmokingGunFinding",
     "SmokingGunReport",
     "SmokingGunSynthesizer",
+    "DWGComparator",
+    "ComparisonResult",
+    "compare_dwg_files",
 ]

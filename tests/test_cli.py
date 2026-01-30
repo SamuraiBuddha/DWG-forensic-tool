@@ -218,14 +218,18 @@ class TestBatchCommand:
     """Tests for batch command."""
 
     def test_batch_directory(self, runner, temp_dir):
-        """Test batch processing a directory."""
+        """Test batch processing a directory with no DWG files."""
         result = runner.invoke(main, ["batch", str(temp_dir)])
-        assert result.exit_code == 0
+        # Should fail with no files error
+        assert result.exit_code == 1
+        assert "No files matching" in result.output
 
     def test_batch_recursive(self, runner, temp_dir):
         """Test batch processing with recursive flag."""
         result = runner.invoke(main, ["batch", str(temp_dir), "--recursive"])
-        assert result.exit_code == 0
+        # Should fail with no files error
+        assert result.exit_code == 1
+        assert "No files matching" in result.output
 
 
 class TestProtectCommand:

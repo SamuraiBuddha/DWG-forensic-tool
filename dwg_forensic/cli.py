@@ -24,6 +24,11 @@ from dwg_forensic.utils.exceptions import DWGForensicError, IntakeError, Unsuppo
 
 # Phase 3 imports
 from dwg_forensic.analysis import TamperingRuleEngine, RiskScorer
+from dwg_forensic.core.batch_processor import BatchProcessor
+from dwg_forensic.analysis.comparator import DWGComparator
+
+# GUI import
+from dwg_forensic.gui import main as gui_main
 
 console = Console()
 
@@ -618,6 +623,154 @@ def tampering(filepath: str, output: str, output_format: str, rules: str, verbos
         sys.exit(1)
 
 
+def _print_comparison_table(result, verbose: int) -> None:
+    """Print comparison results as formatted tables."""
+    from dwg_forensic.analysis.comparator import ComparisonResult
+
+    # File information
+    table = Table(title="File Comparison", show_header=True, header_style="bold")
+    table.add_column("Property", style="cyan")
+    table.add_column("File 1")
+    table.add_column("File 2")
+
+    table.add_row("Filename", result.file1_analysis.file_info.filename, result.file2_analysis.file_info.filename)
+    table.add_row("Version", result.file1_analysis.header_analysis.version_string, result.file2_analysis.header_analysis.version_string)
+    table.add_row("Risk Level", result.file1_analysis.risk_assessment.overall_risk.value, result.file2_analysis.risk_assessment.overall_risk.value)
+    table.add_row("CRC Valid", "[OK]" if result.file1_analysis.crc_validation.is_valid else "[FAIL]", "[OK]" if result.file2_analysis.crc_validation.is_valid else "[FAIL]")
+
+    console.print(table)
+    console.print()
+
+    # Timestamp deltas
+    if result.timestamp_delta_seconds is not None or result.modification_delta_seconds is not None:
+        table = Table(title="Timestamp Comparison", show_header=True, header_style="bold")
+        table.add_column("Type", style="cyan")
+        table.add_column("Delta")
+
+        if result.timestamp_delta_seconds is not None:
+            days = abs(result.timestamp_delta_seconds) // 86400
+            hours = (abs(result.timestamp_delta_seconds) % 86400) // 3600
+            direction = "newer" if result.timestamp_delta_seconds > 0 else "older"
+            table.add_row("Creation Time", f"{days}d {hours}h (File 2 is {direction})")
+
+        if result.modification_delta_seconds is not None:
+            days = abs(result.modification_delta_seconds) // 86400
+            hours = (abs(result.modification_delta_seconds) % 86400) // 3600
+            direction = "newer" if result.modification_delta_seconds > 0 else "older"
+            table.add_row("Modification Time", f"{days}d {hours}h (File 2 is {direction})")
+
+        console.print(table)
+        console.print()
+
+    # Metadata changes
+    if result.metadata_changes:
+        console.print("[bold]Metadata Changes:[/bold]")
+        for change in result.metadata_changes:
+            console.print(f"  [yellow][->][/yellow] {change}")
+        console.print()
+
+    # Risk level change
+    if result.risk_level_change:
+        console.print(Panel(
+            f"Risk Level Changed: [yellow]{result.risk_level_change}[/yellow]",
+            title="Risk Assessment",
+            style="yellow",
+        ))
+    else:
+        console.print(Panel(
+            f"Risk Level: {result.file1_analysis.risk_assessment.overall_risk.value} (unchanged)",
+            title="Risk Assessment",
+            style="green",
+        ))
+
+
+def _print_batch_summary(result, verbose: int) -> None:
+    """Print batch processing summary as formatted tables."""
+    from dwg_forensic.core.batch_processor import BatchAnalysisResult
+
+    # Summary statistics
+    success_rate = (result.successful / result.total_files * 100) if result.total_files > 0 else 0
+    table = Table(title="Batch Processing Summary", show_header=True, header_style="bold")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value")
+
+    table.add_row("Total Files", str(result.total_files))
+    table.add_row("Successful", f"[green]{result.successful}[/green]")
+    table.add_row("Failed", f"[red]{result.failed}[/red]" if result.failed > 0 else "0")
+    table.add_row("Success Rate", f"{success_rate:.1f}%")
+    table.add_row("Processing Time", f"{result.processing_time_seconds:.2f}s")
+    table.add_row("Avg Risk Score", f"{result.aggregated_risk_score:.2f}/4.0")
+
+    console.print(table)
+    console.print()
+
+    # Risk distribution
+    if result.risk_distribution:
+        table = Table(title="Risk Distribution", show_header=True, header_style="bold")
+        table.add_column("Risk Level", style="cyan")
+        table.add_column("Count")
+        table.add_column("Percentage")
+
+        risk_colors = {
+            "INFO": "blue",
+            "LOW": "green",
+            "MEDIUM": "yellow",
+            "HIGH": "red",
+            "CRITICAL": "red bold",
+        }
+
+        for level, count in result.risk_distribution.items():
+            if count > 0:
+                color = risk_colors.get(level, "white")
+                pct = (count / result.successful * 100) if result.successful > 0 else 0
+                table.add_row(
+                    f"[{color}]{level}[/{color}]",
+                    str(count),
+                    f"{pct:.1f}%"
+                )
+
+        console.print(table)
+        console.print()
+
+    # Failed files (if any)
+    if result.failures and (verbose > 0 or len(result.failures) <= 5):
+        table = Table(title="Failed Files", show_header=True, header_style="bold red")
+        table.add_column("Filename", style="cyan")
+        table.add_column("Error Type")
+        table.add_column("Error Message")
+
+        for failure in result.failures[:10]:  # Limit to 10
+            table.add_row(
+                failure.file_path.name,
+                failure.error_type or "Unknown",
+                (failure.error[:50] + "...") if failure.error and len(failure.error) > 50 else (failure.error or "")
+            )
+
+        console.print(table)
+        console.print()
+
+    # Recommendation
+    if result.failed == 0:
+        console.print(Panel(
+            "[green]All files processed successfully[/green]",
+            title="Status",
+            style="green",
+        ))
+    elif result.successful == 0:
+        console.print(Panel(
+            "[red]All files failed processing - check file formats and permissions[/red]",
+            title="Status",
+            style="red",
+        ))
+    else:
+        console.print(Panel(
+            f"[yellow]{result.successful}/{result.total_files} files processed successfully[/yellow]\n"
+            f"Review failed files above for details.",
+            title="Status",
+            style="yellow",
+        ))
+
+
 def _print_tampering_report(report, verbose: int) -> None:
     """Print tampering analysis report as formatted tables."""
     # Risk summary
@@ -783,32 +936,162 @@ def list_rules(output_format: str):
 @main.command()
 @click.argument("file1", type=click.Path(exists=True))
 @click.argument("file2", type=click.Path(exists=True))
-@click.option("--report", help="Output report file path")
-def compare(file1: str, file2: str, report: str):
+@click.option("-o", "--output", help="Output PDF report file path (not yet implemented)")
+@click.option("-f", "--format", "output_format", type=click.Choice(["table", "json"]), default="table")
+@click.option("-v", "--verbose", count=True, help="Verbosity level")
+def compare(file1: str, file2: str, output: str, output_format: str, verbose: int):
     """Compare two DWG files for differences.
 
     FILE1 and FILE2 are the paths to the DWG files to compare.
+
+    Performs independent forensic analysis on both files and identifies:
+    - Timestamp differences (creation and modification)
+    - Metadata changes (author, revision number, etc.)
+    - Risk level changes
+    - Version differences
+
+    Phase 3.2 will add deep structure comparison (section maps, handle gaps).
     """
-    console.print("[bold blue]Comparing:[/bold blue]")
-    console.print(f"  File 1: {file1}")
-    console.print(f"  File 2: {file2}")
-    # TODO: Implement comparison in future phase
-    console.print("[yellow]Compare module will be implemented in a future phase[/yellow]")
+    file1_path = Path(file1)
+    file2_path = Path(file2)
+
+    console.print(Panel(
+        f"[bold]DWG File Comparison[/bold]\n"
+        f"File 1: {file1_path.name}\n"
+        f"File 2: {file2_path.name}",
+        style="blue"
+    ))
+
+    try:
+        print_status("[INFO]", "Analyzing both files...")
+        comparator = DWGComparator()
+        result = comparator.compare_files(file1_path, file2_path)
+
+        if output_format == "json":
+            # JSON output
+            import json
+            output_data = {
+                "file1": {
+                    "filename": result.file1_analysis.file_info.filename,
+                    "version": result.file1_analysis.header_analysis.version_string,
+                    "risk_level": result.file1_analysis.risk_assessment.overall_risk.value,
+                },
+                "file2": {
+                    "filename": result.file2_analysis.file_info.filename,
+                    "version": result.file2_analysis.header_analysis.version_string,
+                    "risk_level": result.file2_analysis.risk_assessment.overall_risk.value,
+                },
+                "timestamp_delta_seconds": result.timestamp_delta_seconds,
+                "modification_delta_seconds": result.modification_delta_seconds,
+                "metadata_changes": result.metadata_changes,
+                "risk_level_change": result.risk_level_change,
+                "summary": result.comparison_summary,
+            }
+            console.print(json.dumps(output_data, indent=2))
+        else:
+            # Table format output
+            _print_comparison_table(result, verbose)
+
+        if output:
+            print_status("[WARN]", "PDF report output not yet implemented (Phase 3.2)")
+
+    except ValueError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+    except DWGForensicError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+    except Exception as e:
+        print_status("[ERROR]", f"Comparison failed: {e}")
+        if verbose > 0:
+            console.print_exception()
+        sys.exit(1)
 
 
 @main.command()
 @click.argument("directory", type=click.Path(exists=True))
-@click.option("--recursive", is_flag=True, help="Process subdirectories")
-@click.option("--output-dir", help="Output directory for reports")
-def batch(directory: str, recursive: bool, output_dir: str):
+@click.option("--recursive", is_flag=True, help="Process subdirectories recursively")
+@click.option("-o", "--output-dir", type=click.Path(), help="Output directory for reports (not yet implemented)")
+@click.option("--parallel", type=int, help="Number of parallel workers (default: auto-detect CPU count)")
+@click.option("-f", "--format", "output_format", type=click.Choice(["table", "json"]), default="table")
+@click.option("-v", "--verbose", count=True, help="Verbosity level")
+def batch(directory: str, recursive: bool, output_dir: str, parallel: int, output_format: str, verbose: int):
     """Batch analyze multiple DWG files in a directory.
 
     DIRECTORY is the path to the directory containing DWG files.
+
+    Processes all .dwg files in parallel using multiprocessing.
+    Shows progress bar during analysis and generates summary report.
+
+    Features:
+    - Parallel processing (auto-detects CPU count)
+    - Individual file error isolation
+    - Aggregated risk statistics
+    - Risk distribution summary
     """
-    console.print(f"[bold blue]Batch Analysis:[/bold blue] {directory}")
-    console.print(f"[dim]Recursive: {recursive}[/dim]")
-    # TODO: Implement batch processing in Phase 3
-    console.print("[yellow]Batch module will be implemented in Phase 3[/yellow]")
+    dir_path = Path(directory)
+
+    console.print(Panel(
+        f"[bold]Batch DWG Analysis[/bold]\n"
+        f"Directory: {dir_path}\n"
+        f"Recursive: {'Yes' if recursive else 'No'}\n"
+        f"Workers: {parallel if parallel else 'Auto'}",
+        style="blue"
+    ))
+
+    try:
+        # Initialize batch processor
+        processor = BatchProcessor(num_workers=parallel)
+
+        # Process directory
+        print_status("[INFO]", "Starting batch analysis...")
+        result = processor.process_directory(
+            directory=dir_path,
+            output_dir=Path(output_dir) if output_dir else None,
+            recursive=recursive,
+        )
+
+        # Display results
+        console.print()
+        if output_format == "json":
+            # JSON output
+            import json
+            output_data = {
+                "total_files": result.total_files,
+                "successful": result.successful,
+                "failed": result.failed,
+                "aggregated_risk_score": result.aggregated_risk_score,
+                "risk_distribution": result.risk_distribution,
+                "processing_time_seconds": result.processing_time_seconds,
+                "failures": [
+                    {
+                        "file": str(f.file_path),
+                        "error": f.error,
+                        "error_type": f.error_type,
+                    }
+                    for f in result.failures
+                ],
+            }
+            console.print(json.dumps(output_data, indent=2))
+        else:
+            # Table format output
+            _print_batch_summary(result, verbose)
+
+        if output_dir:
+            print_status("[WARN]", "Individual JSON reports not yet implemented (Phase 3.2)")
+
+        # Exit with error if any files failed
+        if result.failed > 0 and result.successful == 0:
+            sys.exit(1)
+
+    except ValueError as e:
+        print_status("[ERROR]", str(e))
+        sys.exit(1)
+    except Exception as e:
+        print_status("[ERROR]", f"Batch processing failed: {e}")
+        if verbose > 0:
+            console.print_exception()
+        sys.exit(1)
 
 
 @main.command()
@@ -1090,6 +1373,19 @@ def timeline(filepath: str, output: str, output_format: str, verbose: int):
         if verbose > 0:
             console.print_exception()
         sys.exit(1)
+
+
+@main.command()
+def gui():
+    """Launch the forensic GUI application.
+
+    Opens a Tkinter-based graphical interface for forensic analysis.
+    Provides point-and-click access to all forensic tools including:
+    - File analysis and metadata extraction
+    - Tampering detection
+    - Report generation
+    """
+    gui_main()
 
 
 @main.command()

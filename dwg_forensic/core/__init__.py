@@ -17,6 +17,12 @@ from dwg_forensic.core.database import (
 )
 from dwg_forensic.core.file_guard import FileGuard, ProtectedFileContext
 from dwg_forensic.core.intake import FileIntake, intake_file
+from dwg_forensic.core.batch_processor import (
+    BatchProcessor,
+    BatchAnalysisResult,
+    BatchFileResult,
+    process_batch,
+)
 
 __all__ = [
     # Analyzer
@@ -40,4 +46,9 @@ __all__ = [
     # Intake
     "FileIntake",
     "intake_file",
+    # Batch Processing
+    "BatchProcessor",
+    "BatchAnalysisResult",
+    "BatchFileResult",
+    "process_batch",
 ]
