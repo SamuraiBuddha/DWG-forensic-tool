@@ -230,5 +230,21 @@
     "permission_mode": "bypassPermissions",
     "hook_event_name": "UserPromptSubmit",
     "prompt": "<--- Last few GCs --->\n\n[33216:000001D965820000]   562452 ms: Scavenge (interleaved) 4029.7 (4117.1) -> 4026.8 (4135.6) MB, pooled: 0 MB, 7.88 / 0.00 ms  (average mu = 0.408, current mu = 0.276) allocation failure;\n[33216:000001D965820000]   563368 ms: Mark-Compact 4042.2 (4137.9) -> 4034.9 (4146.6) MB, pooled: 0 MB, 896.07 / 0.00 ms  (average mu = 0.273, current mu = 0.119) allocation failure; scavenge might not succeed\n\n\n<--- JS stacktrace --->\n\nFATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory\n----- Native stack trace -----\n\n 1: 00007FF707E470F7 node::SetCppgcReference+18039\n 2: 00007FF707DAAA18 v8::base::CPU::num_virtual_address_bits+102920\n 3: 00007FF7089AF151 v8::Isolate::ReportExternalAllocationLimitReached+65\n 4: 00007FF70899BCD6 v8::Function::Experimental_IsNopFunction+3302\n 5: 00007FF7087F8420 v8::internal::StrongRootAllocatorBase::StrongRootAllocatorBase+33904\n 6: 00007FF7087F4AAA v8::internal::StrongRootAllocatorBase::StrongRootAllocatorBase+19194\n 7: 00007FF70880B08C v8::Isolate::GetHeapProfiler+8012\n 8: 00007FF70880B90A v8::Isolate::GetHeapProfiler+10186\n 9: 00007FF70881C2FB v8::Isolate::GetHeapProfiler+78267\n10: 00007FF7084E93FB v8::base::AddressSpaceReservation::AddressSpaceReservation+323419\n11: 00007FF6A8A2D4BA"
+  },
+  {
+    "session_id": "dc166d8f-a1c2-4ab1-ae88-a367d111bd81",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "all three in parallel, i aint getting any younger... lol j/k"
+  },
+  {
+    "session_id": "dc166d8f-a1c2-4ab1-ae88-a367d111bd81",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "proceed"
   }
 ]

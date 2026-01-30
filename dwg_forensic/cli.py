@@ -53,13 +53,22 @@ def print_status(status: str, message: str) -> None:
 
 @click.group()
 @click.version_option(version=__version__, prog_name="dwg-forensic")
-def main():
+@click.option(
+    "--llm-mode",
+    type=click.Choice(["auto", "force", "off"], case_sensitive=False),
+    default=None,
+    help="Set LLM reasoning mode: auto (detect Ollama), force (require), off (disable)",
+)
+@click.pass_context
+def main(ctx: click.Context, llm_mode: str):
     """DWG Forensic Tool - Forensic analysis toolkit for AutoCAD DWG files.
 
     Analyze DWG files for tampering detection, timestamp validation,
     and forensic documentation. Supports R18+ versions (AutoCAD 2010+).
     """
-    pass
+    # Store llm_mode in context for subcommands
+    ctx.ensure_object(dict)
+    ctx.obj["llm_mode"] = llm_mode
 
 
 def _create_progress_callback(verbose: int):
@@ -124,7 +133,8 @@ def _create_progress_callback(verbose: int):
 @click.option("-v", "--verbose", count=True, help="Verbosity level")
 @click.option("--llm", is_flag=True, help="Enable LLM expert narrative generation")
 @click.option("--llm-model", default="mistral", help="Ollama model for LLM narration")
-def analyze(filepath: str, output: str, output_format: str, verbose: int, llm: bool, llm_model: str):
+@click.pass_context
+def analyze(ctx: click.Context, filepath: str, output: str, output_format: str, verbose: int, llm: bool, llm_model: str):
     """Perform full forensic analysis on a DWG file.
 
     FILEPATH is the path to the DWG file to analyze.
@@ -133,12 +143,24 @@ def analyze(filepath: str, output: str, output_format: str, verbose: int, llm: b
     console.print(Panel(f"[bold]DWG Forensic Analysis[/bold]\nFile: {file_path.name}", style="blue"))
 
     try:
+        # Get llm_mode from context (global option)
+        llm_mode_str = ctx.obj.get("llm_mode") if ctx.obj else None
+        llm_mode = None
+        if llm_mode_str:
+            # Import LLMMode to parse string
+            try:
+                from dwg_forensic.llm import LLMMode
+                llm_mode = LLMMode.from_string(llm_mode_str)
+            except ImportError:
+                pass  # LLM module not available
+
         # Create progress callback for terminal display
         progress_callback = _create_progress_callback(verbose)
         analyzer = ForensicAnalyzer(
             progress_callback=progress_callback,
             use_llm=llm,
             llm_model=llm_model if llm else None,
+            llm_mode=llm_mode,
         )
         result = analyzer.analyze(file_path)
 
@@ -1058,10 +1080,11 @@ def list_rules(output_format: str):
 @main.command()
 @click.argument("file1", type=click.Path(exists=True))
 @click.argument("file2", type=click.Path(exists=True))
-@click.option("-o", "--output", help="Output PDF report file path (not yet implemented)")
+@click.option("-o", "--output-report", help="Output report file path (.pdf or .json)")
 @click.option("-f", "--format", "output_format", type=click.Choice(["table", "json"]), default="table")
+@click.option("--case-id", help="Case identifier for the report")
 @click.option("-v", "--verbose", count=True, help="Verbosity level")
-def compare(file1: str, file2: str, output: str, output_format: str, verbose: int):
+def compare(file1: str, file2: str, output_report: str, output_format: str, case_id: str, verbose: int):
     """Compare two DWG files for differences.
 
     FILE1 and FILE2 are the paths to the DWG files to compare.
@@ -1071,8 +1094,11 @@ def compare(file1: str, file2: str, output: str, output_format: str, verbose: in
     - Metadata changes (author, revision number, etc.)
     - Risk level changes
     - Version differences
+    - Deep structure comparison (section maps, handle gaps)
 
-    Phase 3.2 will add deep structure comparison (section maps, handle gaps).
+    Phase 3.3: Generate comparison reports with -o/--output-report flag:
+    - PDF format: compare file1.dwg file2.dwg -o report.pdf
+    - JSON format: compare file1.dwg file2.dwg -o report.json
     """
     file1_path = Path(file1)
     file2_path = Path(file2)
@@ -1089,33 +1115,60 @@ def compare(file1: str, file2: str, output: str, output_format: str, verbose: in
         comparator = DWGComparator()
         result = comparator.compare_files(file1_path, file2_path)
 
-        if output_format == "json":
-            # JSON output
-            import json
-            output_data = {
-                "file1": {
-                    "filename": result.file1_analysis.file_info.filename,
-                    "version": result.file1_analysis.header_analysis.version_string,
-                    "risk_level": result.file1_analysis.risk_assessment.overall_risk.value,
-                },
-                "file2": {
-                    "filename": result.file2_analysis.file_info.filename,
-                    "version": result.file2_analysis.header_analysis.version_string,
-                    "risk_level": result.file2_analysis.risk_assessment.overall_risk.value,
-                },
-                "timestamp_delta_seconds": result.timestamp_delta_seconds,
-                "modification_delta_seconds": result.modification_delta_seconds,
-                "metadata_changes": result.metadata_changes,
-                "risk_level_change": result.risk_level_change,
-                "summary": result.comparison_summary,
-            }
-            console.print(json.dumps(output_data, indent=2))
-        else:
-            # Table format output
-            _print_comparison_table(result, verbose)
+        # Generate report if output specified
+        if output_report:
+            from dwg_forensic.output.comparison_report import (
+                generate_comparison_pdf_report,
+                generate_comparison_json_report,
+            )
 
-        if output:
-            print_status("[WARN]", "PDF report output not yet implemented (Phase 3.2)")
+            output_path = Path(output_report)
+            print_status("[INFO]", "Generating comparison report...")
+
+            # Determine format from extension
+            if output_path.suffix.lower() == '.pdf':
+                report_path = generate_comparison_pdf_report(
+                    comparison=result,
+                    output_path=output_path,
+                    case_id=case_id,
+                )
+                print_status("[OK]", f"PDF comparison report saved: {report_path}")
+            elif output_path.suffix.lower() == '.json':
+                report_path = generate_comparison_json_report(
+                    comparison=result,
+                    output_path=output_path,
+                )
+                print_status("[OK]", f"JSON comparison report saved: {report_path}")
+            else:
+                print_status("[ERROR]", "Unsupported output format. Use .pdf or .json extension.")
+                sys.exit(1)
+
+        # Display results to console if no output or verbose mode
+        if not output_report or verbose > 0:
+            if output_format == "json":
+                # JSON output
+                import json
+                output_data = {
+                    "file1": {
+                        "filename": result.file1_analysis.file_info.filename,
+                        "version": result.file1_analysis.header_analysis.version_string,
+                        "risk_level": result.file1_analysis.risk_assessment.overall_risk.value,
+                    },
+                    "file2": {
+                        "filename": result.file2_analysis.file_info.filename,
+                        "version": result.file2_analysis.header_analysis.version_string,
+                        "risk_level": result.file2_analysis.risk_assessment.overall_risk.value,
+                    },
+                    "timestamp_delta_seconds": result.timestamp_delta_seconds,
+                    "modification_delta_seconds": result.modification_delta_seconds,
+                    "metadata_changes": result.metadata_changes,
+                    "risk_level_change": result.risk_level_change,
+                    "summary": result.comparison_summary,
+                }
+                console.print(json.dumps(output_data, indent=2))
+            else:
+                # Table format output
+                _print_comparison_table(result, verbose)
 
     except ValueError as e:
         print_status("[ERROR]", str(e))
@@ -1133,11 +1186,14 @@ def compare(file1: str, file2: str, output: str, output_format: str, verbose: in
 @main.command()
 @click.argument("directory", type=click.Path(exists=True))
 @click.option("--recursive", is_flag=True, help="Process subdirectories recursively")
-@click.option("-o", "--output-dir", type=click.Path(), help="Output directory for reports (not yet implemented)")
+@click.option("-o", "--output-dir", type=click.Path(), help="Output directory for reports")
+@click.option("--baseline", type=click.Path(exists=True), help="Baseline DWG file for comparison")
+@click.option("--generate-deltas", is_flag=True, help="Generate comparison reports vs baseline")
 @click.option("--parallel", type=int, help="Number of parallel workers (default: auto-detect CPU count)")
 @click.option("-f", "--format", "output_format", type=click.Choice(["table", "json"]), default="table")
 @click.option("-v", "--verbose", count=True, help="Verbosity level")
-def batch(directory: str, recursive: bool, output_dir: str, parallel: int, output_format: str, verbose: int):
+def batch(directory: str, recursive: bool, output_dir: str, baseline: str, generate_deltas: bool,
+          parallel: int, output_format: str, verbose: int):
     """Batch analyze multiple DWG files in a directory.
 
     DIRECTORY is the path to the directory containing DWG files.
@@ -1150,6 +1206,11 @@ def batch(directory: str, recursive: bool, output_dir: str, parallel: int, outpu
     - Individual file error isolation
     - Aggregated risk statistics
     - Risk distribution summary
+    - Baseline comparison mode (--baseline FILE --generate-deltas)
+
+    Phase 3.3: Generate comparison reports for each file vs baseline:
+    - batch /dwgs/ --baseline clean.dwg --generate-deltas -o /reports/
+    - Produces per-file PDF/JSON comparison reports
     """
     dir_path = Path(directory)
 
@@ -1157,11 +1218,22 @@ def batch(directory: str, recursive: bool, output_dir: str, parallel: int, outpu
         f"[bold]Batch DWG Analysis[/bold]\n"
         f"Directory: {dir_path}\n"
         f"Recursive: {'Yes' if recursive else 'No'}\n"
+        f"Baseline: {Path(baseline).name if baseline else 'None'}\n"
+        f"Generate Deltas: {'Yes' if generate_deltas else 'No'}\n"
         f"Workers: {parallel if parallel else 'Auto'}",
         style="blue"
     ))
 
     try:
+        # Validate baseline + generate_deltas options
+        if generate_deltas and not baseline:
+            print_status("[ERROR]", "--generate-deltas requires --baseline to be specified")
+            sys.exit(1)
+
+        if generate_deltas and not output_dir:
+            print_status("[ERROR]", "--generate-deltas requires --output-dir to be specified")
+            sys.exit(1)
+
         # Initialize batch processor
         processor = BatchProcessor(num_workers=parallel)
 
@@ -1172,6 +1244,62 @@ def batch(directory: str, recursive: bool, output_dir: str, parallel: int, outpu
             output_dir=Path(output_dir) if output_dir else None,
             recursive=recursive,
         )
+
+        # Phase 3.3: Generate comparison reports vs baseline
+        if generate_deltas and baseline:
+            from dwg_forensic.output.comparison_report import generate_comparison_pdf_report
+
+            baseline_path = Path(baseline)
+            output_dir_path = Path(output_dir)
+            output_dir_path.mkdir(parents=True, exist_ok=True)
+
+            print_status("[INFO]", f"Generating comparison reports vs baseline: {baseline_path.name}")
+
+            # Analyze baseline once
+            comparator = DWGComparator()
+            baseline_analysis = comparator.analyzer.analyze(baseline_path)
+
+            # Generate comparison report for each successful file
+            delta_count = 0
+            for analysis in result.results:
+                try:
+                    # Create comparison result manually
+                    file_name = Path(analysis.file_info.filename).stem
+                    report_path = output_dir_path / f"{file_name}_vs_baseline.pdf"
+
+                    # Compare file against baseline
+                    from dwg_forensic.analysis.comparator import ComparisonResult
+                    from dwg_forensic.analysis.structure_models import StructureDiff
+
+                    # Calculate deltas
+                    ts_delta = None
+                    mod_delta = None
+                    if analysis.metadata and analysis.metadata.created_date and baseline_analysis.metadata and baseline_analysis.metadata.created_date:
+                        ts_delta = int((analysis.metadata.created_date - baseline_analysis.metadata.created_date).total_seconds())
+                    if analysis.metadata and analysis.metadata.modified_date and baseline_analysis.metadata and baseline_analysis.metadata.modified_date:
+                        mod_delta = int((analysis.metadata.modified_date - baseline_analysis.metadata.modified_date).total_seconds())
+
+                    # Create comparison result
+                    comp_result = ComparisonResult(
+                        file1_analysis=baseline_analysis,
+                        file2_analysis=analysis,
+                        timestamp_delta_seconds=ts_delta,
+                        modification_delta_seconds=mod_delta,
+                        metadata_changes=[],
+                        comparison_summary=f"Comparison of {analysis.file_info.filename} against baseline {baseline_path.name}",
+                    )
+
+                    # Generate PDF report
+                    generate_comparison_pdf_report(
+                        comparison=comp_result,
+                        output_path=report_path,
+                    )
+                    delta_count += 1
+
+                except Exception as e:
+                    logger.warning(f"Failed to generate comparison report for {analysis.file_info.filename}: {e}")
+
+            print_status("[OK]", f"Generated {delta_count} comparison reports in {output_dir_path}")
 
         # Display results
         console.print()
@@ -1198,9 +1326,6 @@ def batch(directory: str, recursive: bool, output_dir: str, parallel: int, outpu
         else:
             # Table format output
             _print_batch_summary(result, verbose)
-
-        if output_dir:
-            print_status("[WARN]", "Individual JSON reports not yet implemented (Phase 3.2)")
 
         # Exit with error if any files failed
         if result.failed > 0 and result.successful == 0:

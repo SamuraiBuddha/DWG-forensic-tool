@@ -24,6 +24,11 @@ from dwg_forensic.analysis.rules.rules_fingerprint import FingerprintRulesMixin
 from dwg_forensic.analysis.rules.rules_ntfs import NTFSRulesMixin
 from dwg_forensic.analysis.rules.rules_structure import StructureRulesMixin
 from dwg_forensic.analysis.rules.rules_timestamp import TimestampRulesMixin
+from dwg_forensic.analysis.tolerance_profiles import (
+    ProvenanceToleranceProfile,
+    UNKNOWN,
+)
+from dwg_forensic.analysis.tolerance_mapper import ProvenanceToleranceMapper
 
 
 class TamperingRuleEngine(
@@ -45,10 +50,22 @@ class TamperingRuleEngine(
     - StructureRulesMixin: TAMPER-036 to TAMPER-040 (Deep DWG structure analysis)
     """
 
-    def __init__(self):
-        """Initialize with built-in rules."""
+    def __init__(
+        self,
+        tolerance_profile: Optional[ProvenanceToleranceProfile] = None
+    ):
+        """
+        Initialize with built-in rules and optional tolerance profile.
+
+        Args:
+            tolerance_profile: Optional ProvenanceToleranceProfile for
+                provenance-aware rule evaluation. If None, uses UNKNOWN profile
+                (conservative fallback). Can be auto-selected using
+                ProvenanceToleranceMapper.
+        """
         self.rules: List[TamperingRule] = []
         self.results: List[RuleResult] = []
+        self._tolerance_profile = tolerance_profile or UNKNOWN
         self._load_builtin_rules()
 
     def _load_builtin_rules(self) -> None:
@@ -743,3 +760,21 @@ class TamperingRuleEngine(
             return 0.0
 
         return min(weighted_failures / total_weight, 1.0)
+
+    def get_tolerance(self) -> ProvenanceToleranceProfile:
+        """
+        Get the current tolerance profile.
+
+        Returns:
+            ProvenanceToleranceProfile instance currently in use
+        """
+        return self._tolerance_profile
+
+    def set_tolerance(self, profile: ProvenanceToleranceProfile) -> None:
+        """
+        Set the tolerance profile for rule evaluation.
+
+        Args:
+            profile: ProvenanceToleranceProfile to use
+        """
+        self._tolerance_profile = profile

@@ -72,12 +72,14 @@ from dwg_forensic.knowledge import KnowledgeEnricher, Neo4jKnowledgeClient
 
 # LLM integration (optional - gracefully degrades if unavailable)
 try:
-    from dwg_forensic.llm import ForensicNarrator, ForensicReasoner
+    from dwg_forensic.llm import ForensicNarrator, ForensicReasoner, LLMModeManager, LLMMode
     LLM_AVAILABLE = True
 except ImportError:
     LLM_AVAILABLE = False
     ForensicNarrator = None  # type: ignore
     ForensicReasoner = None  # type: ignore
+    LLMModeManager = None  # type: ignore
+    LLMMode = None  # type: ignore
 
 # Smoking gun synthesis for definitive proof filtering
 try:
@@ -106,6 +108,7 @@ class ForensicAnalyzer:
         use_llm: bool = False,
         llm_model: Optional[str] = None,
         expert_name: str = "Digital Forensics Expert",
+        llm_mode: Optional["LLMMode"] = None,
     ):
         """Initialize the forensic analyzer with all required parsers.
 
@@ -120,15 +123,36 @@ class ForensicAnalyzer:
             neo4j_user: Optional Neo4j username (defaults to NEO4J_USER env var)
             neo4j_password: Optional Neo4j password (defaults to NEO4J_PASSWORD env var)
             enable_knowledge_enrichment: Whether to enrich analysis with forensic knowledge
-            use_llm: Whether to use LLM for expert narrative generation
+            use_llm: Whether to use LLM for expert narrative generation (legacy param)
             llm_model: Optional Ollama model name (e.g., 'mistral', 'llama3')
             expert_name: Name of the expert witness for LLM narrative
+            llm_mode: LLM operating mode (AUTO/FORCE/OFF). Overrides use_llm if specified.
         """
         # Progress callback for terminal display
         self._progress_callback = progress_callback
 
         # Forensic error tracking - ALL errors are potential evidence in forensic analysis
         self._analysis_errors: List[Dict[str, Any]] = []
+
+        # Phase 4.1: LLM mode manager (AUTO/FORCE/OFF with graceful fallback)
+        self.llm_mode_manager: Optional["LLMModeManager"] = None
+        if LLMModeManager:
+            # Determine mode from parameters
+            if llm_mode is not None:
+                # Explicit mode specified
+                mode = llm_mode
+            elif use_llm:
+                # Legacy use_llm=True maps to FORCE mode
+                mode = LLMMode.FORCE if LLMMode else None
+            else:
+                # Default to AUTO mode (detect Ollama availability)
+                mode = LLMMode.AUTO if LLMMode else None
+
+            if mode is not None:
+                self.llm_mode_manager = LLMModeManager(mode=mode)
+
+        # Property for checking if LLM is enabled
+        self._llm_enabled_cached: Optional[bool] = None
 
         # Phase 1 parsers
         self.header_parser = HeaderParser()
@@ -237,6 +261,24 @@ class ForensicAnalyzer:
         # Load custom rules if provided
         if custom_rules_path:
             self.rule_engine.load_rules(custom_rules_path)
+
+    @property
+    def llm_enabled(self) -> bool:
+        """
+        Check if LLM reasoning is enabled.
+
+        Returns True if mode manager is initialized and LLM is enabled,
+        False otherwise (graceful fallback).
+
+        Returns:
+            True if LLM should be used, False otherwise
+        """
+        if self._llm_enabled_cached is None:
+            if self.llm_mode_manager:
+                self._llm_enabled_cached = self.llm_mode_manager.is_enabled()
+            else:
+                self._llm_enabled_cached = False
+        return self._llm_enabled_cached
 
     def _report_progress(self, step: str, status: str, message: str) -> None:
         """Report progress to callback if registered.
@@ -560,6 +602,11 @@ class ForensicAnalyzer:
         rule_results = self.rule_engine.evaluate_all(rule_context, skip_rules=skip_rules)
         failed_rules = self.rule_engine.get_failed_rules(rule_results)
         self._report_progress("rules", "complete", f"Rules triggered: {len(failed_rules)}")
+
+        # Phase 4.1: Log LLM reasoning status (Phase 4.2+ will hook actual reasoning here)
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"LLM reasoning: {'enabled' if self.llm_enabled else 'disabled'}")
 
         # Phase 3: Detect tampering indicators (version-aware, with NTFS cross-validation)
         self._report_progress("tampering", "start", "Analyzing tampering indicators")

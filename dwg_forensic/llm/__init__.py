@@ -5,6 +5,8 @@ Provides LLM-powered forensic analysis:
 - ForensicReasoner: LLM-based evidence evaluation and smoking gun detection
 - ForensicNarrator: Narrative generation for reports
 - OllamaClient: Low-level Ollama API client
+- OllamaHealthChecker: Health checking for Ollama availability
+- LLMModeManager: Mode management (AUTO/FORCE/OFF) with graceful fallback
 
 The ForensicReasoner is the key innovation - it uses the LLM to REASON about
 evidence rather than just running algorithms. This allows it to:
@@ -16,10 +18,15 @@ evidence rather than just running algorithms. This allows it to:
 from dwg_forensic.llm.ollama_client import OllamaClient
 from dwg_forensic.llm.forensic_narrator import ForensicNarrator
 from dwg_forensic.llm.forensic_reasoner import ForensicReasoner, ForensicReasoning
+from dwg_forensic.llm.ollama_health import OllamaHealthChecker
+from dwg_forensic.llm.mode_manager import LLMModeManager, LLMMode
 
 __all__ = [
     "OllamaClient",
     "ForensicNarrator",
     "ForensicReasoner",
     "ForensicReasoning",
+    "OllamaHealthChecker",
+    "LLMModeManager",
+    "LLMMode",
 ]
