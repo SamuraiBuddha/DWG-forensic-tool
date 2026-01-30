@@ -3,6 +3,9 @@ DWG Forensic Tool - NTFS Cross-Validation Rules (TAMPER-019 to TAMPER-028)
 
 "Smoking gun" indicators comparing DWG internal timestamps with NTFS filesystem metadata.
 These rules produce court-admissible proof of timestamp manipulation.
+
+CRITICAL: NTFS rules are definitive smoking guns and must NEVER be relaxed
+by tolerance profiles. They remain STRICT across all provenances.
 """
 
 from typing import Any, Dict
