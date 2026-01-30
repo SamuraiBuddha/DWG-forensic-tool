@@ -669,6 +669,10 @@ def _print_comparison_table(result, verbose: int) -> None:
             console.print(f"  [yellow][->][/yellow] {change}")
         console.print()
 
+    # Phase 3.2: Structure diff
+    if result.structure_diff and result.structure_diff.has_structural_changes():
+        _print_structure_diff(result.structure_diff, verbose)
+
     # Risk level change
     if result.risk_level_change:
         console.print(Panel(
@@ -682,6 +686,124 @@ def _print_comparison_table(result, verbose: int) -> None:
             title="Risk Assessment",
             style="green",
         ))
+
+
+def _print_structure_diff(structure_diff, verbose: int) -> None:
+    """Print structure comparison results.
+
+    Args:
+        structure_diff: StructureDiff object
+        verbose: Verbosity level
+    """
+    from dwg_forensic.analysis.structure_models import StructureDiff
+
+    severity = structure_diff.get_change_severity()
+    severity_colors = {
+        "NONE": "green",
+        "MINOR": "yellow",
+        "MAJOR": "red",
+        "CRITICAL": "red bold",
+    }
+    severity_color = severity_colors.get(severity, "white")
+
+    # Main structure changes panel
+    console.print(Panel(
+        f"Structural Change Severity: [{severity_color}]{severity}[/{severity_color}]",
+        title="Deep Structure Comparison (Phase 3.2)",
+        style=severity_color,
+    ))
+    console.print()
+
+    # Handle gap changes
+    if structure_diff.handle_gaps_added or structure_diff.handle_gaps_removed:
+        table = Table(title="Handle Gap Changes", show_header=True, header_style="bold")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value")
+
+        gap_changes = structure_diff.handle_gap_changes
+        if gap_changes.get("file1_gap_count") is not None:
+            table.add_row("File 1 Gap Count", str(gap_changes["file1_gap_count"]))
+        if gap_changes.get("file2_gap_count") is not None:
+            table.add_row("File 2 Gap Count", str(gap_changes["file2_gap_count"]))
+        if structure_diff.handle_gaps_added:
+            table.add_row("Gaps Added", str(len(structure_diff.handle_gaps_added)))
+        if structure_diff.handle_gaps_removed:
+            table.add_row("Gaps Removed", str(len(structure_diff.handle_gaps_removed)))
+
+        missing_1 = gap_changes.get("file1_missing_handles", 0)
+        missing_2 = gap_changes.get("file2_missing_handles", 0)
+        if missing_1 or missing_2:
+            delta = missing_2 - missing_1
+            table.add_row("Missing Handles Delta", f"{delta:+d} ({missing_1} -> {missing_2})")
+
+        console.print(table)
+        console.print()
+
+    # Section changes
+    if structure_diff.section_changes:
+        table = Table(title="Section Map Changes", show_header=True, header_style="bold")
+        table.add_column("Section", style="cyan")
+        table.add_column("Before (bytes)")
+        table.add_column("After (bytes)")
+        table.add_column("Change")
+
+        for section_name, changes in sorted(structure_diff.section_changes.items()):
+            size_before = changes["size_before"]
+            size_after = changes["size_after"]
+            delta = changes["delta"]
+
+            if size_before == 0:
+                change_str = "[green]+Added[/green]"
+            elif size_after == 0:
+                change_str = "[red]-Removed[/red]"
+            else:
+                pct = abs(delta) / size_before * 100 if size_before > 0 else 0
+                color = "green" if delta > 0 else "red"
+                change_str = f"[{color}]{delta:+,d} ({pct:+.1f}%)[/{color}]"
+
+            table.add_row(
+                section_name,
+                f"{size_before:,}" if size_before > 0 else "-",
+                f"{size_after:,}" if size_after > 0 else "-",
+                change_str,
+            )
+
+        console.print(table)
+        console.print()
+
+    # Object count changes
+    if structure_diff.object_deltas:
+        table = Table(title="Object Count Changes", show_header=True, header_style="bold")
+        table.add_column("Object Type", style="cyan")
+        table.add_column("Delta")
+        table.add_column("Direction")
+
+        for obj_type, delta in sorted(
+            structure_diff.object_deltas.items(),
+            key=lambda x: abs(x[1]),
+            reverse=True,
+        ):
+            color = "green" if delta > 0 else "red"
+            direction = "Added" if delta > 0 else "Removed"
+            table.add_row(obj_type, f"[{color}]{delta:+d}[/{color}]", direction)
+
+        console.print(table)
+        console.print()
+
+    # Property changes
+    if structure_diff.property_changes and verbose > 0:
+        table = Table(title="Property Changes", show_header=True, header_style="bold")
+        table.add_column("Property", style="cyan")
+        table.add_column("Before")
+        table.add_column("After")
+
+        for prop_name, (before, after) in sorted(structure_diff.property_changes.items()):
+            before_str = str(before) if before is not None else "-"
+            after_str = str(after) if after is not None else "-"
+            table.add_row(prop_name, before_str, after_str)
+
+        console.print(table)
+        console.print()
 
 
 def _print_batch_summary(result, verbose: int) -> None:

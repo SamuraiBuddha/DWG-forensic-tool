@@ -241,10 +241,10 @@ class TestDWGComparator:
         assert "Risk Level Change" in result.comparison_summary
 
     @patch("dwg_forensic.core.analyzer.ForensicAnalyzer")
-    def test_structure_changes_placeholder(
+    def test_structure_diff_field(
         self, mock_analyzer_class, mock_analysis1, mock_analysis2, tmp_path
     ):
-        """Test that structure changes field exists (Phase 3.2 placeholder)."""
+        """Test that structure_diff field exists and is populated (Phase 3.2)."""
         file1 = tmp_path / "file1.dwg"
         file2 = tmp_path / "file2.dwg"
         file1.write_bytes(b"fake dwg 1")
@@ -256,10 +256,10 @@ class TestDWGComparator:
         comparator = DWGComparator()
         result = comparator.compare_files(file1, file2)
 
-        # Should have structure_changes dict (placeholder for Phase 3.2)
-        assert isinstance(result.structure_changes, dict)
-        assert "note" in result.structure_changes
-        assert "Phase 3.2" in result.structure_changes["note"]
+        # Should have structure_diff (Phase 3.2)
+        from dwg_forensic.analysis.structure_models import StructureDiff
+        assert result.structure_diff is not None
+        assert isinstance(result.structure_diff, StructureDiff)
 
 
 class TestComparisonHelpers:
