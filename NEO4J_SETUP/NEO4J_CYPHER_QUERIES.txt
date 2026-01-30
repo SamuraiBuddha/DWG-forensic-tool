@@ -1,0 +1,434 @@
+# Neo4j Cypher Query Templates
+# Kara Murphy vs Danny Garcia Litigation Case
+# Generated: 2026-01-30
+
+## QUICK REFERENCE QUERIES FOR LITIGATION TEAM
+
+---
+
+## 1. EVIDENCE TIMELINE QUERIES
+
+### 1.1 Show all evidence chronologically
+```cypher
+MATCH (ev:Evidence)
+OPTIONAL MATCH (ev)<-[c:CREATED]-(creator:Party)
+OPTIONAL MATCH (ev)-[:LOCATED_IN]->(loc:Location)
+RETURN ev.name AS Evidence,
+       ev.evidence_type AS Type,
+       c.created_date AS CreatedDate,
+       creator.name AS Creator,
+       loc.path AS Location,
+       ev.sha256 AS Hash
+ORDER BY c.created_date ASC;
+```
+
+### 1.2 Evidence timeline for specific party
+```cypher
+MATCH (p:Party {name: $party_name})
+OPTIONAL MATCH (p)-[c:CREATED]->(ev:Evidence)
+OPTIONAL MATCH (p)-[m:MODIFIED]->(ev2:Evidence)
+RETURN p.name AS Party,
+       collect(DISTINCT {file: ev.name, action: "Created", date: c.created_date}) +
+       collect(DISTINCT {file: ev2.name, action: "Modified", date: m.modification_date}) AS Actions
+ORDER BY Actions.date;
+```
+// Parameters: {party_name: "Andy Garcia"}
+
+### 1.3 All events in date range
+```cypher
+MATCH (e:Event)
+WHERE e.date >= datetime($start_date) AND e.date <= datetime($end_date)
+OPTIONAL MATCH (p:Party)-[:PARTY_INVOLVED_IN]->(e)
+RETURN e.name AS Event,
+       e.event_type AS Type,
+       e.date AS Date,
+       collect(p.name) AS Parties,
+       e.significance AS Significance
+ORDER BY e.date ASC;
+```
+// Parameters: {start_date: "2021-01-01T00:00:00Z", end_date: "2021-12-31T23:59:59Z"}
+
+---
+
+## 2. PARTY RELATIONSHIP QUERIES
+
+### 2.1 Who knew about X on Y date?
+```cypher
+// Find all parties involved with events/evidence before a specific date
+MATCH (p:Party)
+WHERE EXISTS {
+    MATCH (p)-[:PARTY_INVOLVED_IN]->(e:Event)
+    WHERE e.date <= datetime($target_date) AND e.name CONTAINS $event_keyword
+}
+OR EXISTS {
+    MATCH (p)-[:CREATED|MODIFIED]->(ev:Evidence)
+    WHERE ev.name CONTAINS $evidence_keyword
+}
+RETURN DISTINCT p.name AS Party,
+                p.role AS Role,
+                p.entity_type AS Type;
+```
+// Parameters: {target_date: "2021-09-21T00:00:00Z", event_keyword: "Lane", evidence_keyword: "Lane"}
+
+### 2.2 All interactions between two parties
+```cypher
+MATCH (p1:Party {name: $party1}), (p2:Party {name: $party2})
+OPTIONAL MATCH (p1)-[:PARTY_INVOLVED_IN]->(e:Event)<-[:PARTY_INVOLVED_IN]-(p2)
+OPTIONAL MATCH (p1)-[:CREATED|MODIFIED]->(ev:Evidence)<-[:CREATED|MODIFIED]-(p2)
+RETURN p1.name AS Party1,
+       p2.name AS Party2,
+       collect(DISTINCT e.name) AS SharedEvents,
+       collect(DISTINCT ev.name) AS SharedEvidence;
+```
+// Parameters: {party1: "Andy Garcia", party2: "Danny Garcia"}
+
+### 2.3 Party activity summary
+```cypher
+MATCH (p:Party {name: $party_name})
+OPTIONAL MATCH (p)-[c:CREATED]->(ev_created:Evidence)
+OPTIONAL MATCH (p)-[m:MODIFIED]->(ev_modified:Evidence)
+OPTIONAL MATCH (p)-[:PARTY_INVOLVED_IN]->(e:Event)
+RETURN p.name AS Party,
+       count(DISTINCT ev_created) AS FilesCreated,
+       count(DISTINCT ev_modified) AS FilesModified,
+       count(DISTINCT e) AS EventsInvolved,
+       collect(DISTINCT e.name)[0..5] AS RecentEvents;
+```
+// Parameters: {party_name: "Andy Garcia"}
+
+---
+
+## 3. CLAIM ANALYSIS QUERIES
+
+### 3.1 Evidence supporting a claim
+```cypher
+MATCH (c:Claim {claim_text: $claim_text})
+OPTIONAL MATCH (ev:Evidence)-[s:SUPPORTS_CLAIM]->(c)
+OPTIONAL MATCH (d:Document)-[s2:SUPPORTS_CLAIM]->(c)
+RETURN c.claim_text AS Claim,
+       collect(DISTINCT {evidence: ev.name, type: ev.evidence_type, strength: s.strength}) AS SupportingEvidence,
+       collect(DISTINCT {document: d.title, type: d.document_type, strength: s2.strength}) AS SupportingDocuments;
+```
+// Parameters: {claim_text: "Amenities removed from design without authorization"}
+
+### 3.2 Evidence contradicting a claim
+```cypher
+MATCH (c:Claim {claim_text: $claim_text})
+OPTIONAL MATCH (ev:Evidence)-[con:CONTRADICTS_CLAIM]->(c)
+OPTIONAL MATCH (d:Document)-[con2:CONTRADICTS_CLAIM]->(c)
+RETURN c.claim_text AS Claim,
+       collect(DISTINCT {evidence: ev.name, type: ev.evidence_type, strength: con.strength}) AS ContradictingEvidence,
+       collect(DISTINCT {document: d.title, type: d.document_type, strength: con2.strength}) AS ContradictingDocuments;
+```
+// Parameters: {claim_text: "Timestamp manipulation detected"}
+
+### 3.3 All claims with evidence count
+```cypher
+MATCH (c:Claim)
+OPTIONAL MATCH (ev:Evidence)-[:SUPPORTS_CLAIM]->(c)
+OPTIONAL MATCH (ev2:Evidence)-[:CONTRADICTS_CLAIM]->(c)
+RETURN c.claim_text AS Claim,
+       c.claim_type AS Type,
+       c.severity AS Severity,
+       count(DISTINCT ev) AS SupportingCount,
+       count(DISTINCT ev2) AS ContradictingCount,
+       c.status AS Status
+ORDER BY c.severity DESC, SupportingCount DESC;
+```
+
+### 3.4 Smoking gun evidence (strong support, no contradiction)
+```cypher
+MATCH (c:Claim)<-[s:SUPPORTS_CLAIM]-(ev:Evidence)
+WHERE s.strength = "Strong"
+AND NOT EXISTS {
+    MATCH (ev)-[:CONTRADICTS_CLAIM]->(c)
+}
+RETURN c.claim_text AS Claim,
+       collect(ev.name) AS SmokingGunEvidence,
+       c.alleged_by AS AllegedBy,
+       c.alleged_against AS AllegedAgainst;
+```
+
+---
+
+## 4. DOCUMENT REFERENCE QUERIES
+
+### 4.1 What documents reference X?
+```cypher
+MATCH (target {name: $entity_name}) // Works for Evidence, Party, Event
+MATCH (d:Document)-[r:REFERENCES]->(target)
+RETURN d.title AS Document,
+       d.document_type AS Type,
+       d.date AS Date,
+       r.reference_type AS ReferenceType,
+       r.page_number AS Page,
+       r.context AS Context
+ORDER BY d.date DESC;
+```
+// Parameters: {entity_name: "Lane.rvt"} or {entity_name: "Danny Garcia"}
+
+### 4.2 All references in a document
+```cypher
+MATCH (d:Document {title: $document_title})
+OPTIONAL MATCH (d)-[r:REFERENCES]->(target)
+RETURN d.title AS Document,
+       collect(DISTINCT {
+           entity: target.name,
+           type: labels(target)[0],
+           reference_type: r.reference_type,
+           page: r.page_number
+       }) AS References;
+```
+// Parameters: {document_title: "Forensic Analysis Report - Lane.rvt"}
+
+### 4.3 Cross-reference between evidence and claims via documents
+```cypher
+MATCH (ev:Evidence)-[:SUPPORTS_CLAIM|CONTRADICTS_CLAIM]->(c:Claim)
+MATCH (d:Document)-[:REFERENCES]->(ev)
+RETURN ev.name AS Evidence,
+       c.claim_text AS Claim,
+       collect(DISTINCT d.title) AS CitedInDocuments;
+```
+
+---
+
+## 5. LOCATION-BASED QUERIES
+
+### 5.1 All evidence at a location
+```cypher
+MATCH (loc:Location {path: $location_path})
+MATCH (ev:Evidence)-[:LOCATED_IN]->(loc)
+OPTIONAL MATCH (p:Party)-[:CREATED]->(ev)
+RETURN loc.path AS Location,
+       collect({file: ev.name, type: ev.evidence_type, creator: p.name}) AS Evidence;
+```
+// Parameters: {location_path: "E:\\6075 English Oaks - Naples 2\\2021 Initial Permit\\"}
+
+### 5.2 Trace evidence movement across locations
+```cypher
+MATCH (ev:Evidence {name: $evidence_name})
+MATCH (ev)-[l:LOCATED_IN]->(loc:Location)
+RETURN ev.name AS Evidence,
+       collect({
+           location: loc.path,
+           discovered: l.discovered_date,
+           still_present: l.still_present
+       }) AS Locations
+ORDER BY l.discovered_date;
+```
+// Parameters: {evidence_name: "Lane.rvt"}
+
+### 5.3 Cloud storage evidence
+```cypher
+MATCH (loc:Location {location_type: "Cloud"})
+MATCH (ev:Evidence)-[:LOCATED_IN]->(loc)
+RETURN loc.path AS CloudLocation,
+       collect(ev.name) AS Files;
+```
+
+---
+
+## 6. TEMPORAL DEPENDENCY QUERIES
+
+### 6.1 Event dependency chain
+```cypher
+MATCH path = (e1:Event)-[:DEPENDS_ON*]->(e2:Event)
+WHERE e1.name = $event_name
+RETURN [node IN nodes(path) | node.name] AS EventChain,
+       [rel IN relationships(path) | rel.dependency_type] AS DependencyTypes;
+```
+// Parameters: {event_name: "Batch DWG conversion"}
+
+### 6.2 Events in timeline period
+```cypher
+MATCH (t:Timeline {name: $timeline_name})
+MATCH (e:Event)-[:OCCURRED_ON]->(t)
+RETURN t.name AS Timeline,
+       t.start_date AS StartDate,
+       t.end_date AS EndDate,
+       collect({event: e.name, date: e.date, type: e.event_type}) AS Events
+ORDER BY e.date;
+```
+// Parameters: {timeline_name: "2021 Initial Permit Phase"}
+
+### 6.3 Gap analysis - find suspicious time gaps
+```cypher
+MATCH (e1:Event), (e2:Event)
+WHERE e1.date < e2.date
+  AND e1.event_type = "FileModification"
+  AND e2.event_type = "FileModification"
+  AND duration.between(e1.date, e2.date).days > $gap_threshold
+RETURN e1.name AS Event1,
+       e1.date AS Date1,
+       e2.name AS Event2,
+       e2.date AS Date2,
+       duration.between(e1.date, e2.date).days AS GapInDays
+ORDER BY GapInDays DESC
+LIMIT 10;
+```
+// Parameters: {gap_threshold: 30}
+
+---
+
+## 7. FORENSIC-SPECIFIC QUERIES
+
+### 7.1 Files with hash mismatches (potential tampering)
+```cypher
+MATCH (ev:Evidence)
+WHERE ev.sha256 IS NOT NULL
+MATCH (ev)-[m:MODIFIED]->(ev) // Self-modification after creation
+RETURN ev.name AS Evidence,
+       ev.sha256 AS Hash,
+       ev.acquisition_date AS AcquisitionDate,
+       m.modification_date AS LastModified,
+       m.modification_type AS ModificationType;
+```
+
+### 7.2 Software-generated files
+```cypher
+MATCH (software:Party {entity_type: "Software"})
+MATCH (software)-[c:CREATED]->(ev:Evidence)
+RETURN software.name AS Software,
+       collect({file: ev.name, date: c.created_date, type: ev.evidence_type}) AS GeneratedFiles;
+```
+
+### 7.3 Batch operations on same date
+```cypher
+MATCH (e:Event {event_type: "FileModification"})
+WHERE e.date >= datetime($target_date_start) AND e.date <= datetime($target_date_end)
+OPTIONAL MATCH (p:Party)-[:PARTY_INVOLVED_IN]->(e)
+RETURN date(e.date) AS Date,
+       count(e) AS OperationCount,
+       collect(e.name) AS Operations,
+       collect(DISTINCT p.name) AS Parties
+ORDER BY OperationCount DESC;
+```
+// Parameters: {target_date_start: "2026-01-09T00:00:00Z", target_date_end: "2026-01-09T23:59:59Z"}
+
+---
+
+## 8. DEPOSITION PREP QUERIES
+
+### 8.1 Complete profile for deposition witness
+```cypher
+MATCH (p:Party {name: $witness_name})
+OPTIONAL MATCH (p)-[c:CREATED]->(ev_created:Evidence)
+OPTIONAL MATCH (p)-[m:MODIFIED]->(ev_modified:Evidence)
+OPTIONAL MATCH (p)-[:PARTY_INVOLVED_IN]->(e:Event)
+OPTIONAL MATCH (d:Document)-[:REFERENCES]->(p)
+RETURN p.name AS Witness,
+       p.role AS Role,
+       collect(DISTINCT {action: "Created", file: ev_created.name, date: c.created_date}) AS CreatedFiles,
+       collect(DISTINCT {action: "Modified", file: ev_modified.name, date: m.modification_date}) AS ModifiedFiles,
+       collect(DISTINCT {event: e.name, date: e.date}) AS Events,
+       collect(DISTINCT d.title) AS MentionedInDocuments;
+```
+// Parameters: {witness_name: "Andy Garcia"}
+
+### 8.2 Timeline of witness activity
+```cypher
+MATCH (p:Party {name: $witness_name})
+MATCH (p)-[r]->(target)
+WHERE type(r) IN ["CREATED", "MODIFIED", "PARTY_INVOLVED_IN"]
+RETURN p.name AS Witness,
+       type(r) AS Action,
+       labels(target)[0] AS TargetType,
+       target.name AS TargetName,
+       CASE
+           WHEN type(r) = "CREATED" THEN r.created_date
+           WHEN type(r) = "MODIFIED" THEN r.modification_date
+           ELSE target.date
+       END AS Date
+ORDER BY Date ASC;
+```
+// Parameters: {witness_name: "Andy Garcia"}
+
+### 8.3 Contradictory statements check
+```cypher
+// Find parties who created AND modified same evidence (potential red flag)
+MATCH (p:Party)-[:CREATED]->(ev:Evidence)
+MATCH (p)-[:MODIFIED]->(ev)
+RETURN p.name AS Party,
+       ev.name AS Evidence,
+       ev.evidence_type AS Type;
+```
+
+---
+
+## 9. SETTLEMENT NEGOTIATION QUERIES
+
+### 9.1 Strength of case summary
+```cypher
+MATCH (c:Claim {alleged_by: $plaintiff_name})
+OPTIONAL MATCH (ev:Evidence)-[s:SUPPORTS_CLAIM]->(c)
+OPTIONAL MATCH (ev2:Evidence)-[con:CONTRADICTS_CLAIM]->(c)
+RETURN c.claim_text AS Claim,
+       count(DISTINCT ev) AS SupportingEvidence,
+       count(DISTINCT ev2) AS ContradictingEvidence,
+       CASE
+           WHEN count(DISTINCT ev) > count(DISTINCT ev2) * 2 THEN "Strong"
+           WHEN count(DISTINCT ev) > count(DISTINCT ev2) THEN "Moderate"
+           ELSE "Weak"
+       END AS OverallStrength;
+```
+// Parameters: {plaintiff_name: "Kara Murphy"}
+
+### 9.2 Key evidence summary for settlement memo
+```cypher
+MATCH (c:Claim)<-[s:SUPPORTS_CLAIM {strength: "Strong"}]-(ev:Evidence)
+MATCH (ev)<-[cr:CREATED]-(creator:Party)
+RETURN c.claim_text AS Claim,
+       collect({
+           evidence: ev.name,
+           creator: creator.name,
+           date: cr.created_date,
+           type: ev.evidence_type
+       }) AS KeyEvidence;
+```
+
+---
+
+## 10. GRAPH VISUALIZATION QUERIES
+
+### 10.1 Complete case graph (limited depth)
+```cypher
+MATCH path = (p:Party)-[*1..2]-(target)
+WHERE p.name IN [$party1, $party2]
+RETURN path
+LIMIT 200;
+```
+// Parameters: {party1: "Kara Murphy", party2: "Danny Garcia"}
+
+### 10.2 Evidence-claim network
+```cypher
+MATCH (ev:Evidence)-[r:SUPPORTS_CLAIM|CONTRADICTS_CLAIM]->(c:Claim)
+RETURN ev, r, c;
+```
+
+### 10.3 Timeline visualization
+```cypher
+MATCH (e:Event)
+OPTIONAL MATCH (p:Party)-[:PARTY_INVOLVED_IN]->(e)
+RETURN e, collect(p) AS parties
+ORDER BY e.date;
+```
+
+---
+
+## USAGE NOTES
+
+**Parameter Syntax**: Use `$parameter_name` in queries, pass values via Neo4j driver or Browser params box:
+```javascript
+// JavaScript driver example
+session.run(query, {party_name: "Andy Garcia", start_date: "2021-01-01T00:00:00Z"})
+```
+
+**Performance**: Queries with `OPTIONAL MATCH` may be slow on large graphs. Use indexes on frequently queried properties.
+
+**Datetime Format**: Use ISO 8601 format: `YYYY-MM-DDTHH:MM:SSZ`
+
+**Export Results**: In Neo4j Browser, use "Download CSV" or "Download JSON" buttons after running queries.
+
+---
+
+End of Query Templates

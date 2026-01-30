@@ -1,0 +1,448 @@
+================================================================================
+QUICK START GUIDE - NEO4J LITIGATION KNOWLEDGE GRAPH
+================================================================================
+
+Case: Kara Murphy vs Danny Garcia
+Guide Version: 1.0
+Last Updated: 2026-01-30
+Phase: Phase 2 POC Ingestion Complete
+
+================================================================================
+CONNECTION SETUP
+================================================================================
+
+Neo4j Connection Details:
+- URI: bolt://localhost:7687
+- Username: neo4j
+- Password: [Use your Neo4j password]
+- Database: neo4j (default)
+
+Neo4j Browser Access:
+1. Open web browser
+2. Navigate to: http://localhost:7474
+3. Enter credentials (URI: bolt://localhost:7687)
+4. Connect to graph
+
+Python Driver Connection:
+```python
+from neo4j import GraphDatabase
+
+driver = GraphDatabase.driver(
+    "bolt://localhost:7687",
+    auth=("neo4j", "your_password")
+)
+
+with driver.session() as session:
+    result = session.run("MATCH (n) RETURN count(n) AS count")
+    print(f"Total nodes: {result.single()['count']}")
+
+driver.close()
+```
+
+================================================================================
+QUERYING INGESTED DOCUMENTS
+================================================================================
+
+1. COUNT ALL DOCUMENTS
+```cypher
+MATCH (d:Document)
+RETURN count(d) AS total_documents
+```
+Expected Result: 5 documents (POC ingestion)
+
+--------------------------------------------------------------------------------
+
+2. LIST ALL DOCUMENTS WITH METADATA
+```cypher
+MATCH (d:Document)
+RETURN d.file_name AS filename,
+       d.evidence_category AS category,
+       d.file_type AS type,
+       d.confidence_score AS confidence,
+       d.created_date AS created
+ORDER BY d.confidence_score DESC, created
+```
+Expected Result:
+- Lane.rvt (design_file, RVT, 95%, 2021-02-24)
+- Lane.0024.rvt (design_file, RVT, 95%, 2021-09-21)
+- 6075 Enlgish Oaks AutoCAD 092021mls.dwg (design_file, DWG, 95%, 2021-09-21)
+- Forensic_Analysis_Lane_RVT_Phase_A.pdf (forensic_report, PDF, 95%, 2026-01-30)
+- Deposition_Andy_Garcia_2025_XX_XX.pdf (deposition, PDF, 75%, 2025-06-15)
+
+--------------------------------------------------------------------------------
+
+3. FIND ALL DOCUMENTS RELATED TO LANE.RVT
+```cypher
+MATCH (d:Document)-[r:REFERENCES]->(ev:Evidence {name: "Lane.rvt"})
+RETURN d.file_name AS document,
+       d.evidence_category AS category,
+       r.confidence AS confidence,
+       r.context AS context
+ORDER BY r.confidence DESC
+```
+Expected Result: 2 documents (forensic report, deposition)
+
+Usage Notes:
+- Replace "Lane.rvt" with any Evidence node name
+- Confidence scores indicate relationship strength (95% = definitive, 75% = strong)
+- Context field contains forensic findings summary
+
+--------------------------------------------------------------------------------
+
+4. FIND DEPOSITION EXHIBITS BY DATE RANGE
+```cypher
+MATCH (d:Document {evidence_category: "deposition"})
+WHERE d.created_date >= datetime("2025-01-01T00:00:00Z")
+  AND d.created_date <= datetime("2025-12-31T23:59:59Z")
+RETURN d.file_name AS deposition,
+       d.created_date AS date,
+       d.confidence_score AS confidence
+ORDER BY date
+```
+Expected Result: 1 deposition (Garcia 2025-06-15)
+
+Usage Notes:
+- Adjust date range as needed
+- Use ISO 8601 format: "YYYY-MM-DDTHH:MM:SSZ"
+- Filter by other categories: "forensic_report", "email", "design_file"
+
+--------------------------------------------------------------------------------
+
+5. FIND FORENSIC EVIDENCE WITH CONFIDENCE > 75%
+```cypher
+MATCH (d:Document)
+WHERE d.confidence_score > 75
+  AND d.evidence_category IN ["design_file", "forensic_report"]
+RETURN d.file_name AS document,
+       d.confidence_score AS confidence,
+       d.forensic_findings AS findings
+ORDER BY d.confidence_score DESC
+```
+Expected Result: 4 documents (all design files + forensic report)
+
+Usage Notes:
+- Confidence threshold adjustable (50, 75, 95)
+- forensic_findings field contains analysis summary
+- Useful for identifying "smoking gun" evidence
+
+================================================================================
+SAMPLE QUERIES FROM NEO4J_CYPHER_QUERIES.txt
+================================================================================
+
+6. DOCUMENT-EVIDENCE-PARTY NETWORK
+```cypher
+MATCH (d:Document)-[:REFERENCES]->(ev:Evidence)
+MATCH (d)-[:REFERENCES]->(p:Party)
+RETURN d.file_name AS document,
+       ev.name AS evidence,
+       p.name AS party,
+       d.confidence_score AS confidence
+ORDER BY confidence DESC
+```
+Expected Result: Network showing Lane.rvt/0024.rvt linked to Andy Garcia
+
+--------------------------------------------------------------------------------
+
+7. CRITICAL DOCUMENTS FLAGGED (SMOKING GUN)
+```cypher
+MATCH (d:Document)
+WHERE d.forensic_findings CONTAINS "impossible"
+   OR d.forensic_findings CONTAINS "spoliation"
+   OR d.forensic_findings CONTAINS "destruction"
+RETURN d.file_name AS document,
+       d.forensic_findings AS findings,
+       d.confidence_score AS confidence
+ORDER BY confidence DESC
+```
+Expected Result: Lane.0024.rvt (build anachronism), DWG (timestamp destruction)
+
+--------------------------------------------------------------------------------
+
+8. TIMELINE VISUALIZATION - DOCUMENT CREATION DATES
+```cypher
+MATCH (d:Document)
+WHERE d.created_date IS NOT NULL
+RETURN date(d.created_date) AS date,
+       collect(d.file_name) AS documents,
+       count(d) AS document_count
+ORDER BY date
+```
+Expected Result: 4 distinct dates (2021-02-24, 2021-09-21, 2025-06-15, 2026-01-30)
+
+--------------------------------------------------------------------------------
+
+9. DOCUMENTS BY LOCATION
+```cypher
+MATCH (d:Document)-[:LOCATED_IN]->(loc:Location)
+RETURN loc.path AS location,
+       collect(d.file_name) AS documents,
+       count(d) AS document_count
+ORDER BY document_count DESC
+```
+Expected Result: 4 locations (2021 Initial Permit, 2022 Drawing Files, etc.)
+
+--------------------------------------------------------------------------------
+
+10. CONFIDENCE SCORE DISTRIBUTION
+```cypher
+MATCH (d:Document)
+RETURN d.confidence_score AS confidence,
+       count(d) AS count
+ORDER BY confidence DESC
+```
+Expected Result:
+- 95%: 4 documents
+- 75%: 1 document
+
+================================================================================
+ADDING NEW DOCUMENTS (WHEN NETWORK CSV AVAILABLE)
+================================================================================
+
+Option 1: Using Python Script (Batch Mode)
+```bash
+cd NEO4J_SETUP/PHASE_2_INGESTION
+
+python document_ingestion_poc.py \
+  --uri bolt://localhost:7687 \
+  --user neo4j \
+  --password your_password \
+  --export-backup NEO4J_UPDATED_BACKUP.json
+```
+
+This will:
+- Validate Neo4j schema constraints
+- Ingest POC documents (if not already ingested)
+- Create Document nodes with forensic metadata
+- Establish REFERENCES relationships to Evidence/Party/Location
+- Export full graph backup to JSON
+
+--------------------------------------------------------------------------------
+
+Option 2: CSV Batch Ingestion (Future Enhancement)
+```bash
+# When network CSV available at:
+# \\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\DOCUMENT_CATALOG\
+
+python document_ingestion_csv.py \
+  --uri bolt://localhost:7687 \
+  --user neo4j \
+  --password your_password \
+  --csv-file "\\adam\DataPool\...\document_catalog.csv" \
+  --batch-size 100
+```
+
+CSV Format Required:
+- filename: String (required)
+- file_path: String (required)
+- file_type: "RVT" | "DWG" | "PDF" | "MSG" | "XLSX" (required)
+- evidence_category: "design_file" | "deposition" | "forensic_report" | "email" | "permit" (required)
+- created_date: ISO datetime (optional)
+- modified_date: ISO datetime (optional)
+- file_size_bytes: Integer (optional)
+- forensic_findings: Text (optional)
+- confidence_score: 0-100 (default: 50)
+
+--------------------------------------------------------------------------------
+
+Option 3: Manual Single Document Ingestion (Neo4j Browser)
+```cypher
+CREATE (d:Document {
+  uuid: randomUUID(),
+  file_name: "New_Evidence_Document.pdf",
+  file_path: "E:\\6075 English Oaks - Naples 2\\NEW_EVIDENCE\\document.pdf",
+  file_type: "PDF",
+  evidence_category: "email",
+  created_date: datetime("2022-03-15T10:30:00Z"),
+  confidence_score: 75,
+  forensic_findings: "Email chain discussing design modifications",
+  created_at: datetime()
+})
+
+// Link to Evidence
+MATCH (d:Document {file_name: "New_Evidence_Document.pdf"})
+MATCH (ev:Evidence {name: "Lane.rvt"})
+CREATE (d)-[:REFERENCES {
+  reference_type: "Mentions",
+  confidence: 75,
+  created_at: datetime()
+}]->(ev)
+
+// Link to Party
+MATCH (d:Document {file_name: "New_Evidence_Document.pdf"})
+MATCH (p:Party {name: "Andy Garcia"})
+CREATE (d)-[:REFERENCES {
+  reference_type: "Mentions",
+  confidence: 75,
+  created_at: datetime()
+}]->(p)
+```
+
+================================================================================
+ADVANCED QUERIES
+================================================================================
+
+11. FIND DOCUMENTS SUPPORTING SPECIFIC CLAIM
+```cypher
+MATCH (c:Claim {claim_text: "Timestamp manipulation detected"})
+MATCH (d:Document)-[s:SUPPORTS_CLAIM]->(c)
+RETURN d.file_name AS document,
+       d.evidence_category AS category,
+       s.strength AS support_strength,
+       s.relevance AS relevance
+ORDER BY s.strength DESC
+```
+
+12. CROSS-REFERENCE DOCUMENTS WITH CONTRADICTORY EVIDENCE
+```cypher
+MATCH (d1:Document)-[:REFERENCES]->(ev:Evidence)-[:SUPPORTS_CLAIM]->(c:Claim)
+MATCH (d2:Document)-[:REFERENCES]->(ev2:Evidence)-[:CONTRADICTS_CLAIM]->(c)
+RETURN c.claim_text AS claim,
+       d1.file_name AS supporting_doc,
+       d2.file_name AS contradicting_doc,
+       ev.name AS supporting_evidence,
+       ev2.name AS contradicting_evidence
+```
+
+13. EXPORT DOCUMENT METADATA TO CSV
+```cypher
+MATCH (d:Document)
+OPTIONAL MATCH (d)-[:REFERENCES]->(ev:Evidence)
+OPTIONAL MATCH (d)-[:REFERENCES]->(p:Party)
+RETURN d.file_name AS filename,
+       d.file_type AS type,
+       d.evidence_category AS category,
+       d.created_date AS created,
+       d.confidence_score AS confidence,
+       collect(DISTINCT ev.name) AS evidence_refs,
+       collect(DISTINCT p.name) AS party_refs
+ORDER BY d.created_date
+```
+Note: Click "Download CSV" button in Neo4j Browser after running query
+
+================================================================================
+GRAPH VISUALIZATION TIPS
+================================================================================
+
+Neo4j Browser Graph View:
+1. Run query: MATCH (d:Document)-[r]->(target) RETURN d, r, target LIMIT 50
+2. Click "Graph" tab (default view)
+3. Color nodes by label: Settings -> Node Color -> By Label
+4. Resize nodes by property: Settings -> Node Size -> confidence_score
+5. Show labels: Settings -> Node Caption -> file_name
+
+Export Graph Image:
+1. Run visualization query
+2. Click "Export" icon in graph view
+3. Choose "Export SVG" or "Export PNG"
+4. Save as LITIGATION_GRAPH_VISUALIZATION.png
+
+Recommended Visualization Queries:
+- Full case graph: MATCH path = (d:Document)-[*1..2]-(target) RETURN path LIMIT 200
+- Evidence network: MATCH (d:Document)-[:REFERENCES]->(ev:Evidence) RETURN d, ev
+- Party network: MATCH (d:Document)-[:REFERENCES]->(p:Party) RETURN d, p
+- Timeline: MATCH (d:Document) WHERE d.created_date IS NOT NULL RETURN d ORDER BY d.created_date
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Issue: "Connection refused" error
+Solution: Verify Neo4j is running
+```bash
+# Check Neo4j status
+neo4j status
+
+# Start Neo4j if stopped
+neo4j start
+```
+
+Issue: "Constraint violation" error
+Solution: Check for duplicate UUIDs or missing schema constraints
+```cypher
+SHOW CONSTRAINTS
+```
+Expected: 7 unique constraints (Party, Location, Event, Evidence, Timeline, Claim, Document)
+
+Issue: "No results found" for query
+Solution: Verify data was ingested
+```cypher
+MATCH (d:Document) RETURN count(d)
+```
+Expected: 5 documents (POC)
+
+Issue: Relationship not created
+Solution: Check that target nodes exist
+```cypher
+MATCH (ev:Evidence {name: "Lane.rvt"}) RETURN ev
+MATCH (p:Party {name: "Andy Garcia"}) RETURN p
+```
+If no results, target nodes need to be created first (see Phase 1 initialization)
+
+================================================================================
+BACKUP AND RECOVERY
+================================================================================
+
+Create Backup:
+```bash
+python document_ingestion_poc.py \
+  --uri bolt://localhost:7687 \
+  --user neo4j \
+  --password your_password \
+  --export-backup NEO4J_BACKUP_$(date +%Y%m%d).json
+```
+
+Restore from Backup:
+1. Stop Neo4j: neo4j stop
+2. Clear database: rm -rf data/databases/neo4j
+3. Restart Neo4j: neo4j start
+4. Re-run Phase 1 initialization (schema + core nodes)
+5. Re-run Phase 2 ingestion from backup
+
+Manual Export (Neo4j Browser):
+- CALL apoc.export.json.all("graph_export.json", {})
+  (Requires APOC plugin)
+
+Manual Import:
+- CALL apoc.import.json("graph_export.json")
+  (Requires APOC plugin)
+
+================================================================================
+PERFORMANCE OPTIMIZATION
+================================================================================
+
+For Large Datasets (1,000+ documents):
+1. Use batch transactions (100 documents per commit)
+2. Create indexes on frequently queried properties:
+   ```cypher
+   CREATE INDEX document_filename_idx IF NOT EXISTS FOR (d:Document) ON (d.file_name)
+   CREATE INDEX document_category_idx IF NOT EXISTS FOR (d:Document) ON (d.evidence_category)
+   CREATE INDEX document_confidence_idx IF NOT EXISTS FOR (d:Document) ON (d.confidence_score)
+   ```
+3. Use APOC procedures for bulk operations
+4. Monitor query performance: :queries (Neo4j Browser)
+
+================================================================================
+CONTACT AND SUPPORT
+================================================================================
+
+Documentation:
+- NEO4J_SCHEMA.txt: Full schema definition
+- NEO4J_CYPHER_QUERIES.txt: 40+ query templates
+- NEO4J_DOCUMENT_INGESTION_REPORT.txt: Ingestion summary
+- INGESTION_SCALABILITY_NOTES.txt: Batch processing guide
+
+Logs:
+- NEO4J_INGESTION_LOG.txt: All ingestion operations
+- Neo4j logs: logs/neo4j.log
+
+Backup Files:
+- NEO4J_PHASE2_POC_BACKUP.json: Full graph export (Phase 2)
+- Restore from this file if graph corruption occurs
+
+================================================================================
+END OF QUICK START GUIDE
+================================================================================
+
+Generated by: CasparCode-002 Orchestrator
+Last Updated: 2026-01-30
+Status: Phase 2 POC Complete - Ready for CSV Batch Ingestion

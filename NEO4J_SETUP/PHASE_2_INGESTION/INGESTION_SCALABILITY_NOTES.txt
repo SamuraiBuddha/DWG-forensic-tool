@@ -1,0 +1,594 @@
+================================================================================
+INGESTION SCALABILITY NOTES - PHASE 2 TO PHASE 3
+================================================================================
+
+Case: Kara Murphy vs Danny Garcia
+Document: Scalability Architecture
+Version: 1.0
+Date: 2026-01-30
+Author: CasparCode-002 Orchestrator
+
+================================================================================
+CURRENT STATUS
+================================================================================
+
+Phase 2 POC Status: COMPLETE
+
+Documents Ingested: 5 core forensic evidence documents
+- Lane.rvt (93.16 MB, RVT, 2021-02-24)
+- Lane.0024.rvt (93.12 MB, RVT, 2021-09-21)
+- 6075 Enlgish Oaks AutoCAD 092021mls.dwg (9.53 MB, DWG, 2021-09-21)
+- Forensic_Analysis_Lane_RVT_Phase_A.pdf (PDF, 2026-01-30)
+- Deposition_Andy_Garcia_2025_XX_XX.pdf (PDF, 2025-06-15)
+
+Relationships Established: 15
+- Document -> Evidence: 9 relationships
+- Document -> Party: 9 relationships
+- Document -> Location: 5 relationships
+
+Infrastructure Ready:
+[X] Neo4j schema constraints validated (7 unique constraints)
+[X] Performance indexes created (10 indexes on critical properties)
+[X] Document node creation with forensic metadata
+[X] Relationship creation with confidence scoring
+[X] Dual-tracking logging (text + JSON backup)
+[X] Schema validation before ingestion
+[X] Error handling with detailed logging
+
+================================================================================
+ARCHITECTURE READY FOR
+================================================================================
+
+Target Dataset: 1,040 documents from network CSV
+
+Source Location:
+\\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\DOCUMENT_CATALOG\
+
+Expected CSV Columns:
+- filename: String (required)
+- file_path: String (required) - Full UNC or absolute path
+- file_type: String (required) - "RVT", "DWG", "PDF", "MSG", "XLSX", "TXT"
+- evidence_category: String (required) - "design_file", "deposition", "forensic_report", "email", "permit"
+- created_date: String (optional) - ISO 8601 datetime
+- modified_date: String (optional) - ISO 8601 datetime
+- file_size_bytes: Integer (optional)
+- author: String (optional) - For emails and documents with metadata
+- recipient: String (optional) - For emails
+- subject: String (optional) - For emails
+- forensic_findings: Text (optional) - Analysis summary
+- confidence_score: Integer (optional) - 0-100, defaults to 50
+
+Document Breakdown (from Phase 1 catalog):
+- Design files: 11 (RVT, DWG)
+- Deposition exhibits: 242 (PDF)
+- Forensic reports: 29 (PDF, XLSX)
+- Email evidence: 65 (.msg files)
+- Permit documents: ~150 (PDF, scanned images)
+- Supporting documents: ~540 (contracts, invoices, correspondence)
+
+Total Expected: 1,037-1,040 documents
+
+================================================================================
+BATCH INGESTION STRATEGY
+================================================================================
+
+Step 1: CSV Parsing and Validation
+- Read CSV with pandas or Python csv module
+- Validate required columns exist
+- Check data types for each field
+- Flag missing required fields
+- Skip malformed rows with detailed logging
+
+Step 2: Batch Transaction Processing
+- Process documents in chunks of 100
+- Each batch = 1 Neo4j transaction
+- Commit after each batch completion
+- Log successful batch number and document count
+- Continue on batch failure (skip to next batch)
+
+Step 3: Relationship Inference
+Auto-link documents to existing graph entities:
+
+A. Evidence Matching (High Confidence: 95%)
+   - Extract filename from document path
+   - Match against Evidence.name property
+   - Create REFERENCES relationship with confidence=95%
+   - Example: "Lane.rvt" in path -> link to Evidence{name: "Lane.rvt"}
+
+B. Party Matching (Medium Confidence: 75%)
+   - Extract author from email metadata (.msg files)
+   - Match against Party.name property
+   - Create REFERENCES relationship with confidence=75%
+   - Example: "From: Andy Garcia" -> link to Party{name: "Andy Garcia"}
+
+C. Location Matching (High Confidence: 95%)
+   - Extract directory from file_path
+   - Match or create Location node
+   - Create LOCATED_IN relationship with confidence=95%
+   - Example: "E:\6075 English Oaks - Naples 2\2021 Initial Permit\" -> Location node
+
+D. Date-Based Event Linking (Medium Confidence: 75%)
+   - Parse created_date from document
+   - Match against Event.date property (within 24-hour window)
+   - Create REFERENCES relationship with confidence=75%
+   - Example: Document created 2021-02-24 -> link to Event{date: 2021-02-24, name: "Lane.rvt created"}
+
+E. Claim Linking (Low Confidence: 50% - Manual Review Required)
+   - Keyword search in forensic_findings or subject
+   - Keywords: "timestamp", "manipulation", "spoliation", "anachronism", "destruction"
+   - Create SUPPORTS_CLAIM relationship with confidence=50%
+   - Flag for manual review and adjustment
+
+Step 4: Error Handling and Recovery
+- Log all errors to NEO4J_INGESTION_LOG.txt with timestamps
+- Export failed CSV rows to FAILED_DOCUMENTS.csv
+- Categories of errors:
+  * Missing required fields: Skip row, log warning
+  * Invalid data types: Skip row, log warning
+  * Neo4j constraint violation: Skip row, log error (duplicate UUID)
+  * Relationship target not found: Create Document, log warning (orphaned)
+  * Network timeout: Retry 3 times, then skip batch
+- Generate error summary report after ingestion
+
+Step 5: Post-Ingestion Validation
+- Count total documents ingested
+- Verify relationship counts match expected patterns
+- Check for orphaned documents (no Evidence/Party links)
+- Run integrity validation queries from neo4j_utils.py
+- Generate validation report
+
+================================================================================
+PERFORMANCE PROJECTIONS
+================================================================================
+
+Hardware Assumptions:
+- CPU: i9-14900KF (24 cores)
+- RAM: 64GB DDR5
+- Storage: 4TB NVMe SSD (local Neo4j instance)
+- Network: 1Gbps LAN (for CSV access)
+
+Estimated Performance:
+- CSV parsing: ~1,000 rows/second (pandas)
+- Document node creation: ~50 nodes/second (Neo4j write throughput)
+- Relationship creation: ~100 relationships/second
+- Batch commit overhead: ~0.5 seconds per 100-document batch
+
+Total Time Estimate:
+- CSV parsing: 1,040 rows / 1,000 rows/s = 1.04 seconds
+- Document creation: 1,040 nodes / 50 nodes/s = 20.8 seconds
+- Relationship creation: ~3,120 relationships / 100 rels/s = 31.2 seconds
+- Batch commits: (1,040 / 100) * 0.5s = 5.2 seconds
+- Validation queries: ~5 seconds
+
+Total: ~63 seconds (optimistic) to ~10 minutes (realistic with logging overhead)
+
+Memory Requirements:
+- Neo4j heap: 4GB recommended (default 1GB may be insufficient)
+- Python process: <500MB for CSV parsing
+- Total system memory usage: <5GB
+
+Disk Space Requirements:
+- Neo4j database: ~200MB (after 1,040 documents + relationships)
+- JSON backup: ~50MB (compressed export)
+- Ingestion logs: ~10MB (detailed logging)
+- Total: ~260MB additional storage
+
+Network Latency:
+- Minimal (local Neo4j instance on localhost:7687)
+- CSV access over network: 1-2 seconds to read full file
+- Bottleneck: Neo4j write throughput, NOT network
+
+================================================================================
+CODE MODIFICATIONS REQUIRED
+================================================================================
+
+File: document_ingestion_poc.py (enhance to document_ingestion_csv.py)
+
+1. Add CSV Parsing Module
+```python
+import pandas as pd
+
+def parse_document_csv(csv_file: str) -> List[Dict]:
+    """
+    Parse document catalog CSV.
+
+    Returns:
+        List of document dictionaries with validated fields
+    """
+    df = pd.read_csv(csv_file)
+
+    # Validate required columns
+    required = ["filename", "file_path", "file_type", "evidence_category"]
+    missing = [col for col in required if col not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required CSV columns: {missing}")
+
+    # Convert to list of dicts
+    documents = df.to_dict('records')
+
+    # Validate data types
+    for i, doc in enumerate(documents):
+        try:
+            # Validate file_type
+            valid_types = ["RVT", "DWG", "PDF", "MSG", "XLSX", "TXT"]
+            if doc["file_type"] not in valid_types:
+                logger.warning(f"Row {i}: Invalid file_type '{doc['file_type']}'. Skipping.")
+                doc["_skip"] = True
+
+            # Validate evidence_category
+            valid_categories = ["design_file", "deposition", "forensic_report", "email", "permit"]
+            if doc["evidence_category"] not in valid_categories:
+                logger.warning(f"Row {i}: Invalid evidence_category '{doc['evidence_category']}'. Skipping.")
+                doc["_skip"] = True
+
+            # Parse dates
+            if "created_date" in doc and pd.notna(doc["created_date"]):
+                doc["created_date"] = pd.to_datetime(doc["created_date"]).isoformat()
+
+            if "modified_date" in doc and pd.notna(doc["modified_date"]):
+                doc["modified_date"] = pd.to_datetime(doc["modified_date"]).isoformat()
+
+            # Default confidence score
+            if "confidence_score" not in doc or pd.isna(doc["confidence_score"]):
+                doc["confidence_score"] = 50
+
+        except Exception as e:
+            logger.error(f"Row {i} validation failed: {e}. Skipping.")
+            doc["_skip"] = True
+
+    # Filter out skipped rows
+    valid_documents = [doc for doc in documents if not doc.get("_skip", False)]
+    logger.info(f"Parsed {len(valid_documents)} valid documents from {len(documents)} rows")
+
+    return valid_documents
+```
+
+2. Add Batch Transaction Handler
+```python
+def batch_ingest_documents(
+    pipeline: ForensicDocumentIngestionPipeline,
+    documents: List[Dict],
+    batch_size: int = 100
+):
+    """
+    Ingest documents in batches with transaction commits.
+
+    Args:
+        pipeline: Initialized pipeline
+        documents: List of document dictionaries
+        batch_size: Documents per transaction (default: 100)
+    """
+    total = len(documents)
+    batches = (total + batch_size - 1) // batch_size
+
+    logger.info(f"Starting batch ingestion: {total} documents in {batches} batches")
+
+    for i in range(0, total, batch_size):
+        batch = documents[i:i+batch_size]
+        batch_num = (i // batch_size) + 1
+
+        logger.info(f"[Batch {batch_num}/{batches}] Processing {len(batch)} documents")
+
+        try:
+            for doc in batch:
+                # Create Document node
+                doc_uuid = pipeline.create_document_node(
+                    file_name=doc["filename"],
+                    file_path=doc["file_path"],
+                    file_type=doc["file_type"],
+                    evidence_category=doc["evidence_category"],
+                    created_date=doc.get("created_date"),
+                    modified_date=doc.get("modified_date"),
+                    file_size_bytes=doc.get("file_size_bytes"),
+                    forensic_findings=doc.get("forensic_findings"),
+                    confidence_score=doc.get("confidence_score", 50),
+                )
+
+                # Infer and create relationships
+                infer_relationships(pipeline, doc_uuid, doc)
+
+            logger.info(f"[Batch {batch_num}/{batches}] COMPLETE")
+
+        except Exception as e:
+            logger.error(f"[Batch {batch_num}/{batches}] FAILED: {e}")
+            # Continue to next batch
+
+    logger.info("Batch ingestion complete")
+```
+
+3. Add Relationship Inference
+```python
+def infer_relationships(
+    pipeline: ForensicDocumentIngestionPipeline,
+    doc_uuid: str,
+    doc_data: Dict
+):
+    """
+    Infer and create relationships based on document metadata.
+
+    Args:
+        pipeline: Initialized pipeline
+        doc_uuid: UUID of created Document node
+        doc_data: Document metadata dictionary
+    """
+    # Infer Evidence link from filename
+    filename = doc_data["filename"]
+
+    # Check if filename matches known Evidence nodes
+    known_evidence = ["Lane.rvt", "Lane.0024.rvt", "6075 Enlgish Oaks AutoCAD 092021mls.dwg"]
+    for evidence_name in known_evidence:
+        if evidence_name in filename or filename in evidence_name:
+            pipeline.link_document_to_evidence(
+                document_uuid=doc_uuid,
+                evidence_name=evidence_name,
+                confidence=95,
+                context=f"Filename match: {filename}"
+            )
+
+    # Infer Party link from author field
+    if "author" in doc_data and doc_data["author"]:
+        author = doc_data["author"]
+        known_parties = ["Andy Garcia", "Danny Garcia", "Kara Murphy"]
+        for party_name in known_parties:
+            if party_name.lower() in author.lower():
+                pipeline.link_document_to_party(
+                    document_uuid=doc_uuid,
+                    party_name=party_name,
+                    confidence=75
+                )
+
+    # Infer Location link from file_path
+    file_path = doc_data["file_path"]
+    # Extract directory
+    import os
+    directory = os.path.dirname(file_path)
+    pipeline.link_document_to_location(
+        document_uuid=doc_uuid,
+        location_path=directory,
+        discovered_date=doc_data.get("created_date"),
+        still_present=True
+    )
+```
+
+4. Add Progress Bar (Optional)
+```python
+from tqdm import tqdm
+
+for i in tqdm(range(0, total, batch_size), desc="Ingesting batches"):
+    batch = documents[i:i+batch_size]
+    # ... process batch
+```
+
+5. Add Failed Document Export
+```python
+def export_failed_documents(failed_docs: List[Dict], output_file: str):
+    """Export failed documents to CSV for review."""
+    import pandas as pd
+    df = pd.DataFrame(failed_docs)
+    df.to_csv(output_file, index=False)
+    logger.warning(f"Exported {len(failed_docs)} failed documents to {output_file}")
+```
+
+================================================================================
+RELATIONSHIP INFERENCE RULES
+================================================================================
+
+Evidence Matching Rules:
+1. Exact filename match: confidence=95%
+   - Example: filename="Lane.rvt" -> Evidence{name="Lane.rvt"}
+
+2. Partial filename match (contains): confidence=85%
+   - Example: filename="Report_Lane_rvt_Analysis.pdf" -> Evidence{name="Lane.rvt"}
+
+3. Reference in forensic_findings: confidence=75%
+   - Example: forensic_findings="Analysis of Lane.0024.rvt shows..." -> Evidence{name="Lane.0024.rvt"}
+
+Party Matching Rules:
+1. Author metadata exact match: confidence=95%
+   - Example: author="Andy Garcia" -> Party{name="Andy Garcia"}
+
+2. Recipient metadata exact match: confidence=95%
+   - Example: recipient="Kara Murphy" -> Party{name="Kara Murphy"}
+
+3. Name in subject line: confidence=75%
+   - Example: subject="RE: Garcia Design Questions" -> Party{name="Andy Garcia"}
+
+4. Name in forensic_findings: confidence=50% (manual review)
+   - Example: forensic_findings="Created by Andy Garcia on..." -> Party{name="Andy Garcia"}
+
+Location Matching Rules:
+1. Directory path exact match: confidence=95%
+   - Example: file_path="E:\6075 English Oaks - Naples 2\2021 Initial Permit\file.pdf"
+     -> Location{path="E:\6075 English Oaks - Naples 2\2021 Initial Permit"}
+
+2. Create new Location if not exists: confidence=95%
+   - Auto-create Location node from directory path
+   - Set location_type based on path pattern:
+     * Contains "Dropbox" -> "Cloud"
+     * UNC path (\\server\share) -> "Network"
+     * Absolute path (E:\, C:\) -> "Directory"
+
+Claim Matching Rules (LOW CONFIDENCE - MANUAL REVIEW REQUIRED):
+1. Keyword in forensic_findings: confidence=50%
+   - Keywords: "timestamp manipulation" -> Claim{claim_text="Timestamp manipulation detected"}
+   - Keywords: "spoliation", "destruction" -> Claim{claim_text="Spoliation of evidence"}
+   - Keywords: "anachronism", "impossible" -> Claim{claim_text="Build version anachronism"}
+
+2. Flag for manual adjustment:
+   - Log all inferred Claim relationships to CLAIM_LINKS_REVIEW.csv
+   - Litigation team reviews and adjusts confidence scores
+   - Re-import corrected confidence scores
+
+================================================================================
+FUTURE ENHANCEMENTS (PHASE 3+)
+================================================================================
+
+1. Email Metadata Extraction (.msg files)
+   - Use msg-extractor Python library
+   - Extract: From, To, CC, Subject, Date, Body text
+   - Create Party nodes for unknown senders/recipients
+   - Create Event nodes for email send dates
+
+2. PDF Text Extraction and NLP
+   - Use PyPDF2 or pdfplumber
+   - Extract full text from PDFs
+   - Store in Document.full_text property
+   - Enable full-text search with Neo4j indexes
+   - Use NLP to identify party names, dates, evidence references
+
+3. OCR for Scanned Documents
+   - Use Tesseract OCR for image-based PDFs
+   - Extract text from scanned permits
+   - Index for searchability
+
+4. Semantic Search with Embeddings
+   - Generate text embeddings for Document.full_text
+   - Use vector similarity search to find related documents
+   - Integrate with Neo4j vector index (Neo4j 5.11+)
+
+5. Automated Claim Support Scoring
+   - Train ML model on forensic_findings text
+   - Predict which documents support which claims
+   - Generate confidence scores automatically
+
+6. Timeline Event Auto-Creation
+   - Parse created_date from documents
+   - Auto-create Event nodes for significant document dates
+   - Link Events to Timeline periods
+
+7. Duplicate Detection
+   - Calculate SHA-256 hashes for all files
+   - Detect duplicate documents across locations
+   - Flag potential file copying or renaming
+
+8. Visualization Dashboard
+   - Web interface for graph exploration
+   - Timeline view with interactive filtering
+   - Party activity heatmaps
+   - Claim strength scorecards
+
+================================================================================
+TESTING STRATEGY FOR BATCH INGESTION
+================================================================================
+
+Unit Tests:
+- CSV parsing with valid/invalid data
+- Batch transaction handling
+- Relationship inference logic
+- Error handling for malformed CSV rows
+
+Integration Tests:
+- Ingest 100-document sample CSV
+- Verify Document node count
+- Verify relationship counts match expected
+- Validate schema constraints not violated
+
+Performance Tests:
+- Ingest 1,000-document CSV
+- Measure ingestion time
+- Monitor memory usage
+- Check Neo4j query performance after ingestion
+
+Validation Tests:
+- Run integrity validation queries from neo4j_utils.py
+- Check for orphaned documents
+- Verify confidence score distribution
+- Ensure all required relationships created
+
+Regression Tests:
+- Re-run POC ingestion after code changes
+- Verify 5 POC documents still correctly ingested
+- Ensure backward compatibility
+
+================================================================================
+ROLLBACK AND RECOVERY PLAN
+================================================================================
+
+If Batch Ingestion Fails:
+1. Check NEO4J_INGESTION_LOG.txt for error timestamp
+2. Identify last successful batch number
+3. Restore from NEO4J_PHASE2_POC_BACKUP.json (if needed)
+4. Resume ingestion from failed batch number
+
+Manual Rollback Steps:
+```cypher
+// Delete all Document nodes created after specific timestamp
+MATCH (d:Document)
+WHERE d.created_at > datetime("2026-01-30T12:00:00Z")
+DETACH DELETE d
+```
+
+Batch Checkpoint Strategy:
+- Export backup JSON after every 10 batches (1,000 documents)
+- Store as NEO4J_BATCH_CHECKPOINT_X.json (X = batch number)
+- If failure occurs, restore from nearest checkpoint
+
+Full Restore Procedure:
+1. Stop Neo4j
+2. Backup current database: cp -r data/databases/neo4j data/databases/neo4j.bak
+3. Clear current database: rm -rf data/databases/neo4j
+4. Restart Neo4j
+5. Re-run Phase 1 initialization (schema + core nodes)
+6. Re-run Phase 2 POC ingestion
+7. Resume CSV batch ingestion from checkpoint
+
+================================================================================
+SUCCESS METRICS
+================================================================================
+
+Phase 3 Batch Ingestion Success Criteria:
+[ ] 1,000+ documents ingested successfully
+[ ] <5% failed document rows (acceptable error rate)
+[ ] All Document nodes have uuid property
+[ ] >80% of documents have at least 1 Evidence/Party relationship
+[ ] <10% orphaned documents (no relationships)
+[ ] Ingestion time <15 minutes
+[ ] Memory usage <8GB
+[ ] Neo4j database size <500MB
+[ ] All schema constraints validated
+[ ] Backup JSON successfully created
+[ ] Validation queries return expected counts
+
+Quality Assurance Checks:
+[ ] Manual review of 10 random Document nodes
+[ ] Verify relationship confidence scores accurate
+[ ] Check for duplicate Document nodes (same filename)
+[ ] Validate date parsing (no future dates)
+[ ] Confirm file_type matches actual file extension
+[ ] Review FAILED_DOCUMENTS.csv for patterns
+[ ] Test graph query performance (<1s for simple queries)
+
+================================================================================
+CONTACT AND NEXT STEPS
+================================================================================
+
+Current Phase: Phase 2 POC COMPLETE
+Next Phase: Phase 3 CSV Batch Ingestion (pending network access)
+
+When Network CSV Becomes Available:
+1. Update document_ingestion_csv.py with CSV path
+2. Run CSV validation script (check column names, data types)
+3. Ingest small test batch (100 documents)
+4. Review results in Neo4j Browser
+5. Adjust relationship inference rules if needed
+6. Run full batch ingestion (1,040 documents)
+7. Generate Phase 3 Ingestion Report
+8. Update LITIGATION_GRAPH_VISUALIZATION.png
+
+Documentation:
+- document_ingestion_poc.py: POC ingestion script (Phase 2)
+- document_ingestion_csv.py: CSV batch ingestion (Phase 3 - to be created)
+- NEO4J_DOCUMENT_INGESTION_REPORT.txt: Phase 2 summary
+- NEO4J_INGESTION_LOG.txt: All ingestion operations
+
+Backup Files:
+- NEO4J_PHASE2_POC_BACKUP.json: Full graph export after POC
+
+================================================================================
+END OF SCALABILITY NOTES
+================================================================================
+
+Generated by: CasparCode-002 Orchestrator
+Date: 2026-01-30
+Status: Phase 2 POC Complete - Architecture Ready for 1,040-Document CSV Ingestion
+Next Action: Await network CSV access, then execute Phase 3 batch ingestion

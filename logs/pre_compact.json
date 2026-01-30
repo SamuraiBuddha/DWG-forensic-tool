@@ -174,5 +174,13 @@
     "hook_event_name": "PreCompact",
     "trigger": "auto",
     "custom_instructions": null
+  },
+  {
+    "session_id": "dc166d8f-a1c2-4ab1-ae88-a367d111bd81",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "hook_event_name": "PreCompact",
+    "trigger": "auto",
+    "custom_instructions": null
   }
 ]

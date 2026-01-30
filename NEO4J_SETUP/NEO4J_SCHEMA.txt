@@ -1,0 +1,382 @@
+# Neo4j Knowledge Graph Schema
+# Kara Murphy vs Danny Garcia Litigation Case
+# Generated: 2026-01-30
+
+## OVERVIEW
+This schema enables rapid querying of litigation evidence, temporal relationships,
+and cross-referencing of claims to supporting/contradicting documentation.
+
+Primary use cases:
+- "Who knew about X on Y date?"
+- "Show all evidence timeline for party Z"
+- "What documents reference event/claim X?"
+- "Find contradictory evidence patterns"
+
+---
+
+## NODE LABELS (7 Entity Types)
+
+### 1. Party
+Represents individuals, organizations, or software agents involved in the case.
+
+Properties:
+- name: STRING (required) - Full legal name
+- role: STRING - "Plaintiff" | "Defendant" | "Architect" | "Software" | "Witness" | "Expert"
+- entity_type: STRING - "Person" | "Organization" | "Software"
+- contact_info: STRING (optional) - Email, phone, address
+- created_at: DATETIME - Node creation timestamp
+- uuid: STRING (unique) - Unique identifier
+
+Constraints:
+- UNIQUE (uuid)
+- INDEX ON (name)
+
+Examples:
+- {name: "Kara Murphy", role: "Plaintiff", entity_type: "Person"}
+- {name: "Danny Garcia", role: "Defendant", entity_type: "Person"}
+- {name: "Andy Garcia", role: "Architect", entity_type: "Person"}
+- {name: "ODA SDK", role: "Software", entity_type: "Software"}
+
+
+### 2. Location
+Physical or digital locations where evidence exists or events occurred.
+
+Properties:
+- path: STRING (required) - Full path or address
+- location_type: STRING - "Directory" | "Cloud" | "Physical" | "URL"
+- description: STRING (optional)
+- access_restrictions: STRING (optional)
+- created_at: DATETIME
+- uuid: STRING (unique)
+
+Constraints:
+- UNIQUE (uuid)
+- INDEX ON (path)
+
+Examples:
+- {path: "E:\\6075 English Oaks - Naples 2\\2021 Initial Permit\\", location_type: "Directory"}
+- {path: "C:\\Users\\Andy\\Dropbox", location_type: "Cloud"}
+- {path: "6075 English Oaks Drive, Naples, FL", location_type: "Physical"}
+
+
+### 3. Event
+Temporal milestones, meetings, approvals, delays, file modifications, litigation events.
+
+Properties:
+- name: STRING (required) - Event description
+- event_type: STRING - "Meeting" | "Approval" | "FileModification" | "Litigation" | "Communication"
+- date: DATETIME (required) - Event occurrence timestamp
+- description: STRING (optional) - Detailed narrative
+- significance: STRING - "Critical" | "High" | "Medium" | "Low"
+- source: STRING (optional) - Where this event was recorded
+- created_at: DATETIME
+- uuid: STRING (unique)
+
+Constraints:
+- UNIQUE (uuid)
+- INDEX ON (date)
+- INDEX ON (event_type)
+
+Examples:
+- {name: "Lane.rvt created", event_type: "FileModification", date: "2021-02-24T00:00:00Z"}
+- {name: "Batch DWG conversion", event_type: "FileModification", date: "2026-01-09T00:00:00Z"}
+- {name: "Complaint filed", event_type: "Litigation", date: "2025-XX-XXZ"}
+
+
+### 4. Evidence
+Physical or digital evidence (files, photographs, objects).
+
+Properties:
+- name: STRING (required) - Filename or evidence identifier
+- evidence_type: STRING - "DWG" | "RVT" | "Email" | "Contract" | "Photo" | "ForensicReport"
+- file_path: STRING (optional) - Full path to file
+- file_size: INTEGER (optional) - Bytes
+- sha256: STRING (optional) - Hash for integrity verification
+- acquisition_date: DATETIME - When evidence was collected
+- chain_of_custody: STRING (optional) - JSON array of custody transfers
+- description: STRING (optional)
+- created_at: DATETIME
+- uuid: STRING (unique)
+
+Constraints:
+- UNIQUE (uuid)
+- UNIQUE (sha256) WHERE sha256 IS NOT NULL
+- INDEX ON (evidence_type)
+- INDEX ON (name)
+
+Examples:
+- {name: "Lane.rvt", evidence_type: "RVT", sha256: "abc123...", acquisition_date: "2026-01-30"}
+- {name: "FLOOR PLAN.dwg", evidence_type: "DWG", file_path: "E:\\...\\FLOOR PLAN.dwg"}
+
+
+### 5. Timeline
+Abstract timeline nodes for grouping events by temporal periods.
+
+Properties:
+- name: STRING (required) - Timeline name
+- start_date: DATETIME
+- end_date: DATETIME (optional)
+- description: STRING (optional)
+- created_at: DATETIME
+- uuid: STRING (unique)
+
+Constraints:
+- UNIQUE (uuid)
+- INDEX ON (start_date)
+
+Examples:
+- {name: "2021 Initial Permit Phase", start_date: "2021-01-01", end_date: "2021-12-31"}
+- {name: "2026 Forensic Analysis", start_date: "2026-01-01"}
+
+
+### 6. Claim
+Legal claims, allegations, or assertions made by parties.
+
+Properties:
+- claim_text: STRING (required) - Full claim statement
+- claim_type: STRING - "Fraud" | "ContractViolation" | "Negligence" | "CounterClaim"
+- alleged_by: STRING - Party name
+- alleged_against: STRING - Party name
+- status: STRING - "Active" | "Dismissed" | "Proven" | "Disproven"
+- severity: STRING - "Critical" | "High" | "Medium" | "Low"
+- created_at: DATETIME
+- uuid: STRING (unique)
+
+Constraints:
+- UNIQUE (uuid)
+- INDEX ON (claim_type)
+- INDEX ON (status)
+
+Examples:
+- {claim_text: "Amenities removed from design without authorization", claim_type: "Fraud"}
+- {claim_text: "Timestamp manipulation detected", claim_type: "Fraud"}
+- {claim_text: "Build version anachronism indicates file alteration", claim_type: "Fraud"}
+
+
+### 7. Document
+Higher-level documents (PDFs, emails, contracts) that reference evidence/parties/events.
+
+Properties:
+- title: STRING (required)
+- document_type: STRING - "Email" | "Contract" | "Report" | "Letter" | "Pleading" | "Deposition"
+- file_path: STRING (optional)
+- author: STRING (optional)
+- recipient: STRING (optional)
+- date: DATETIME (optional) - Document creation/sent date
+- summary: STRING (optional) - Brief description
+- full_text: STRING (optional) - Extracted text content
+- created_at: DATETIME
+- uuid: STRING (unique)
+
+Constraints:
+- UNIQUE (uuid)
+- INDEX ON (document_type)
+- INDEX ON (date)
+
+Examples:
+- {title: "Forensic Analysis Report - Lane.rvt", document_type: "Report", date: "2026-01-30"}
+- {title: "Design Agreement Contract", document_type: "Contract", date: "2020-XX-XX"}
+
+---
+
+## RELATIONSHIPS (8 Types)
+
+### 1. PARTY_INVOLVED_IN
+(Party) -[:PARTY_INVOLVED_IN]-> (Event)
+
+Properties:
+- role_in_event: STRING - "Organizer" | "Participant" | "Observer" | "Author"
+- created_at: DATETIME
+
+Description: Links parties to events they participated in, created, or witnessed.
+
+Examples:
+- (Andy Garcia) -[:PARTY_INVOLVED_IN {role_in_event: "Author"}]-> (Lane.rvt created)
+- (Kara Murphy) -[:PARTY_INVOLVED_IN {role_in_event: "Participant"}]-> (Design approval meeting)
+
+
+### 2. CREATED
+(Party) -[:CREATED]-> (Evidence)
+
+Properties:
+- created_date: DATETIME
+- confidence: STRING - "Confirmed" | "Probable" | "Alleged"
+- source: STRING - How creation was determined (metadata, witness, etc.)
+- created_at: DATETIME
+
+Description: Links parties to evidence they created.
+
+Examples:
+- (Andy Garcia) -[:CREATED {created_date: "2021-02-24", confidence: "Confirmed"}]-> (Lane.rvt)
+- (ODA SDK) -[:CREATED {created_date: "2026-01-09", confidence: "Confirmed"}]-> (FLOOR PLAN.dwg)
+
+
+### 3. MODIFIED
+(Party) -[:MODIFIED]-> (Evidence)
+
+Properties:
+- modification_date: DATETIME (required)
+- modification_type: STRING - "Edit" | "Rename" | "Move" | "Delete" | "Convert"
+- confidence: STRING - "Confirmed" | "Probable" | "Alleged"
+- source: STRING
+- created_at: DATETIME
+
+Description: Links parties to evidence they modified.
+
+Examples:
+- (Andy Garcia) -[:MODIFIED {modification_date: "2026-01-09", modification_type: "Convert"}]-> (FLOOR PLAN.dwg)
+
+
+### 4. REFERENCES
+(Document) -[:REFERENCES]-> (Evidence | Party | Event | Claim)
+
+Properties:
+- reference_type: STRING - "Exhibits" | "Mentions" | "Analyzes" | "Cites"
+- page_number: INTEGER (optional)
+- context: STRING (optional) - Surrounding text
+- created_at: DATETIME
+
+Description: Links documents to entities they reference.
+
+Examples:
+- (Forensic Report) -[:REFERENCES {reference_type: "Analyzes"}]-> (Lane.rvt)
+- (Email) -[:REFERENCES {reference_type: "Mentions"}]-> (Danny Garcia)
+
+
+### 5. LOCATED_IN
+(Evidence) -[:LOCATED_IN]-> (Location)
+
+Properties:
+- discovered_date: DATETIME (optional) - When evidence was found here
+- still_present: BOOLEAN - Whether evidence still exists at location
+- created_at: DATETIME
+
+Description: Links evidence to physical or digital locations.
+
+Examples:
+- (Lane.rvt) -[:LOCATED_IN {discovered_date: "2026-01-30", still_present: true}]-> (E:\6075 English Oaks...)
+
+
+### 6. OCCURRED_ON
+(Event) -[:OCCURRED_ON]-> (Timeline)
+
+Properties:
+- created_at: DATETIME
+
+Description: Links events to timeline periods.
+
+Examples:
+- (Lane.rvt created) -[:OCCURRED_ON]-> (2021 Initial Permit Phase)
+
+
+### 7. SUPPORTS_CLAIM
+(Evidence | Document | Event) -[:SUPPORTS_CLAIM]-> (Claim)
+
+Properties:
+- strength: STRING - "Strong" | "Moderate" | "Weak"
+- relevance: STRING - Free text explanation
+- cited_in: STRING (optional) - Document where this support is argued
+- created_at: DATETIME
+
+Description: Links evidence/documents/events that support a claim.
+
+Examples:
+- (Timestamp manipulation event) -[:SUPPORTS_CLAIM {strength: "Strong"}]-> (Fraud claim)
+- (Forensic Report) -[:SUPPORTS_CLAIM {strength: "Strong"}]-> (File alteration claim)
+
+
+### 8. CONTRADICTS_CLAIM
+(Evidence | Document | Event) -[:CONTRADICTS_CLAIM]-> (Claim)
+
+Properties:
+- strength: STRING - "Strong" | "Moderate" | "Weak"
+- relevance: STRING - Free text explanation
+- cited_in: STRING (optional)
+- created_at: DATETIME
+
+Description: Links evidence/documents/events that contradict a claim.
+
+Examples:
+- (Legitimate conversion event) -[:CONTRADICTS_CLAIM {strength: "Moderate"}]-> (Malicious tampering claim)
+
+
+### 9. DEPENDS_ON (Temporal Ordering)
+(Event) -[:DEPENDS_ON]-> (Event)
+
+Properties:
+- dependency_type: STRING - "HappenedAfter" | "CausedBy" | "EnabledBy"
+- created_at: DATETIME
+
+Description: Links events in temporal/causal order.
+
+Examples:
+- (Batch DWG conversion) -[:DEPENDS_ON {dependency_type: "HappenedAfter"}]-> (Lane.rvt created)
+
+---
+
+## INDEXES AND CONSTRAINTS
+
+```cypher
+// Unique constraints
+CREATE CONSTRAINT party_uuid_unique IF NOT EXISTS FOR (p:Party) REQUIRE p.uuid IS UNIQUE;
+CREATE CONSTRAINT location_uuid_unique IF NOT EXISTS FOR (l:Location) REQUIRE l.uuid IS UNIQUE;
+CREATE CONSTRAINT event_uuid_unique IF NOT EXISTS FOR (e:Event) REQUIRE e.uuid IS UNIQUE;
+CREATE CONSTRAINT evidence_uuid_unique IF NOT EXISTS FOR (ev:Evidence) REQUIRE ev.uuid IS UNIQUE;
+CREATE CONSTRAINT timeline_uuid_unique IF NOT EXISTS FOR (t:Timeline) REQUIRE t.uuid IS UNIQUE;
+CREATE CONSTRAINT claim_uuid_unique IF NOT EXISTS FOR (c:Claim) REQUIRE c.uuid IS UNIQUE;
+CREATE CONSTRAINT document_uuid_unique IF NOT EXISTS FOR (d:Document) REQUIRE d.uuid IS UNIQUE;
+
+// Hash integrity
+CREATE CONSTRAINT evidence_sha256_unique IF NOT EXISTS FOR (ev:Evidence) REQUIRE ev.sha256 IS UNIQUE;
+
+// Performance indexes
+CREATE INDEX party_name_idx IF NOT EXISTS FOR (p:Party) ON (p.name);
+CREATE INDEX location_path_idx IF NOT EXISTS FOR (l:Location) ON (l.path);
+CREATE INDEX event_date_idx IF NOT EXISTS FOR (e:Event) ON (e.date);
+CREATE INDEX event_type_idx IF NOT EXISTS FOR (e:Event) ON (e.event_type);
+CREATE INDEX evidence_type_idx IF NOT EXISTS FOR (ev:Evidence) ON (ev.evidence_type);
+CREATE INDEX evidence_name_idx IF NOT EXISTS FOR (ev:Evidence) ON (ev.name);
+CREATE INDEX timeline_start_idx IF NOT EXISTS FOR (t:Timeline) ON (t.start_date);
+CREATE INDEX claim_type_idx IF NOT EXISTS FOR (c:Claim) ON (c.claim_type);
+CREATE INDEX claim_status_idx IF NOT EXISTS FOR (c:Claim) ON (c.status);
+CREATE INDEX document_type_idx IF NOT EXISTS FOR (d:Document) ON (d.document_type);
+CREATE INDEX document_date_idx IF NOT EXISTS FOR (d:Document) ON (d.date);
+```
+
+---
+
+## SCHEMA VISUALIZATION
+
+```
+[Party] --PARTY_INVOLVED_IN--> [Event] --OCCURRED_ON--> [Timeline]
+  |                              |
+  +--CREATED--> [Evidence]       +--DEPENDS_ON--> [Event]
+  |               |
+  +--MODIFIED--> [Evidence] --LOCATED_IN--> [Location]
+                  |
+                  +--SUPPORTS_CLAIM--> [Claim]
+                  |
+                  +--CONTRADICTS_CLAIM--> [Claim]
+
+[Document] --REFERENCES--> [Evidence | Party | Event | Claim]
+           --SUPPORTS_CLAIM--> [Claim]
+```
+
+---
+
+## DATA GOVERNANCE
+
+**Chain of Custody**: All Evidence nodes must include `chain_of_custody` JSON documenting:
+- Acquisition timestamp
+- Acquiring party
+- Transfer events
+- Hash verification
+
+**Temporal Integrity**: Event dates must be validated against external sources before ingestion.
+
+**Confidentiality**: This graph may contain attorney work product and privileged communications.
+Access controls must be enforced at the Neo4j authentication layer.
+
+---
+
+End of Schema Documentation
