@@ -3,6 +3,10 @@ DWG Forensic Tool - Advanced Timestamp Rules (TAMPER-013 to TAMPER-018)
 
 Sophisticated timestamp analysis including cumulative editing time validation,
 version anachronism detection, and timezone/timer manipulation indicators.
+
+These rules now use provenance-aware tolerance profiles to accommodate
+legitimate variances in Revit exports and ODA SDK tools while maintaining
+strict detection for native AutoCAD files.
 """
 
 from typing import Any, Dict
@@ -25,6 +29,9 @@ class TimestampRulesMixin:
         TDINDWG is a read-only field tracking cumulative editing time.
         It cannot exceed the calendar span between creation and last save.
         If it does, this proves timestamp manipulation.
+
+        Uses provenance-aware tolerance: Revit exports may have TDINDWG=0
+        which is normal behavior, not tampering.
         """
         timestamp_data = context.get("timestamp_data", {})
         anomalies = context.get("anomalies", [])
@@ -61,23 +68,33 @@ class TimestampRulesMixin:
                 confidence=0.0,
             )
 
-        # If we have the raw data, check directly
-        if calendar_span is not None and tdindwg > calendar_span:
-            return RuleResult(
-                rule_id=rule.rule_id,
-                rule_name=rule.name,
-                status=RuleStatus.FAILED,
-                severity=rule.severity,
-                description="[FAIL] TDINDWG exceeds calendar span - timestamp manipulation proven",
-                expected=f"Editing time <= {calendar_span:.2f} days",
-                found=f"Editing time: {tdindwg:.2f} days",
-                confidence=1.0,
-                details={
-                    "tdindwg_days": round(tdindwg, 4),
-                    "calendar_span_days": round(calendar_span, 4),
-                    "excess_days": round(tdindwg - calendar_span, 4),
-                },
-            )
+        # Get tolerance profile
+        profile = self.get_tolerance()
+        # Use TAMPER-013 specific tolerance for TDINDWG checks (days)
+        tolerance_days = profile.get_rule_tolerance("TAMPER-013", "time_window_minutes", 0) / (24 * 60)
+
+        # If we have the raw data, check with tolerance
+        if calendar_span is not None:
+            excess = tdindwg - calendar_span
+
+            # Apply tolerance: Allow small excesses for Revit/ODA exports
+            if excess > tolerance_days:
+                return RuleResult(
+                    rule_id=rule.rule_id,
+                    rule_name=rule.name,
+                    status=RuleStatus.FAILED,
+                    severity=rule.severity,
+                    description=f"[FAIL] TDINDWG exceeds calendar span by {excess:.2f} days (tolerance: {tolerance_days:.2f} days)",
+                    expected=f"Editing time <= {calendar_span + tolerance_days:.2f} days",
+                    found=f"Editing time: {tdindwg:.2f} days",
+                    confidence=1.0,
+                    details={
+                        "tdindwg_days": round(tdindwg, 4),
+                        "calendar_span_days": round(calendar_span, 4),
+                        "excess_days": round(excess, 4),
+                        "tolerance_days": round(tolerance_days, 4),
+                    },
+                )
 
         return RuleResult(
             rule_id=rule.rule_id,
@@ -268,6 +285,9 @@ class TimestampRulesMixin:
         TDUSRTIMER is user-resettable, but TDINDWG is not.
         If TDUSRTIMER << TDINDWG, the user deliberately reset
         the timer to hide editing history.
+
+        Uses provenance-aware tolerance: Revit exports may show larger
+        discrepancies due to background processing.
         """
         timestamp_data = context.get("timestamp_data", {})
         metadata = context.get("metadata", {})
@@ -296,19 +316,31 @@ class TimestampRulesMixin:
         tdindwg_hours = tdindwg * 24 if tdindwg else 0
         tdusrtimer_hours = tdusrtimer * 24 if tdusrtimer else 0
 
+        # Get tolerance profile
+        profile = self.get_tolerance()
+
+        # Minimum hours threshold (use percentage_padding to scale)
+        min_hours_threshold = 0.1 * (1.0 + profile.percentage_padding)
+
         # If TDINDWG is very small, there's nothing significant to hide
-        if tdindwg_hours < 0.1:  # Less than 6 minutes
+        if tdindwg_hours < min_hours_threshold:
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
                 status=RuleStatus.PASSED,
                 severity=rule.severity,
-                description="[OK] Minimal editing time - timer reset check not applicable",
+                description=f"[OK] Minimal editing time ({tdindwg_hours:.2f}h) - timer reset check not applicable",
                 confidence=0.5,
             )
 
-        # If user timer is within 10% of TDINDWG, it wasn't reset
-        if tdindwg_hours > 0 and tdusrtimer_hours >= tdindwg_hours * 0.9:
+        # Calculate consistency threshold with profile tolerance
+        # Base: 90% consistency, adjusted by percentage_padding
+        # Revit: 0.9 - 0.25 = 0.65 (65% threshold)
+        # AutoCAD: 0.9 - 0.05 = 0.85 (85% threshold)
+        consistency_threshold = 0.9 - profile.percentage_padding
+
+        # If user timer is within threshold of TDINDWG, it wasn't reset
+        if tdindwg_hours > 0 and tdusrtimer_hours >= tdindwg_hours * consistency_threshold:
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
@@ -316,7 +348,7 @@ class TimestampRulesMixin:
                 severity=rule.severity,
                 description=(
                     f"[OK] User timer ({tdusrtimer_hours:.2f}h) consistent "
-                    f"with TDINDWG ({tdindwg_hours:.2f}h)"
+                    f"with TDINDWG ({tdindwg_hours:.2f}h) within {consistency_threshold*100:.0f}% threshold"
                 ),
                 confidence=1.0,
             )
@@ -332,9 +364,9 @@ class TimestampRulesMixin:
             severity=rule.severity,
             description=(
                 f"[WARN] User timer reset detected - showing {ratio:.0%} "
-                f"of actual editing time"
+                f"of actual editing time (threshold: {consistency_threshold*100:.0f}%)"
             ),
-            expected=f"TDUSRTIMER ~ {tdindwg_hours:.2f}h",
+            expected=f"TDUSRTIMER >= {tdindwg_hours * consistency_threshold:.2f}h",
             found=f"TDUSRTIMER = {tdusrtimer_hours:.2f}h ({ratio:.0%})",
             confidence=0.7,
             details={
@@ -342,6 +374,7 @@ class TimestampRulesMixin:
                 "tdusrtimer_hours": round(tdusrtimer_hours, 4),
                 "ratio": round(ratio, 4),
                 "hidden_hours": round(hidden_hours, 4),
+                "consistency_threshold": round(consistency_threshold, 4),
                 "forensic_note": (
                     "Timer was reset to hide editing history. "
                     "TDINDWG cannot be reset and reveals true editing time."
