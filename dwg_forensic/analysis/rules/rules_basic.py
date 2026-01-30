@@ -2,9 +2,12 @@
 DWG Forensic Tool - Basic Tampering Rules (TAMPER-001 to TAMPER-012)
 
 Core integrity checks covering CRC validation and basic timestamp anomalies.
+
+These rules now use provenance-aware tolerance profiles to reduce false positives
+while maintaining detection accuracy for genuine tampering.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 
 from dwg_forensic.analysis.rules.models import (
@@ -214,7 +217,10 @@ class BasicRulesMixin:
     def _check_future_timestamp(
         self, rule: TamperingRule, context: Dict[str, Any]
     ) -> RuleResult:
-        """TAMPER-006: Check for future timestamp."""
+        """TAMPER-006: Check for future timestamp.
+
+        Uses provenance-aware tolerance for clock skew grace period.
+        """
         metadata = context.get("metadata", {})
         modified = metadata.get("modified_date") if metadata else None
 
@@ -246,14 +252,18 @@ class BasicRulesMixin:
             )
 
         delta = (modified - now).total_seconds()
-        # Grace period for clock skew
-        if delta <= 300:
+
+        # Grace period for clock skew - use tolerance profile
+        profile = self.get_tolerance()
+        grace_period_seconds = profile.time_window_minutes * 60
+
+        if delta <= grace_period_seconds:
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
                 status=RuleStatus.PASSED,
                 severity=rule.severity,
-                description=f"[OK] {delta:.0f}s future (within grace period)",
+                description=f"[OK] {delta:.0f}s future (within {grace_period_seconds:.0f}s grace period)",
                 confidence=0.5,
             )
 
@@ -271,7 +281,11 @@ class BasicRulesMixin:
     def _check_edit_time(
         self, rule: TamperingRule, context: Dict[str, Any]
     ) -> RuleResult:
-        """TAMPER-007: Check edit time consistency."""
+        """TAMPER-007: Check edit time consistency.
+
+        Uses provenance-aware tolerance for edit time padding.
+        Revit exports may show higher variance due to background processing.
+        """
         metadata = context.get("metadata", {})
 
         created = metadata.get("created_date") if metadata else None
@@ -295,14 +309,18 @@ class BasicRulesMixin:
 
         span_hours = (modified - created).total_seconds() / 3600
 
-        # Allow 10% tolerance
-        if edit_hours <= span_hours * 1.1:
+        # Use tolerance profile for padding
+        profile = self.get_tolerance()
+        tolerance_padding = profile.percentage_padding
+        max_allowed_hours = span_hours * (1.0 + tolerance_padding)
+
+        if edit_hours <= max_allowed_hours:
             return RuleResult(
                 rule_id=rule.rule_id,
                 rule_name=rule.name,
                 status=RuleStatus.PASSED,
                 severity=rule.severity,
-                description=f"[OK] Edit time ({edit_hours:.1f}h) consistent",
+                description=f"[OK] Edit time ({edit_hours:.1f}h) consistent with {tolerance_padding*100:.0f}% tolerance",
                 confidence=1.0,
             )
 
@@ -311,8 +329,8 @@ class BasicRulesMixin:
             rule_name=rule.name,
             status=RuleStatus.FAILED,
             severity=rule.severity,
-            description=f"[WARN] Edit time ({edit_hours:.1f}h) exceeds span ({span_hours:.1f}h)",
-            expected=f"Edit time <= {span_hours:.1f}h",
+            description=f"[WARN] Edit time ({edit_hours:.1f}h) exceeds span ({span_hours:.1f}h) with {tolerance_padding*100:.0f}% tolerance",
+            expected=f"Edit time <= {max_allowed_hours:.1f}h",
             found=f"Edit time: {edit_hours:.1f}h",
             confidence=0.7,
         )
