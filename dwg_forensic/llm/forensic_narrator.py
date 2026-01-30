@@ -12,6 +12,7 @@ from typing import Optional
 
 from dwg_forensic.llm.ollama_client import OllamaClient
 from dwg_forensic.models import ForensicAnalysis, TamperingIndicator, Anomaly
+from dwg_forensic.llm.anomaly_models import FilteredAnomalies
 
 logger = logging.getLogger(__name__)
 
@@ -390,6 +391,221 @@ class ForensicNarrator:
                 model_used=response.model,
                 error=response.error
             )
+
+    def generate_narrative(
+        self,
+        analysis: ForensicAnalysis,
+        filtered_anomalies: FilteredAnomalies,
+    ) -> NarrativeResult:
+        """
+        Generate expert narrative from filtered anomalies.
+
+        This is the Phase 4.3 integration point that generates structured
+        narratives (executive summary, detailed findings, recommendations)
+        based on filtered anomaly results from the reasoner.
+
+        Args:
+            analysis: Complete forensic analysis
+            filtered_anomalies: Filtered anomaly results from reasoner
+
+        Returns:
+            NarrativeResult with structured narrative
+        """
+        if not self.is_available():
+            return self.generate_narrative_fallback(analysis, filtered_anomalies)
+
+        # Build narrative prompt
+        prompt = self._build_narrative_prompt(analysis, filtered_anomalies)
+
+        response = self.client.generate(
+            prompt=prompt,
+            system_prompt=self._get_system_prompt(),
+            temperature=0.1,
+        )
+
+        if response.success and response.response.strip():
+            return NarrativeResult(
+                narrative=response.response.strip(),
+                success=True,
+                model_used=response.model,
+                generation_time_ms=response.total_duration // 1_000_000 if response.total_duration else None
+            )
+        else:
+            # Fallback on LLM error
+            logger.warning(f"LLM narrative generation failed: {response.error}. Using fallback.")
+            return self.generate_narrative_fallback(analysis, filtered_anomalies)
+
+    def generate_narrative_fallback(
+        self,
+        analysis: ForensicAnalysis,
+        filtered_anomalies: FilteredAnomalies,
+    ) -> NarrativeResult:
+        """
+        Generate narrative using static templates (fallback when LLM unavailable).
+
+        Args:
+            analysis: Complete forensic analysis
+            filtered_anomalies: Filtered anomaly results
+
+        Returns:
+            NarrativeResult with template-based narrative
+        """
+        sections = []
+
+        # Executive Summary
+        sections.append("EXECUTIVE SUMMARY")
+        sections.append("")
+
+        if filtered_anomalies.smoking_guns_preserved > 0:
+            sections.append(
+                f"CRITICAL FINDING: This forensic analysis has identified {filtered_anomalies.smoking_guns_preserved} "
+                f"definitive proof(s) of file tampering. These findings represent mathematical or physical "
+                f"impossibilities that cannot occur through normal file operations."
+            )
+        elif filtered_anomalies.kept_count > 0:
+            sections.append(
+                f"This analysis detected {filtered_anomalies.kept_count} anomaly(ies) that warrant investigation. "
+                f"While not definitive proof, these findings indicate deviations from normal AutoCAD file behavior."
+            )
+        else:
+            sections.append(
+                "This forensic analysis found no evidence of tampering. All integrity checks passed and "
+                "no anomalies were detected. The file appears authentic."
+            )
+
+        sections.append("")
+        sections.append("DETAILED FINDINGS")
+        sections.append("")
+
+        # List kept anomalies (true concerns)
+        if filtered_anomalies.kept_anomalies:
+            sections.append("Forensic Concerns Identified:")
+            for anomaly in filtered_anomalies.kept_anomalies:
+                marker = "[DEFINITIVE PROOF]" if anomaly.evidence_strength == "DEFINITIVE" else "[ANOMALY]"
+                sections.append(f"  {marker} {anomaly.rule_id}: {anomaly.description}")
+
+            sections.append("")
+
+        # Mention filtered anomalies (red herrings)
+        if filtered_anomalies.filtered_anomalies:
+            sections.append(f"Red Herrings Filtered: {filtered_anomalies.filtered_count} finding(s) were determined to be ")
+            sections.append("expected behaviors based on file provenance and were excluded from the tampering assessment.")
+            sections.append("")
+
+        # Reasoning
+        sections.append("FORENSIC REASONING")
+        sections.append("")
+        sections.append(filtered_anomalies.reasoning)
+        sections.append("")
+
+        # Recommendations
+        sections.append("RECOMMENDATIONS")
+        sections.append("")
+
+        if filtered_anomalies.smoking_guns_preserved > 0:
+            sections.append(
+                "IMMEDIATE ACTION REQUIRED: This file should NOT be considered authentic evidence. "
+                "The definitive proof of tampering identified requires legal consideration and potential "
+                "investigation into the chain of custody."
+            )
+        elif filtered_anomalies.kept_count > 0:
+            sections.append(
+                "FURTHER INVESTIGATION RECOMMENDED: Verify the file's chain of custody, compare with "
+                "backup copies, and consult with the file's creator to explain the detected anomalies."
+            )
+        else:
+            sections.append(
+                "NO ACTION REQUIRED: The file appears authentic. Standard chain of custody procedures "
+                "should be followed for evidentiary purposes."
+            )
+
+        narrative = "\n".join(sections)
+
+        return NarrativeResult(
+            narrative=narrative,
+            success=True,
+            model_used="fallback_template",
+            generation_time_ms=None
+        )
+
+    def _build_narrative_prompt(
+        self,
+        analysis: ForensicAnalysis,
+        filtered_anomalies: FilteredAnomalies,
+    ) -> str:
+        """Build the narrative generation prompt."""
+
+        # Format kept anomalies
+        kept_text = "None - file appears clean"
+        if filtered_anomalies.kept_anomalies:
+            kept_list = []
+            for a in filtered_anomalies.kept_anomalies:
+                kept_list.append(
+                    f"- [{a.evidence_strength}] {a.rule_id}: {a.description} (Severity: {a.severity.value})"
+                )
+            kept_text = "\n".join(kept_list)
+
+        # Format filtered anomalies
+        filtered_text = "None filtered"
+        if filtered_anomalies.filtered_anomalies:
+            filtered_list = []
+            for a in filtered_anomalies.filtered_anomalies:
+                filtered_list.append(f"- {a.rule_id}: {a.description}")
+            filtered_text = "\n".join(filtered_list)
+
+        # File identification
+        meta = analysis.metadata
+        file_desc = f"{analysis.file_info.filename} ({analysis.header_analysis.version_name})"
+
+        prompt = f"""Generate a comprehensive expert forensic narrative for this DWG file analysis.
+
+FILE: {file_desc}
+ANALYZED: {analysis.analysis_timestamp.strftime("%Y-%m-%d %H:%M:%S")}
+RISK LEVEL: {analysis.risk_assessment.overall_risk.value}
+
+FILTERING RESULTS:
+- Total anomalies detected: {filtered_anomalies.total_count}
+- Kept as true concerns: {filtered_anomalies.kept_count}
+- Filtered as red herrings: {filtered_anomalies.filtered_count}
+- Definitive proofs (smoking guns): {filtered_anomalies.smoking_guns_preserved}
+- Filtering confidence: {filtered_anomalies.llm_confidence:.1%}
+
+KEPT ANOMALIES (TRUE CONCERNS):
+{kept_text}
+
+FILTERED ANOMALIES (RED HERRINGS):
+{filtered_text}
+
+REASONING FOR FILTERING DECISIONS:
+{filtered_anomalies.reasoning}
+
+YOUR TASK:
+Generate a structured expert narrative with these sections:
+
+1. EXECUTIVE SUMMARY
+   - 2-3 sentences for non-technical readers
+   - Clearly state if DEFINITIVE PROOF exists or if findings are inconclusive
+   - Emphasize smoking guns prominently
+
+2. DETAILED FINDINGS
+   - Explain each kept anomaly in plain English
+   - Describe WHY each finding is significant
+   - For definitive proofs, explain the mathematical or physical impossibility
+
+3. RECOMMENDATIONS
+   - Recommend actions based on findings severity
+   - If smoking guns exist: recommend treating file as tampered evidence
+   - If no smoking guns: recommend appropriate verification procedures
+
+IMPORTANT:
+- Be definitive when evidence is mathematically certain (smoking guns)
+- Be appropriately cautious when evidence is circumstantial
+- Use clear language suitable for legal proceedings
+- Emphasize the distinction between PROOF and INDICATION
+
+Write the narrative now:"""
+
+        return prompt
 
     def _build_full_analysis_prompt(self, analysis: ForensicAnalysis) -> str:
         """Build the comprehensive analysis prompt with all raw data."""

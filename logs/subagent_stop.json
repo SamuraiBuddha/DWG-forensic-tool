@@ -588,5 +588,95 @@
     "stop_hook_active": false,
     "agent_id": "a436a4f",
     "agent_transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81\\subagents\\agent-a436a4f.jsonl"
+  },
+  {
+    "session_id": "dc166d8f-a1c2-4ab1-ae88-a367d111bd81",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a9211ea",
+    "agent_transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81\\subagents\\agent-a9211ea.jsonl"
+  },
+  {
+    "session_id": "dc166d8f-a1c2-4ab1-ae88-a367d111bd81",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a47ed6b",
+    "agent_transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81\\subagents\\agent-a47ed6b.jsonl"
+  },
+  {
+    "session_id": "dc166d8f-a1c2-4ab1-ae88-a367d111bd81",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a4eef71",
+    "agent_transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81\\subagents\\agent-a4eef71.jsonl"
+  },
+  {
+    "session_id": "dc166d8f-a1c2-4ab1-ae88-a367d111bd81",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a79fd85",
+    "agent_transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81\\subagents\\agent-a79fd85.jsonl"
+  },
+  {
+    "session_id": "dc166d8f-a1c2-4ab1-ae88-a367d111bd81",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a19ae70",
+    "agent_transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81\\subagents\\agent-a19ae70.jsonl"
+  },
+  {
+    "session_id": "dc166d8f-a1c2-4ab1-ae88-a367d111bd81",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "acd2e23",
+    "agent_transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81\\subagents\\agent-acd2e23.jsonl"
+  },
+  {
+    "session_id": "dc166d8f-a1c2-4ab1-ae88-a367d111bd81",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a9a8cf6",
+    "agent_transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81\\subagents\\agent-a9a8cf6.jsonl"
+  },
+  {
+    "session_id": "dc166d8f-a1c2-4ab1-ae88-a367d111bd81",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a2ba59c",
+    "agent_transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81\\subagents\\agent-a2ba59c.jsonl"
+  },
+  {
+    "session_id": "dc166d8f-a1c2-4ab1-ae88-a367d111bd81",
+    "transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81.jsonl",
+    "cwd": "C:\\Users\\JordanEhrig\\Documents\\GitHub\\DWG-forensic-tool",
+    "permission_mode": "bypassPermissions",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "a01b9ec",
+    "agent_transcript_path": "C:\\Users\\JordanEhrig\\.claude\\projects\\C--Users-JordanEhrig-Documents-GitHub-DWG-forensic-tool\\dc166d8f-a1c2-4ab1-ae88-a367d111bd81\\subagents\\agent-a01b9ec.jsonl"
   }
 ]
