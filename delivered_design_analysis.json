@@ -1,0 +1,443 @@
++-----------------------------------------------------------------------------+
+| DWG Forensic Analysis                                                       |
+| File: 6075_02_25_2022.dwg                                                   |
++-----------------------------------------------------------------------------+
+  [OK] CAD Application Detection: UNKNOWN (confidence: 20%)
+  [OK] Deep Analysis: Section Map: Sections found: 3
+  [OK] Deep Analysis: Drawing Variables: No timestamps found (method: section)
+  [OK] Deep Analysis: Handle Gap Detection: Handle gaps: 0
+Heuristic anomaly filtering failed: 'critical' is not a valid RiskLevel, keeping all anomalies
+{
+  "file_info": {
+    "filename": "6075_02_25_2022.dwg",
+    "sha256": 
+"e17080189ee0d0ed52b5f65de1ce1afffb0ad56611ce3e0a308e2efc98d080cc",
+    "file_size_bytes": 6369163,
+    "intake_timestamp": "2026-01-30T19:47:31.294119"
+  },
+  "header_analysis": {
+    "version_string": "AC1032",
+    "version_name": "AutoCAD 2018+",
+    "maintenance_version": 0,
+    "preview_address": 448,
+    "codepage": 30,
+    "is_supported": true
+  },
+  "crc_validation": {
+    "header_crc_stored": "0x00000000",
+    "header_crc_calculated": "0xB2E65433",
+    "is_valid": false,
+    "section_results": [],
+    "is_revit_export": false,
+    "is_oda_export": false,
+    "forensic_notes": "CRC value is 0x00000000. This may indicate the file was 
+created by ODA SDK-based software (BricsCAD, DraftSight, etc.) which may not 
+compute CRC checksums. Consider checking application fingerprint.",
+    "validation_skipped": false
+  },
+  "metadata": {
+    "title": null,
+    "author": null,
+    "last_saved_by": null,
+    "created_date": null,
+    "modified_date": null,
+    "revision_number": null,
+    "total_editing_time_hours": 6.544840170956897e-309,
+    "comments": null,
+    "keywords": null,
+    "tdcreate": null,
+    "tdupdate": null,
+    "tducreate": null,
+    "tduupdate": null,
+    "tdindwg": 2.7270167378987e-310,
+    "tdusrtimer": null,
+    "fingerprint_guid": "30314341-3233-0000-0000-000003c00100",
+    "version_guid": "00003233-0000-0000-03c0-01000021001e",
+    "login_name": null,
+    "educational_watermark": false,
+    "xref_paths": null,
+    "network_paths_detected": null
+  },
+  "ntfs_analysis": {
+    "si_created": "2026-01-30T20:30:58.992718+00:00",
+    "si_modified": "2026-01-08T18:23:26+00:00",
+    "si_accessed": "2026-01-30T22:25:41.441609+00:00",
+    "si_created_nanoseconds": 992717400,
+    "si_modified_nanoseconds": 0,
+    "fn_created": null,
+    "fn_modified": null,
+    "timestomping_detected": false,
+    "nanosecond_truncation": false,
+    "impossible_timestamps": true,
+    "dwg_ntfs_contradiction": false,
+    "contradiction_details": null,
+    "forensic_conclusion": "FILE COPY DETECTED: Creation timestamp is later 
+than modification timestamp - this is NORMAL Windows copy behavior, NOT 
+evidence of tampering."
+  },
+  "file_provenance": {
+    "source_application": "Unknown",
+    "is_export": false,
+    "is_transferred": false,
+    "confidence": 0.0,
+    "rules_to_skip": [],
+    "detection_notes": [],
+    "is_revit_export": false,
+    "is_oda_tool": false,
+    "is_native_autocad": false,
+    "revit_confidence": 0.0,
+    "fingerprint_confidence": 0.0,
+    "transfer_indicators": []
+  },
+  "application_fingerprint": {
+    "detected_application": "unknown",
+    "confidence": 0.2,
+    "is_autodesk": false,
+    "is_oda_based": false,
+    "forensic_summary": "Detected: unknown\n- Zero CRC32 - Inconclusive (see 
+notes): NOTE: CRC32 = 0x00000000 was previously thought to indicate 
+non-Autodesk origin, but testing shows genuine Civil 3D 2025 and Revit 2024 
+exports also have CRC=0. This marker should NOT be used alone for origin 
+detection. Use embedded path strings, application markers, and header field 
+patterns for more reliable fingerprinting.",
+    "created_by": "unknown",
+    "application_id": null,
+    "build_number": null
+  },
+  "revit_detection": {
+    "is_revit_export": false,
+    "export_type": "NOT_REVIT",
+    "confidence_score": 0.0,
+    "revit_version": null,
+    "export_timestamp": null,
+    "forensic_notes": [],
+    "signatures": []
+  },
+  "structure_analysis": {
+    "structure_type": "corrupted",
+    "confidence": 0.6,
+    "sections": {
+      "header": false,
+      "classes": false,
+      "handles": false,
+      "objects": false,
+      "appinfo": false,
+      "preview": false
+    },
+    "metrics": {
+      "expected_sections": 6,
+      "found_sections": 0,
+      "section_map_valid": true,
+      "acfs_header_valid": false
+    },
+    "tool_detection": {
+      "detected_tool": "Open Design Alliance SDK",
+      "signatures": [
+        "Od"
+      ]
+    },
+    "forensic": {
+      "notes": [
+        "FILE STRUCTURE CORRUPTED: Cannot locate valid DWG sections. File may 
+be damaged, truncated, or intentionally modified.",
+        "MISSING CRITICAL SECTIONS: AcDb:Header (contains timestamps, GUIDs), 
+AcDb:Classes (object type definitions), AcDb:Handles (object reference map)",
+        "FORENSIC SIGNIFICANCE: The non-standard structure of this file may be 
+relevant to determining file origin, authenticity, or whether the file has been
+modified/processed after original creation."
+      ],
+      "is_significant": true
+    },
+    "offsets": {
+      "section_map_address": "0x202",
+      "acfs_offset": "0x80",
+      "data_offset": "0x9e0"
+    }
+  },
+  "anomalies": [
+    {
+      "anomaly_type": "CRC_MISMATCH",
+      "description": "Header CRC checksum does not match calculated value",
+      "severity": "HIGH",
+      "details": {
+        "stored_crc": "0x00000000",
+        "calculated_crc": "0xB2E65433"
+      }
+    },
+    {
+      "anomaly_type": "NTFS_CREATION_AFTER_MODIFICATION",
+      "description": "INFORMATIONAL: File was copied to this machine. NTFS 
+Created timestamp is newer than Modified timestamp. This is NORMAL Windows copy
+behavior - the operating system sets Created to time of copy but preserves the 
+original Modified timestamp from the source.",
+      "severity": "INFO",
+      "details": {
+        "created": "2026-01-30 20:30:58.992718+00:00",
+        "modified": "2026-01-08 18:23:26+00:00",
+        "forensic_conclusion": "Normal Windows file copy behavior - NOT 
+evidence of tampering",
+        "is_normal_copy_behavior": true
+      }
+    }
+  ],
+  "tampering_indicators": [
+    {
+      "indicator_type": "CRC_MODIFIED",
+      "description": "File header CRC does not match, indicating modification 
+after save",
+      "confidence": 0.9,
+      "evidence": "Stored CRC: 0x00000000, Calculated CRC: 0xB2E65433"
+    },
+    {
+      "indicator_type": "SUSPICIOUS_PATTERN",
+      "description": "Tampering rule triggered: CRC Header Mismatch",
+      "confidence": 0.8,
+      "evidence": "Expected: 0x00000000; Found: 0xB2E65433"
+    },
+    {
+      "indicator_type": "TDINDWG_MANIPULATION",
+      "description": "Tampering rule triggered: Zero Edit Time",
+      "confidence": 0.6,
+      "evidence": "Expected: Edit time > 1 minute for legitimate drawings; 
+Found: TDINDWG: 0.0 minutes"
+    },
+    {
+      "indicator_type": "TDINDWG_MANIPULATION",
+      "description": "Tampering rule triggered: Implausible Edit Ratio",
+      "confidence": 0.6,
+      "evidence": "Expected: < 100 MB per hour of editing for normal CAD work; 
+Found: 6.07 MB in 0.00h = inf MB/h"
+    },
+    {
+      "indicator_type": "SUSPICIOUS_PATTERN",
+      "description": "Tampering rule triggered: Missing AutoCAD Identifiers",
+      "confidence": 0.6,
+      "evidence": "[WARN] Missing AutoCAD identifiers: FINGERPRINTGUID, 
+VERSIONGUID"
+    },
+    {
+      "indicator_type": "SUSPICIOUS_PATTERN",
+      "description": "Tampering rule triggered: Missing Header Section",
+      "confidence": 0.8,
+      "evidence": "[FAIL] AcDb:Header section missing - structural tampering 
+detected"
+    }
+  ],
+  "risk_assessment": {
+    "overall_risk": "CRITICAL",
+    "factors": [
+      "[FAIL] Header CRC validation failed - file may be modified",
+      "[WARN] 1 high-severity anomaly(ies) detected",
+      "[INFO] 1 other anomaly(ies) detected",
+      "[WARN] 5 tampering rule(s) triggered",
+      "[INFO] Failed rules: TAMPER-001, TAMPER-024, TAMPER-025",
+      "[CRITICAL] 3 high-confidence tampering indicator(s)"
+    ],
+    "recommendation": "Critical integrity failures detected (score: 26). File 
+should not be used as evidence without extensive forensic investigation and 
+expert testimony."
+  },
+  "forensic_knowledge": {
+    "standards": [
+      {
+        "name": "ISO/IEC 27037:2012",
+        "organization": "ISO/IEC",
+        "description": "Guidelines for identification, collection, acquisition 
+and preservation of digital evidence",
+        "version": "2012",
+        "url": null,
+        "relevance": 1.0
+      },
+      {
+        "name": "NIST SP 800-86",
+        "organization": "NIST",
+        "description": "Guide to Integrating Forensic Techniques into Incident 
+Response",
+        "version": "2006",
+        "url": null,
+        "relevance": 1.0
+      },
+      {
+        "name": "SWGDE Best Practices",
+        "organization": "SWGDE",
+        "description": "Scientific Working Group on Digital Evidence best 
+practices for computer forensics",
+        "version": null,
+        "url": null,
+        "relevance": 1.0
+      },
+      {
+        "name": "ACPO Guidelines v5",
+        "organization": "ACPO",
+        "description": "Good Practice Guide for Digital Evidence",
+        "version": "v5",
+        "url": null,
+        "relevance": 1.0
+      }
+    ],
+    "legal_cases": [
+      {
+        "name": "Daubert v. Merrell Dow Pharmaceuticals",
+        "citation": "509 U.S. 579",
+        "year": 1993,
+        "jurisdiction": "US Supreme Court",
+        "holding": "Scientific evidence must be based on sufficient facts, 
+reliable principles and methods, and reliably applied to the facts of the 
+case",
+        "relevance": "Establishes standard for admissibility of 
+scientific/technical expert testimony"
+      }
+    ],
+    "techniques": [
+      {
+        "name": "CRC32 Validation",
+        "description": "Validates file integrity by comparing stored CRC32 
+checksum against calculated value from file content",
+        "reliability": "High",
+        "error_rate": 0.0,
+        "peer_reviewed": true,
+        "standards_compliance": [
+          "ISO/IEC 27037:2012",
+          "NIST SP 800-86"
+        ]
+      },
+      {
+        "name": "Timestamp Cross-Validation",
+        "description": "Compares timestamps from multiple sources (DWG 
+internal, NTFS $MFT, $STANDARD_INFORMATION, $FILE_NAME) to detect 
+manipulation",
+        "reliability": "High",
+        "error_rate": 0.01,
+        "peer_reviewed": true,
+        "standards_compliance": [
+          "SWGDE Best Practices"
+        ]
+      },
+      {
+        "name": "GUID Analysis",
+        "description": "Analyzes FINGERPRINTGUID and VERSIONGUID to determine 
+file origin and detect unauthorized modifications",
+        "reliability": "High",
+        "error_rate": 0.0,
+        "peer_reviewed": true,
+        "standards_compliance": [
+          "ISO/IEC 27037:2012"
+        ]
+      },
+      {
+        "name": "NTFS $MFT Analysis",
+        "description": "Examines NTFS Master File Table timestamps including 
+$STANDARD_INFORMATION and $FILE_NAME attributes",
+        "reliability": "High",
+        "error_rate": 0.0,
+        "peer_reviewed": true,
+        "standards_compliance": [
+          "NIST SP 800-86",
+          "SWGDE Best Practices"
+        ]
+      }
+    ],
+    "tampering_indicators": [
+      {
+        "indicator_id": "INTEGRITY-001",
+        "name": "CRC Mismatch",
+        "description": "Stored CRC32 does not match calculated file checksum",
+        "severity": "CRITICAL",
+        "forensic_significance": "File content was modified after original save
+without proper update",
+        "rule_ids": [
+          "TAMPER-001"
+        ],
+        "techniques": [
+          "CRC32 Validation"
+        ],
+        "legal_cases": [
+          "Daubert v. Merrell Dow"
+        ]
+      },
+      {
+        "indicator_id": "FINGERPRINT-001",
+        "name": "Missing AutoCAD Identifiers",
+        "description": "FINGERPRINTGUID or VERSIONGUID missing or null",
+        "severity": "MEDIUM",
+        "forensic_significance": "AutoCAD always generates these GUIDs - 
+absence indicates third-party CAD tool or file manipulation",
+        "rule_ids": [
+          "TAMPER-035"
+        ],
+        "techniques": [
+          "GUID Analysis"
+        ],
+        "legal_cases": []
+      }
+    ],
+    "expert_context": {
+      "rules_evaluated": 5,
+      "indicators_matched": 2,
+      "critical_findings": [
+        "CRC Mismatch"
+      ],
+      "tampering_likelihood": "High",
+      "methodology_statement": "Analysis conducted using peer-reviewed forensic
+techniques in accordance with ISO/IEC 27037:2012 and NIST SP 800-86 guidelines.
+Findings are based on objective examination of file metadata, timestamp 
+correlation, and integrity verification."
+    },
+    "retrieval_timestamp": "2026-01-31T00:47:32.600272"
+  },
+  "llm_narrative": null,
+  "llm_model_used": null,
+  "smoking_gun_report": {
+    "has_definitive_proof": true,
+    "smoking_gun_count": 2,
+    "smoking_guns": [
+      {
+        "rule_id": "TAMPER-001",
+        "rule_name": "CRC Header Mismatch",
+        "description": "[FAIL] CRC value is 0x00000000. This may indicate the 
+file was created by ODA SDK-based software (BricsCAD, DraftSight, etc.) which 
+may not compute CRC checksums. Consider checking application fingerprint.",
+        "forensic_reasoning": "The CRC32 checksum stored in the DWG header does
+not match the calculated value. CRC32 is a mathematical function - if the data 
+has not changed, the checksum MUST match. This mismatch is DEFINITIVE PROOF 
+that the file has been modified since the CRC was calculated.",
+        "legal_significance": "CRC mismatch indicates modification after last 
+save.",
+        "confidence": 1.0
+      },
+      {
+        "rule_id": "TAMPER-037",
+        "rule_name": "Missing Header Section",
+        "description": "[FAIL] AcDb:Header section missing - structural 
+tampering detected",
+        "forensic_reasoning": "The mandatory AcDb:Header section is missing or 
+corrupted. This section is REQUIRED by the DWG specification. Its absence 
+indicates the file structure has been tampered with at the binary level or was 
+corrupted.",
+        "legal_significance": "Missing mandatory section indicates structural 
+tampering or corruption.",
+        "confidence": 0.95
+      }
+    ],
+    "expert_summary": "MULTIPLE DEFINITIVE PROOFS OF TAMPERING have been 
+identified. 2 independent smoking gun findings prove with mathematical 
+certainty that this file has been manipulated: CRC Header Mismatch, Missing 
+Header Section. Each finding independently proves tampering; together they 
+constitute overwhelming evidence of deliberate manipulation.",
+    "legal_conclusion": "CONCLUSION: Strong evidence of tampering exists. Two 
+independent smoking gun findings corroborate each other, providing definitive 
+proof that this file has been manipulated. The authenticity of this file should
+be challenged.",
+    "recommendation": "Perform binary diff analysis against known-good copy if 
+available. Examine backup systems for earlier versions of this file. Document 
+this forensic analysis for potential expert witness testimony. Consider 
+challenging the admissibility of this file as evidence."
+  },
+  "has_definitive_proof": true,
+  "llm_reasoning": null,
+  "filtered_anomalies": null,
+  "anomaly_filter_method": "error",
+  "analysis_errors": null,
+  "analysis_timestamp": "2026-01-30T19:47:32.600272",
+  "analyzer_version": "0.1.0"
+}
