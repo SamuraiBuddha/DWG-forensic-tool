@@ -7,7 +7,7 @@ Parses 65 Outlook MSG files from Naples project emails to build litigation timel
 Extracts sent/received dates, sender/recipient, subject matter for evidence mapping.
 
 USAGE:
-    python email_timeline_parser.py
+    python email_timeline_parser.py --input-path <email_dir> --output-path <output_dir>
 
 OUTPUT:
     - EMAIL_TIMELINE_MASTER.csv (chronological, all 65 emails)
@@ -23,6 +23,7 @@ import os
 import csv
 import datetime
 import re
+import argparse
 from pathlib import Path
 from typing import Dict, List, Tuple, Set, Optional
 from collections import defaultdict, Counter
@@ -35,10 +36,6 @@ try:
 except ImportError:
     print("[ERROR] extract-msg library not found. Install with: pip install extract-msg")
     exit(1)
-
-# Case directory
-EMAIL_DIR = Path(r"\\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\Gansari\Naples\emails")
-OUTPUT_DIR = Path(r"\\adam\DataPool\Projects\2026-001_Kara_Murphy_vs_Danny_Garcia\EMAIL_TIMELINE_ANALYSIS")
 
 # Known parties in the case
 PARTIES = {
@@ -130,9 +127,19 @@ def parse_msg_file(msg_path: Path) -> Optional[EmailMetadata]:
     try:
         msg = extract_msg.Message(str(msg_path))
 
-        # Extract sender
+        # Extract sender (handle different MSG formats)
         sender = msg.sender if msg.sender else "UNKNOWN"
-        sender_email = msg.senderEmail if msg.senderEmail else ""
+        # Try multiple attributes for sender email (depends on MSG format)
+        sender_email = ""
+        if hasattr(msg, 'senderEmail') and msg.senderEmail:
+            sender_email = msg.senderEmail
+        elif hasattr(msg, 'sender') and msg.sender and '@' in str(msg.sender):
+            # Extract email from "Name <email>" format
+            email_match = re.search(r'<(.+?)>', str(msg.sender))
+            if email_match:
+                sender_email = email_match.group(1)
+            elif '@' in str(msg.sender):
+                sender_email = str(msg.sender)
 
         # Extract recipients
         recipients = []
@@ -172,8 +179,14 @@ def parse_msg_file(msg_path: Path) -> Optional[EmailMetadata]:
 
         # Extract attachments
         attachments = msg.attachments
-        attachment_names = [att.longFilename if att.longFilename else att.shortFilename
-                            for att in attachments]
+        attachment_names = []
+        for att in attachments:
+            if hasattr(att, 'longFilename') and att.longFilename:
+                attachment_names.append(att.longFilename)
+            elif hasattr(att, 'shortFilename') and att.shortFilename:
+                attachment_names.append(att.shortFilename)
+            else:
+                attachment_names.append("UNNAMED_ATTACHMENT")
         attachment_count = len(attachments)
 
         # Create metadata object
@@ -563,6 +576,14 @@ def generate_exhibit_cross_reference(emails: List[EmailMetadata], output_file: P
 
 def main():
     """Main execution for email timeline extraction."""
+    parser = argparse.ArgumentParser(description='Email Timeline Extraction for Kara Murphy vs Danny Garcia')
+    parser.add_argument('--input-path', required=True, help='Path to directory containing MSG files')
+    parser.add_argument('--output-path', required=True, help='Path to output directory for deliverables')
+    args = parser.parse_args()
+
+    email_dir = Path(args.input_path)
+    output_dir = Path(args.output_path)
+
     print("=" * 80)
     print("EMAIL TIMELINE EXTRACTION TOOL")
     print("Kara Murphy vs Danny Garcia (Case 2026-001)")
@@ -570,8 +591,8 @@ def main():
     print()
 
     # Verify paths
-    if not EMAIL_DIR.exists():
-        print(f"[ERROR] Email directory not found: {EMAIL_DIR}")
+    if not email_dir.exists():
+        print(f"[ERROR] Email directory not found: {email_dir}")
         print()
         print("TROUBLESHOOTING:")
         print("  1. Verify network share is mounted: \\\\adam\\DataPool\\")
@@ -582,16 +603,16 @@ def main():
         return
 
     # Create output directory
-    OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
-    print(f"[INFO] Email Source: {EMAIL_DIR}")
-    print(f"[INFO] Output Directory: {OUTPUT_DIR}")
+    output_dir.mkdir(exist_ok=True, parents=True)
+    print(f"[INFO] Email Source: {email_dir}")
+    print(f"[INFO] Output Directory: {output_dir}")
     print()
 
     # Parse all emails
     print("=" * 80)
     print("STEP 1: PARSING MSG FILES")
     print("=" * 80)
-    emails = parse_all_emails(EMAIL_DIR)
+    emails = parse_all_emails(email_dir)
 
     if not emails:
         print("[ERROR] No emails parsed. Exiting.")
@@ -606,38 +627,38 @@ def main():
 
     # 1. Master timeline CSV
     print("\n[1/7] Generating EMAIL_TIMELINE_MASTER.csv...")
-    generate_master_timeline_csv(emails, OUTPUT_DIR / "EMAIL_TIMELINE_MASTER.csv")
+    generate_master_timeline_csv(emails, output_dir / "EMAIL_TIMELINE_MASTER.csv")
 
     # 2. Communication matrix
     print("[2/7] Generating EMAIL_PARTY_COMMUNICATION_MATRIX.txt...")
-    generate_communication_matrix(emails, OUTPUT_DIR / "EMAIL_PARTY_COMMUNICATION_MATRIX.txt")
+    generate_communication_matrix(emails, output_dir / "EMAIL_PARTY_COMMUNICATION_MATRIX.txt")
 
     # 3. Keyword analysis
     print("[3/7] Generating EMAIL_KEYWORD_ANALYSIS.txt...")
-    generate_keyword_analysis(emails, OUTPUT_DIR / "EMAIL_KEYWORD_ANALYSIS.txt")
+    generate_keyword_analysis(emails, output_dir / "EMAIL_KEYWORD_ANALYSIS.txt")
 
     # 4. Smoking gun report
     print("[4/7] Generating SMOKING_GUN_EMAILS.txt...")
-    generate_smoking_gun_report(emails, OUTPUT_DIR / "SMOKING_GUN_EMAILS.txt")
+    generate_smoking_gun_report(emails, output_dir / "SMOKING_GUN_EMAILS.txt")
 
     # 5. Timeline visualization
     print("[5/7] Generating EMAIL_TIMELINE_VISUALIZATION.txt...")
-    generate_timeline_visualization(emails, OUTPUT_DIR / "EMAIL_TIMELINE_VISUALIZATION.txt")
+    generate_timeline_visualization(emails, output_dir / "EMAIL_TIMELINE_VISUALIZATION.txt")
 
     # 6. Metadata forensics
     print("[6/7] Generating EMAIL_METADATA_FORENSICS.txt...")
-    generate_metadata_forensics(emails, OUTPUT_DIR / "EMAIL_METADATA_FORENSICS.txt")
+    generate_metadata_forensics(emails, output_dir / "EMAIL_METADATA_FORENSICS.txt")
 
     # 7. Exhibit cross-reference
     print("[7/7] Generating DEPOSITION_EXHIBIT_CROSS_REFERENCE.txt...")
-    generate_exhibit_cross_reference(emails, OUTPUT_DIR / "DEPOSITION_EXHIBIT_CROSS_REFERENCE.txt")
+    generate_exhibit_cross_reference(emails, output_dir / "DEPOSITION_EXHIBIT_CROSS_REFERENCE.txt")
 
     print()
     print("=" * 80)
     print("EMAIL TIMELINE EXTRACTION COMPLETE")
     print("=" * 80)
     print(f"Total Emails Processed: {len(emails)}")
-    print(f"All deliverables saved to: {OUTPUT_DIR}")
+    print(f"All deliverables saved to: {output_dir}")
     print()
     print("NEXT STEPS:")
     print("  1. Review SMOKING_GUN_EMAILS.txt for top 10 critical communications")
